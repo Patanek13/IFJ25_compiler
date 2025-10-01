@@ -1,5 +1,5 @@
 CC := gcc
-CFLAGS := -Wall
+CFLAGS := -Wall -Wextra -pedantic
 OUTFILE := IFJcompiler
 BUILDDIR := ../build
 DOCDIR := ../doc
