@@ -8,10 +8,11 @@ RMDIR := rm -rf
 .PHONY: all test clean doc
 
 all:
+	mkdir -p $(BUILDDIR)
 	$(CC) $(CFLAGS) -o $(BUILDDIR)/$(OUTFILE) *.c
 
 doc: doxygen Doxyfile
 
 clean:
-	$(RMDIR) $(BUILDDIR)/*
+	$(RMDIR) $(BUILDDIR)
 	$(RMDIR) $(DOCDIR)
