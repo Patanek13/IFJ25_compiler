@@ -43,6 +43,13 @@ bool match(char d) {
 Token add_token(TokenType type) {
     Token token;
     token.type = type;
+
+    if (token.type == STRING || token.type == ID || token.type == NUMBER) {
+        strncpy(token.value, buffer, i);
+        token.value[i] = '\0'; // Null-terminate the string
+    } else {
+        token.value[0] = '\0'; // No value for other token types
+    }
     return token;
 }
 
@@ -80,242 +87,141 @@ TokenType lookup_keyword(const char* word) {
 }
 
 Token get_token() {
-    Token token;
-
     // Reset buffer
     reset_buffer();
 
     c = advance();
 
-    if (c == EOF) { return add_token(EOF_TOKEN); }
-
     // Whitespace
-    while (c == ' ' || c == '\n' || c == '\t' || c == '\r') {
+    while (c == ' ' || c == '\r' || c == '\t') {
         reset_buffer();
         c = advance();
     }
 
-    //TODO ID and Keywords
-    if (c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z') {
-        while (c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z')
-        {
+    if (c == EOF) { return add_token(EOF_TOKEN); }
+
+    // TODO Keywords and ID
+    else if (c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z') {
+        while (peek() >= 'a' && peek() <= 'z' || peek() >= 'A' && peek() <= 'Z') {
             c = advance();
         }
-        ungetc(c, file);
-        i--;
-        buffer[i] = '\0';
 
-        // Check if it's a keyword using lookup table
-        TokenType keyword_type = lookup_keyword(buffer);
-        return add_token(keyword_type);
+        // Check if is keyword
+        TokenType lookup_keyword_result = lookup_keyword(buffer);
+        if (lookup_keyword_result != ID) {
+            return add_token(lookup_keyword_result);
+        } else {
+            return add_token(ID);
+        }
     }
 
-    //TODO number
-    else if (c >= '0' && c <= '9') {
-        while (c >= '0' && c <= '9') {
-            c = peek();
-            if (c >= '0' && c <= '9') {
-                c = advance();
-            } else {
-                break;
-            }
-        }
-        
-        // Check for decimal point
-        if (c == '.' && peek() >= '0' && peek() <= '9') {
-            c = advance(); // consume the '.'
-            while (c >= '0' && c <= '9') {
-                c = peek();
-                if (c >= '0' && c <= '9') {
-                    c = advance();
-                } else {
-                    break;
-                }
-            }
+    // TODO number
+    else if (c >= '1' && c <= '9') {
+        while (peek() >= '0' && peek() <= '9') {
+            c = advance();
         }
         
         return add_token(NUMBER);
     }
 
+    // TODO comments
     else if (c == '/' && match('/')) {
-        // Single line comment
-        while (c != '\n' && c != EOF) {
+        while (c != '\n') {
             c = advance();
         }
         return get_token(); // Recursively get the next token
     }
 
+    // String token
     else if (c == '"') {
-        // String literal
+        i--; // Don't include the opening quote
         c = advance();
-        while (c != '"' && c != EOF) {
+        while (c != '"' && c != '\n' && c != EOF) {
             c = advance();
         }
         if (c == '"') {
-            advance(); // Consume closing quote
+            i--; // Don't include the closing quote
             return add_token(STRING);
-        } else {
-            return add_token(ERROR); // Unterminated string
         }
+        return add_token(ERROR);
     }
 
-    else switch (c)
-    {
+    else switch (c) {
         // One character tokens
-        case '{':
-            return add_token(BLOCK_START); break;
-
-        case '}':
-            return add_token(BLOCK_END); break;
-
-        case '(':
-            return add_token(BRACKET_START); break;
-
-        case ')':
-            return add_token(BRACKET_END); break;
-
-        case '.':
-            return add_token(DOT); break;
-
-        case '+':
-            return add_token(PLUS); break;
-
-        case '-':
-            return add_token(MINUS); break;
-
-        case '*':
-            return add_token(MULTIPLY); break;
-
-        case '/':
-            return add_token(DIVIDE); break;
-
+        case '{': return add_token(BLOCK_START);
+        case '}': return add_token(BLOCK_END);
+        case '(': return add_token(BRACKET_START);
+        case ')': return add_token(BRACKET_END);
+        case '.': return add_token(DOT);
+        case '+': return add_token(PLUS);
+        case '-': return add_token(MINUS);
+        case '*': return add_token(MULTIPLY);
+        case '/': return add_token(DIVIDE);
         // Two character tokens
-        case '=':
-            return add_token(match('=') ? EQUAL_EQUAL : EQUAL); break;
-
-        case '<':
-            return add_token(match('=') ? LESS_EQUAL : LESS); break;
-
-        case '>':
-            return add_token(match('=') ? MORE_EQUAL : MORE); break;
-
-        case '!':
-            return add_token(match('=') ? NOT_EQUAL : NOT); break;
-
-        case '&':
-            return add_token(match('&') ? AND : ERROR); break;
-
-        case '|':
-            return add_token(match('|') ? OR : ERROR); break;
-
+        case '=': return add_token(match('=') ? EQUAL_EQUAL : EQUAL);
+        case '<': return add_token(match('=') ? LESS_EQUAL : LESS);
+        case '>': return add_token(match('=') ? MORE_EQUAL : MORE);
+        case '!': return add_token(match('=') ? NOT_EQUAL : NOT);
+        case '&': return add_token(match('&') ? AND : ERROR);
+        case '|': return add_token(match('|') ? OR : ERROR);
         // Special cases
-        case '\n':
-            return add_token(NEW_LINE); break;
-
-        case EOF:
-            return add_token(EOF_TOKEN); break;
-            
-        default:
-            return add_token(ERROR); break;
+        case '\n': return add_token(NEW_LINE);
+        default: return add_token(ERROR);
     }
 }
 
 void print_token(Token token) {
-    switch (token.type)
-    {
-    case ID:
-        fprintf(output_file, "ID"); break;
-    case GLOBAL_ID:
-        fprintf(output_file, "GLOBAL_ID"); break;
-    case CLASS:
-        fprintf(output_file, "CLASS"); break;
-    case IF:
-        fprintf(output_file, "IF"); break;
-    case ELSE:
-        fprintf(output_file, "ELSE"); break;
-    case IS:
-        fprintf(output_file, "IS"); break;
-    case NULL_KEYWORD:
-        fprintf(output_file, "NULL_KEYWORD"); break;
-    case RETURN:
-        fprintf(output_file, "RETURN"); break;
-    case VAR:
-        fprintf(output_file, "VAR"); break;
-    case WHILE:
-        fprintf(output_file, "WHILE"); break;
-    case IFJ:
-        fprintf(output_file, "IFJ"); break;
-    case STATIC:
-        fprintf(output_file, "STATIC"); break;
-    case IMPORT:
-        fprintf(output_file, "IMPORT"); break;
-    case FOR:
-        fprintf(output_file, "FOR"); break;
-    case NUM_TYPE:
-        fprintf(output_file, "NUM_TYPE"); break;
-    case STRING_TYPE:
-        fprintf(output_file, "STRING_TYPE"); break;
-    case NULL_TYPE:
-        fprintf(output_file, "NULL_TYPE"); break;
-    case NUMBER:
-        fprintf(output_file, "NUMBER"); break;
-    case STRING:
-        fprintf(output_file, "STRING"); break;
-    case BLOCK_START:
-        fprintf(output_file, "BLOCK_START"); break;
-    case BLOCK_END:
-        fprintf(output_file, "BLOCK_END"); break;
-    case BRACKET_START:
-        fprintf(output_file, "BRACKET_START"); break;
-    case BRACKET_END:
-        fprintf(output_file, "BRACKET_END"); break;
-    case DOT:
-        fprintf(output_file, "DOT"); break;
-    case COMMA:
-        fprintf(output_file, "COMMA"); break;
-    case PLUS:
-        fprintf(output_file, "PLUS"); break;
-    case MINUS:
-        fprintf(output_file, "MINUS"); break;
-    case MULTIPLY:
-        fprintf(output_file, "MULTIPLY"); break;
-    case DIVIDE:
-        fprintf(output_file, "DIVIDE"); break;
-    case EQUAL:
-        fprintf(output_file, "EQUAL"); break;
-    case EQUAL_EQUAL:
-        fprintf(output_file, "EQUAL_EQUAL"); break;
-    case LESS:
-        fprintf(output_file, "LESS"); break;
-    case LESS_EQUAL:
-        fprintf(output_file, "LESS_EQUAL"); break;
-    case MORE:
-        fprintf(output_file, "MORE"); break;
-    case MORE_EQUAL:
-        fprintf(output_file, "MORE_EQUAL"); break;
-    case NOT:
-        fprintf(output_file, "NOT"); break;
-    case NOT_EQUAL:
-        fprintf(output_file, "NOT_EQUAL"); break;
-    case AND:
-        fprintf(output_file, "AND"); break;
-    case OR:
-        fprintf(output_file, "OR"); break;
-    case NEW_LINE:
-        fprintf(output_file, "NEW_LINE"); break;
-    case EOF_TOKEN:
-        fprintf(output_file, "EOF"); break;
-    case ERROR:
-        fprintf(output_file, "ERROR"); break;
-    default:
-        fprintf(output_file, "UNKNOWN"); break;
+    switch (token.type){
+        case ID:            fprintf(output_file, "ID"); break;
+        case GLOBAL_ID:     fprintf(output_file, "GLOBAL_ID"); break;
+        case CLASS:         fprintf(output_file, "CLASS"); break;
+        case IF:            fprintf(output_file, "IF"); break;
+        case ELSE:          fprintf(output_file, "ELSE"); break;
+        case IS:            fprintf(output_file, "IS"); break;
+        case NULL_KEYWORD:  fprintf(output_file, "NULL_KEYWORD"); break;
+        case RETURN:        fprintf(output_file, "RETURN"); break;
+        case VAR:           fprintf(output_file, "VAR"); break;
+        case WHILE:         fprintf(output_file, "WHILE"); break;
+        case IFJ:           fprintf(output_file, "IFJ"); break;
+        case STATIC:        fprintf(output_file, "STATIC"); break;
+        case IMPORT:        fprintf(output_file, "IMPORT"); break;
+        case FOR:           fprintf(output_file, "FOR"); break;
+        case NUM_TYPE:      fprintf(output_file, "NUM_TYPE"); break;
+        case STRING_TYPE:   fprintf(output_file, "STRING_TYPE"); break;
+        case NULL_TYPE:     fprintf(output_file, "NULL_TYPE"); break;
+        case NUMBER:        fprintf(output_file, "NUMBER"); break;
+        case STRING:        fprintf(output_file, "STRING"); break;
+        case BLOCK_START:   fprintf(output_file, "BLOCK_START"); break;
+        case BLOCK_END:     fprintf(output_file, "BLOCK_END"); break;
+        case BRACKET_START: fprintf(output_file, "BRACKET_START"); break;
+        case BRACKET_END:   fprintf(output_file, "BRACKET_END"); break;
+        case DOT:           fprintf(output_file, "DOT"); break;
+        case COMMA:         fprintf(output_file, "COMMA"); break;
+        case PLUS:          fprintf(output_file, "PLUS"); break;
+        case MINUS:         fprintf(output_file, "MINUS"); break;
+        case MULTIPLY:      fprintf(output_file, "MULTIPLY"); break;
+        case DIVIDE:        fprintf(output_file, "DIVIDE"); break;
+        case EQUAL:         fprintf(output_file, "EQUAL"); break;
+        case EQUAL_EQUAL:   fprintf(output_file, "EQUAL_EQUAL"); break;
+        case LESS:          fprintf(output_file, "LESS"); break;
+        case LESS_EQUAL:    fprintf(output_file, "LESS_EQUAL"); break;
+        case MORE:          fprintf(output_file, "MORE"); break;
+        case MORE_EQUAL:    fprintf(output_file, "MORE_EQUAL"); break;
+        case NOT:           fprintf(output_file, "NOT"); break;
+        case NOT_EQUAL:     fprintf(output_file, "NOT_EQUAL"); break;
+        case AND:           fprintf(output_file, "AND"); break;
+        case OR:            fprintf(output_file, "OR"); break;
+        case NEW_LINE:      fprintf(output_file, "NEW_LINE"); break;
+        case EOF_TOKEN:     fprintf(output_file, "EOF"); break;
+        case ERROR:         fprintf(output_file, "ERROR"); break;
+        default:            fprintf(output_file, "UNKNOWN"); break;
     }
 
-    fprintf(output_file, " [");
-    for (int j = 0; j < i; ++j) {
-        fputc(buffer[j], output_file);
+    if (token.value[0] != '\0') {
+        fprintf(output_file, " [%s]", token.value);
     }
-    fprintf(output_file, "]\n");
+
+    fprintf(output_file, "\n");
 }
 
 void prototype_parser_function() {
@@ -331,7 +237,7 @@ int main(int argc, char const *argv[])
     file = fopen("../samples/ahoj.IFJcode25", "r");
     if (!file) {return 1;}
 
-    output_file = fopen("tokens.txt", "w");
+    output_file = fopen("../build/tokens.txt", "w");
     if (!output_file) {return 1;}
 
     prototype_parser_function();
