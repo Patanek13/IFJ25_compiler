@@ -4,6 +4,7 @@
  * @author Patrik Lošťák (xlostap00)
  * @details This file contains the definitions and declarations for error handlingin the IFJ project.
  */
+
 #ifndef IFJ_ERROR_H
 #define IFJ_ERROR_H
 
