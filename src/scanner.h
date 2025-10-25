@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 
-#define BUFFER_SIZE 255
+#define BUFFER_SIZE 256
 #define KEYWORD_LIST_LENGTH 15
 
 // Token types enum prototype
@@ -22,8 +22,9 @@ typedef enum {
     NOT_EQUAL,
     AND,
     OR,
-
     DOT,
+    COMMA,
+
     PLUS,
     MINUS,
     MULTIPLY,
@@ -35,6 +36,7 @@ typedef enum {
     NUMBER,
     STRING,
 
+    NEW_LINE,
     EOF_TOKEN
 } TokenType;
 
