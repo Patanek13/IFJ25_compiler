@@ -8,33 +8,29 @@
 
 // Token types enum prototype
 typedef enum {
-    BLOCK_START,
-    BLOCK_END,
-    BRACKET_START,
-    BRACKET_END,
-    EQUAL,
-    EQUAL_EQUAL,
-    LESS,
-    LESS_EQUAL,
-    MORE,
-    MORE_EQUAL,
-    NOT,
-    NOT_EQUAL,
-    AND,
-    OR,
-    DOT,
-    COMMA,
+    // Single character tokens
+    BLOCK_START, BLOCK_END,
+    BRACKET_START, BRACKET_END,
+    PLUS, MINUS, MULTIPLY, DIVIDE,
+    DOT, COMMA,
 
-    PLUS,
-    MINUS,
-    MULTIPLY,
-    DIVIDE,
+    // One or two character tokens
+    EQUAL, EQUAL_EQUAL,
+    LESS, LESS_EQUAL,
+    MORE, MORE_EQUAL,
+    NOT, NOT_EQUAL,
+    AND, OR,
 
+    // Literals
     ID,
-    KEYWORD,
     GLOBAL_ID,
     NUMBER,
     STRING,
+
+    // Keywords
+    CLASS, IF, ELSE, IS, NULL_KEYWORD,
+    RETURN, VAR, WHILE, IFJ, STATIC, IMPORT,
+    FOR, NUM_TYPE, STRING_TYPE, NULL_TYPE,
 
     NEW_LINE,
     EOF_TOKEN
