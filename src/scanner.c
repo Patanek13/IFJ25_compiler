@@ -1,3 +1,11 @@
+/**
+ * @file scanner.c
+ * @author Petr David Lanca
+ * @brief Scanner implementation for tokenizing input
+ * @date 2025-10-01
+ *
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,27 +15,10 @@
 FILE *file;
 char c;
 char buffer[BUFFER_SIZE];
-char i = 0;
-char keywords[KEYWORD_LIST_LENGTH][255] = {
-    "class",
-    "if",
-    "else",
-    "is",
-    "null",
-    "return",
-    "var",
-    "while",
-    "Ifj",
-    "static",
-    "import",
-    "for",
-    "Num",
-    "String",
-    "Null"
-};
+int index = 0; 
 
 void reset_buffer() {
-    i = 0;
+    index = 0;
     for (int j = 0; j < BUFFER_SIZE; j++) {
         buffer[j] = 0;
     }
@@ -35,8 +26,8 @@ void reset_buffer() {
 
 char advance() {
     c = fgetc(file);
-    buffer[i] = c;
-    i++;
+    buffer[index] = c;
+    index++;
     return c;
 }
 
@@ -55,6 +46,40 @@ Token add_token(TokenType type) {
     Token token;
     token.type = type;
     return token;
+}
+
+typedef struct {
+    char* keyword;
+    TokenType token_type;
+} KeywordEntry;
+
+// Static keyword lookup table
+static KeywordEntry keyword_table[] = {
+    {"class", CLASS},
+    {"if", IF},
+    {"else", ELSE},
+    {"is", IS},
+    {"null", NULL_KEYWORD},
+    {"return", RETURN},
+    {"var", VAR},
+    {"while", WHILE},
+    {"Ifj", IFJ},
+    {"static", STATIC},
+    {"import", IMPORT},
+    {"for", FOR},
+    {"Num", NUM_TYPE},
+    {"String", STRING_TYPE},
+    {"Null", NULL_TYPE},
+    {NULL, 0} // Sentinel
+};
+
+TokenType lookup_keyword(const char* word) {
+    for (int i = 0; keyword_table[i].keyword != NULL; i++) {
+        if (strcmp(word, keyword_table[i].keyword) == 0) {
+            return keyword_table[i].token_type;
+        }
+    }
+    return ID; // Not a keyword, return identifier
 }
 
 Token get_token() {
@@ -82,14 +107,9 @@ Token get_token() {
             c = advance();
         }
 
-        for (int j = 0; j < KEYWORD_LIST_LENGTH; j++)
-        {
-            if (strcmp(buffer, keywords[j])) {
-                return add_token(KEYWORD);
-            }
-        }
-
-        return add_token(ID);
+        // Check if it's a keyword using lookup table
+        TokenType keyword_type = lookup_keyword(buffer);
+        return add_token(keyword_type);
     }
 
     //TODO number
@@ -141,10 +161,13 @@ Token get_token() {
             return add_token(match('=') ? NOT_EQUAL : NOT);
 
         case '&':
-            return add_token(match('&') ? AND : EOF_TOKEN);
+            return add_token(match('&') ? AND : ERROR);
 
         case '|':
-            return add_token(match('|') ? OR : EOF_TOKEN);
+            return add_token(match('|') ? OR : ERROR);
+
+        case '\n':
+            return add_token(NEW_LINE); break;
 
         case EOF:
             return add_token(EOF_TOKEN); break;

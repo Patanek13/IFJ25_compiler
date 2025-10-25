@@ -1,10 +1,17 @@
+/**
+ * @file scanner.h
+ * @author Petr David Lanca
+ * @brief Scanner header file for token definitions
+ * @date 2025-10-01
+ *
+ */
+
 #ifndef SCANNER_H
 #define SCANNER_H
 
 #include <stdio.h>
 
-#define BUFFER_SIZE 256
-#define KEYWORD_LIST_LENGTH 15
+#define BUFFER_SIZE 512
 
 // Token types enum prototype
 typedef enum {
@@ -33,7 +40,8 @@ typedef enum {
     FOR, NUM_TYPE, STRING_TYPE, NULL_TYPE,
 
     NEW_LINE,
-    EOF_TOKEN
+    EOF_TOKEN,
+    ERROR
 } TokenType;
 
 // Token structure prototype
