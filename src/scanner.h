@@ -15,6 +15,7 @@
 
 // Token types enum prototype
 typedef enum {
+    
     // Single character tokens
     BLOCK_START, BLOCK_END,
     BRACKET_START, BRACKET_END,
@@ -31,14 +32,16 @@ typedef enum {
     // Literals
     ID,
     GLOBAL_ID,
-    NUMBER,
+    INTEGER,
     STRING,
+    BOOLEAN,
 
     // Keywords
     CLASS, IF, ELSE, IS, NULL_KEYWORD,
-    RETURN, VAR, WHILE, IFJ, STATIC, IMPORT,
-    FOR, NUM_TYPE, STRING_TYPE, NULL_TYPE,
+    RETURN, VAR, WHILE, IFJ, STATIC, IMPORT, FOR,
+    INT_TYPE, STR_TYPE, NULL_TYPE, BOOL_TYPE,
 
+    // Special tokens
     NEW_LINE,
     EOF_TOKEN,
     ERROR

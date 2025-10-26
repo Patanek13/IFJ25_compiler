@@ -44,7 +44,7 @@ Token add_token(TokenType type) {
     Token token;
     token.type = type;
 
-    if (token.type == STRING || token.type == ID || token.type == NUMBER) {
+    if (token.type == STRING || token.type == ID || token.type == INTEGER) {
         strncpy(token.value, buffer, i);
         token.value[i] = '\0'; // Null-terminate the string
     } else {
@@ -71,9 +71,10 @@ static KeywordEntry keyword_table[] = {
     {"static", STATIC},
     {"import", IMPORT},
     {"for", FOR},
-    {"Num", NUM_TYPE},
-    {"String", STRING_TYPE},
+    {"Num", INT_TYPE},
+    {"String", STR_TYPE},
     {"Null", NULL_TYPE},
+    {"Boolean", BOOL_TYPE},
     {NULL, 0} // Sentinel
 };
 
@@ -121,7 +122,7 @@ Token get_token() {
             c = advance();
         }
         
-        return add_token(NUMBER);
+        return add_token(INTEGER);
     }
 
     // TODO comments
@@ -186,11 +187,13 @@ void print_token(Token token) {
         case STATIC:        fprintf(output_file, "STATIC"); break;
         case IMPORT:        fprintf(output_file, "IMPORT"); break;
         case FOR:           fprintf(output_file, "FOR"); break;
-        case NUM_TYPE:      fprintf(output_file, "NUM_TYPE"); break;
-        case STRING_TYPE:   fprintf(output_file, "STRING_TYPE"); break;
+        case INT_TYPE:      fprintf(output_file, "INT_TYPE"); break;
+        case STR_TYPE:      fprintf(output_file, "STR_TYPE"); break;
         case NULL_TYPE:     fprintf(output_file, "NULL_TYPE"); break;
-        case NUMBER:        fprintf(output_file, "NUMBER"); break;
+        case BOOL_TYPE:     fprintf(output_file, "BOOL_TYPE"); break;
+        case INTEGER:       fprintf(output_file, "INTEGER"); break;
         case STRING:        fprintf(output_file, "STRING"); break;
+        case BOOLEAN:       fprintf(output_file, "BOOLEAN"); break;
         case BLOCK_START:   fprintf(output_file, "BLOCK_START"); break;
         case BLOCK_END:     fprintf(output_file, "BLOCK_END"); break;
         case BRACKET_START: fprintf(output_file, "BRACKET_START"); break;
