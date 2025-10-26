@@ -10,6 +10,7 @@
 #define SCANNER_H
 
 #include <stdio.h>
+#include <stdbool.h>
 
 #define BUFFER_SIZE 512
 
@@ -50,7 +51,12 @@ typedef enum {
 // Token structure prototype
 typedef struct {
     TokenType type;
-    char value[BUFFER_SIZE];
+    union {
+        int integer;
+        double floating;
+        char* string;
+        bool boolean;
+    } value;
 } Token;
 
 #endif // SCANNER_H
