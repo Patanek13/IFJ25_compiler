@@ -1,41 +1,47 @@
+/**
+ * @file scanner.h
+ * @author Petr David Lanca
+ * @brief Scanner header file for token definitions
+ * @date 2025-10-01
+ *
+ */
+
 #ifndef SCANNER_H
 #define SCANNER_H
 
 #include <stdio.h>
 
-#define BUFFER_SIZE 255
-#define KEYWORD_LIST_LENGTH 15
+#define BUFFER_SIZE 512
 
 // Token types enum prototype
 typedef enum {
-    BLOCK_START,
-    BLOCK_END,
-    BRACKET_START,
-    BRACKET_END,
-    EQUAL,
-    EQUAL_EQUAL,
-    LESS,
-    LESS_EQUAL,
-    MORE,
-    MORE_EQUAL,
-    NOT,
-    NOT_EQUAL,
-    AND,
-    OR,
+    // Single character tokens
+    BLOCK_START, BLOCK_END,
+    BRACKET_START, BRACKET_END,
+    PLUS, MINUS, MULTIPLY, DIVIDE,
+    DOT, COMMA,
 
-    DOT,
-    PLUS,
-    MINUS,
-    MULTIPLY,
-    DIVIDE,
+    // One or two character tokens
+    EQUAL, EQUAL_EQUAL,
+    LESS, LESS_EQUAL,
+    MORE, MORE_EQUAL,
+    NOT, NOT_EQUAL,
+    AND, OR,
 
+    // Literals
     ID,
-    KEYWORD,
     GLOBAL_ID,
     NUMBER,
     STRING,
 
-    EOF_TOKEN
+    // Keywords
+    CLASS, IF, ELSE, IS, NULL_KEYWORD,
+    RETURN, VAR, WHILE, IFJ, STATIC, IMPORT,
+    FOR, NUM_TYPE, STRING_TYPE, NULL_TYPE,
+
+    NEW_LINE,
+    EOF_TOKEN,
+    ERROR
 } TokenType;
 
 // Token structure prototype
