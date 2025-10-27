@@ -79,7 +79,7 @@ static KeywordEntry keyword_table[] = {
     {"Num", INT_TYPE},
     {"String", STR_TYPE},
     {"Null", NULL_TYPE},
-    {"Boolean", BOOL_TYPE},
+    {"Bool", BOOL_TYPE},
     {NULL, 0} // Sentinel
 };
 
@@ -124,7 +124,7 @@ Token get_token() {
     // Global ID
     else if (c == '_'){
         if (match('_')) {
-            c = advance(); // consume second '_'
+            c = advance();
             while (peek() >= 'a' && peek() <= 'z' || peek() >= 'A' && peek() <= 'Z') {
                 c = advance();
             }
@@ -146,6 +146,7 @@ Token get_token() {
 
     // TODO comments
     else if (c == '/' && match('/')) {
+        advance();
         while (c != '\n') {
             c = advance();
         }
@@ -154,7 +155,9 @@ Token get_token() {
 
     // Multiline comments
     else if (c == '/' && match('*')) {
-        while (c == '*' && match('/')) {
+        advance();
+        advance();
+        while (!(c == '*' && match('/'))) {
             advance();
         }
         return get_token(); // Recursively get the next token
