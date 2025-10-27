@@ -19,6 +19,7 @@ char buffer[BUFFER_SIZE];
 int i = 0; 
 
 void reset_buffer() {
+    memset(buffer, 0, BUFFER_SIZE);
     i = 0;
 }
 
@@ -44,12 +45,16 @@ Token add_token(TokenType type) {
     Token token;
     token.type = type;
 
-    if (token.type == STRING || token.type == ID || token.type == NUMBER) {
-        strncpy(token.value, buffer, i);
-        token.value[i] = '\0'; // Null-terminate the string
-    } else {
-        token.value[0] = '\0'; // No value for other token types
+    if (token.type == STRING || token.type == ID || token.type == GLOBAL_ID) {
+        strncpy(token.value.string, buffer, i);
+        token.value.string[i] = '\0';
     }
+
+    if (token.type == INTEGER) {
+        buffer[i] = '\0';
+        token.value.integer = atoi(buffer);
+    }
+
     return token;
 }
 
@@ -71,16 +76,17 @@ static KeywordEntry keyword_table[] = {
     {"static", STATIC},
     {"import", IMPORT},
     {"for", FOR},
-    {"Num", NUM_TYPE},
-    {"String", STRING_TYPE},
+    {"Num", INT_TYPE},
+    {"String", STR_TYPE},
     {"Null", NULL_TYPE},
+    {"Boolean", BOOL_TYPE},
     {NULL, 0} // Sentinel
 };
 
 TokenType lookup_keyword(const char* word) {
-    for (int i = 0; keyword_table[i].keyword != NULL; i++) {
-        if (strcmp(word, keyword_table[i].keyword) == 0) {
-            return keyword_table[i].token_type;
+    for (int j = 0; keyword_table[j].keyword != NULL; j++) {
+        if (strcmp(word, keyword_table[j].keyword) == 0) {
+            return keyword_table[j].token_type;
         }
     }
     return ID; // Not a keyword, return identifier
@@ -115,19 +121,41 @@ Token get_token() {
         }
     }
 
+    // Global ID
+    else if (c == '_'){
+        if (match('_')) {
+            c = advance(); // consume second '_'
+            while (peek() >= 'a' && peek() <= 'z' || peek() >= 'A' && peek() <= 'Z') {
+                c = advance();
+            }
+            return add_token(GLOBAL_ID);
+        }
+        else {
+            return add_token(ERROR);
+        }
+    }
+
     // TODO number
     else if (c >= '1' && c <= '9') {
         while (peek() >= '0' && peek() <= '9') {
             c = advance();
         }
         
-        return add_token(NUMBER);
+        return add_token(INTEGER);
     }
 
     // TODO comments
     else if (c == '/' && match('/')) {
         while (c != '\n') {
             c = advance();
+        }
+        return get_token(); // Recursively get the next token
+    }
+
+    // Multiline comments
+    else if (c == '/' && match('*')) {
+        while (c == '*' && match('/')) {
+            advance();
         }
         return get_token(); // Recursively get the next token
     }
@@ -153,6 +181,7 @@ Token get_token() {
         case '(': return add_token(BRACKET_START);
         case ')': return add_token(BRACKET_END);
         case '.': return add_token(DOT);
+        case ',': return add_token(COMMA);
         case '+': return add_token(PLUS);
         case '-': return add_token(MINUS);
         case '*': return add_token(MULTIPLY);
@@ -164,6 +193,9 @@ Token get_token() {
         case '!': return add_token(match('=') ? NOT_EQUAL : NOT);
         case '&': return add_token(match('&') ? AND : ERROR);
         case '|': return add_token(match('|') ? OR : ERROR);
+        // This shit
+        case ':': return add_token(COLON);
+        case '?': return add_token(QUESTION);
         // Special cases
         case '\n': return add_token(NEW_LINE);
         default: return add_token(ERROR);
@@ -186,11 +218,13 @@ void print_token(Token token) {
         case STATIC:        fprintf(output_file, "STATIC"); break;
         case IMPORT:        fprintf(output_file, "IMPORT"); break;
         case FOR:           fprintf(output_file, "FOR"); break;
-        case NUM_TYPE:      fprintf(output_file, "NUM_TYPE"); break;
-        case STRING_TYPE:   fprintf(output_file, "STRING_TYPE"); break;
+        case INT_TYPE:      fprintf(output_file, "INT_TYPE"); break;
+        case STR_TYPE:      fprintf(output_file, "STR_TYPE"); break;
         case NULL_TYPE:     fprintf(output_file, "NULL_TYPE"); break;
-        case NUMBER:        fprintf(output_file, "NUMBER"); break;
+        case BOOL_TYPE:     fprintf(output_file, "BOOL_TYPE"); break;
+        case INTEGER:       fprintf(output_file, "INTEGER"); break;
         case STRING:        fprintf(output_file, "STRING"); break;
+        case BOOLEAN:       fprintf(output_file, "BOOLEAN"); break;
         case BLOCK_START:   fprintf(output_file, "BLOCK_START"); break;
         case BLOCK_END:     fprintf(output_file, "BLOCK_END"); break;
         case BRACKET_START: fprintf(output_file, "BRACKET_START"); break;
@@ -217,8 +251,14 @@ void print_token(Token token) {
         default:            fprintf(output_file, "UNKNOWN"); break;
     }
 
-    if (token.value[0] != '\0') {
-        fprintf(output_file, " [%s]", token.value);
+    if (token.type == INTEGER) {
+        fprintf(output_file, "        INT[%d]", token.value.integer);
+    } else if (token.type == STRING) {
+        fprintf(output_file, "         STR[%s]", token.value.string);
+    } else if (token.type == ID) {
+        fprintf(output_file, "             STR[%s]", token.value.string);
+    } else if (token.type == GLOBAL_ID) {
+        fprintf(output_file, "      STR[%s]", token.value.string);
     }
 
     fprintf(output_file, "\n");
