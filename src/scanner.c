@@ -19,6 +19,7 @@ char buffer[BUFFER_SIZE];
 int i = 0; 
 
 void reset_buffer() {
+    memset(buffer, 0, BUFFER_SIZE);
     i = 0;
 }
 
@@ -44,9 +45,16 @@ Token add_token(TokenType type) {
     Token token;
     token.type = type;
 
-    if (token.type == STRING || token.type == ID || token.type == INTEGER) {
+    if (token.type == STRING || token.type == ID) {
         strncpy(token.value.string, buffer, i);
+        token.value.string[i] = '\0';
     }
+
+    if (token.type == INTEGER) {
+        buffer[i] = '\0';
+        token.value.integer = atoi(buffer);
+    }
+
     return token;
 }
 
@@ -76,9 +84,9 @@ static KeywordEntry keyword_table[] = {
 };
 
 TokenType lookup_keyword(const char* word) {
-    for (int i = 0; keyword_table[i].keyword != NULL; i++) {
-        if (strcmp(word, keyword_table[i].keyword) == 0) {
-            return keyword_table[i].token_type;
+    for (int j = 0; keyword_table[j].keyword != NULL; j++) {
+        if (strcmp(word, keyword_table[j].keyword) == 0) {
+            return keyword_table[j].token_type;
         }
     }
     return ID; // Not a keyword, return identifier
@@ -215,6 +223,14 @@ void print_token(Token token) {
         case EOF_TOKEN:     fprintf(output_file, "EOF"); break;
         case ERROR:         fprintf(output_file, "ERROR"); break;
         default:            fprintf(output_file, "UNKNOWN"); break;
+    }
+
+    if (token.type == INTEGER) {
+        fprintf(output_file, "        INT[%d]", token.value.integer);
+    } else if (token.type == STRING) {
+        fprintf(output_file, "         STR[%s]", token.value.string);
+    } else if (token.type == ID) {
+        fprintf(output_file, "             STR[%s]", token.value.string);
     }
 
     fprintf(output_file, "\n");

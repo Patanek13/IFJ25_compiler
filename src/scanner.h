@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-#define BUFFER_SIZE 512
+#define BUFFER_SIZE 1024
 
 // Token types enum prototype
 typedef enum {
