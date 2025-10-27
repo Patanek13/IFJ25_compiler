@@ -54,7 +54,7 @@ typedef struct {
     union {
         int integer;
         double floating;
-        char* string;
+        char string[BUFFER_SIZE];
         bool boolean;
     } value;
 } Token;

@@ -45,10 +45,7 @@ Token add_token(TokenType type) {
     token.type = type;
 
     if (token.type == STRING || token.type == ID || token.type == INTEGER) {
-        strncpy(token.value, buffer, i);
-        token.value[i] = '\0'; // Null-terminate the string
-    } else {
-        token.value[0] = '\0'; // No value for other token types
+        strncpy(token.value.string, buffer, i);
     }
     return token;
 }
@@ -218,10 +215,6 @@ void print_token(Token token) {
         case EOF_TOKEN:     fprintf(output_file, "EOF"); break;
         case ERROR:         fprintf(output_file, "ERROR"); break;
         default:            fprintf(output_file, "UNKNOWN"); break;
-    }
-
-    if (token.value[0] != '\0') {
-        fprintf(output_file, " [%s]", token.value);
     }
 
     fprintf(output_file, "\n");
