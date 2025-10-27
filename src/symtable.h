@@ -121,7 +121,7 @@ ErrorCode symtable_delete(SymTable* table, const char* key);
  * @param is_global Whether the variable is global
  * @return SymbolData for the variable
  */
-SymbolData create_variable_symbol(DataType type, bool is_global);
+SymbolData create_variable_symbol(DataType type);
 
 /*
  * @brief Create a function symbol
