@@ -80,7 +80,7 @@ static KeywordEntry keyword_table[] = {
     {"String", STR_TYPE},
     {"Null", NULL_TYPE},
     {"Bool", BOOL_TYPE},
-    {NULL, 0} // Sentinel
+    {NULL, 0}
 };
 
 TokenType lookup_keyword(const char* word) {
@@ -89,11 +89,11 @@ TokenType lookup_keyword(const char* word) {
             return keyword_table[j].token_type;
         }
     }
-    return ID; // Not a keyword, return identifier
+    return ID;
 }
 
 Token get_token() {
-    // Reset buffer
+
     reset_buffer();
 
     c = advance();
@@ -150,7 +150,7 @@ Token get_token() {
         while (c != '\n') {
             c = advance();
         }
-        return get_token(); // Recursively get the next token
+        return get_token();
     }
 
     // Multiline comments
@@ -160,18 +160,19 @@ Token get_token() {
         while (!(c == '*' && match('/'))) {
             advance();
         }
-        return get_token(); // Recursively get the next token
+        return get_token();
     }
 
     // String token
     else if (c == '"') {
-        i--; // Don't include the opening quote
+        reset_buffer();
         c = advance();
         while (c != '"' && c != '\n' && c != EOF) {
             c = advance();
         }
         if (c == '"') {
-            i--; // Don't include the closing quote
+            i--;
+            buffer[i] = '\0';
             return add_token(STRING);
         }
         return add_token(ERROR);
@@ -189,6 +190,8 @@ Token get_token() {
         case '-': return add_token(MINUS);
         case '*': return add_token(MULTIPLY);
         case '/': return add_token(DIVIDE);
+        case ':': return add_token(COLON);
+        case '?': return add_token(QUESTION);
         // Two character tokens
         case '=': return add_token(match('=') ? EQUAL_EQUAL : EQUAL);
         case '<': return add_token(match('=') ? LESS_EQUAL : LESS);
@@ -196,9 +199,6 @@ Token get_token() {
         case '!': return add_token(match('=') ? NOT_EQUAL : NOT);
         case '&': return add_token(match('&') ? AND : ERROR);
         case '|': return add_token(match('|') ? OR : ERROR);
-        // This shit
-        case ':': return add_token(COLON);
-        case '?': return add_token(QUESTION);
         // Special cases
         case '\n': return add_token(NEW_LINE);
         default: return add_token(ERROR);
