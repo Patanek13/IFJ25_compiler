@@ -76,31 +76,87 @@ typedef struct SymTable {
 
 // ==== Function prototypes =====
 
-// Initialize symbol table
+/*
+ * @brief Initialize symbol table
+ * @param table Pointer to the symbol table
+ * @return ErrorCode ERR_OK on success, ERR_INTERNAL on failure
+ */
 ErrorCode symtable_init(SymTable* table);
 
-// Free symbol table
+/*
+ * @brief Free symbol table resources
+ * @param table Pointer to the symbol table
+ */
 void symtable_free(SymTable* table);
 
-// Hash function
-size_t symtable_hash(const char* key, size_t table_size);
+/*
+ * @brief Hash function for symbol table
+ * @param key Pointer to the symbol name
+ * @return Hash value
+ */
+size_t symtable_hash(const char* key);
 
-// Insert symbol into table
+/*
+ * @brief Insert symbol into table
+ * @param table Pointer to the symbol table
+ * @param key Pointer to the symbol name
+ * @param data Symbol data to insert
+ * @return ErrorCode ERR_OK on success, ERR_SEMANTIC_REDEFINITION if symbol already exists
+ */
 ErrorCode symtable_insert(SymTable* table, const char* key, SymbolData data);
 
-// Lookup symbol in table
+/*
+ * @brief Lookup symbol in table
+ * @param table Pointer to the symbol table
+ * @param key Pointer to the symbol name
+ * @return Pointer to the symbol data if found, NULL otherwise
+ */
 SymbolData *symtable_lookup(SymTable* table, const char* key);
 
-// Delete symbol from table
+/*
+ * @brief Delete symbol from table
+ * @param table Pointer to the symbol table
+ * @param key Pointer to the symbol name
+ * @return ErrorCode ERR_OK on success, ERR_SEMANTIC_UNDEFINED if symbol does not exist
+ */
 ErrorCode symtable_delete(SymTable* table, const char* key);
 
-// Helpers for SymbolData
+/*
+ * @brief Create a variable symbol
+ * @param type Data type of the variable
+ * @param is_global Whether the variable is global
+ * @return SymbolData for the variable
+ */
 SymbolData create_variable_symbol(DataType type, bool is_global);
+
+/*
+ * @brief Create a function symbol
+ * @param return_type Return type of the function
+ * @param param_count Number of parameters
+ * @return SymbolData for the function
+ */
 SymbolData create_function_symbol(DataType return_type, size_t param_count);
+
+/*
+ * @brief Create a getter symbol
+ * @param type Data type of the getter
+ * @return SymbolData for the getter
+ */
 SymbolData create_getter_symbol(DataType type);
+
+/*
+ * @brief Create a setter symbol
+ * @param param_type Data type of the setter's parameter
+ * @return SymbolData for the setter
+ */
 SymbolData create_setter_symbol(DataType param_type);
 
-// Function to make unique keys for functions
+/*
+ * @brief Generate a unique key for function symbols based on name and parameter count
+ * @param name Function name
+ * @param param_count Number of parameters
+ * @return Dynamically allocated string representing the unique key
+ */
 char *make_function_key(const char* name, size_t param_count);
 
 #endif // IFJ_SYMTABLE_H
