@@ -74,7 +74,7 @@ typedef struct SymTable {
     size_t count; // number of occupied entries
 } SymTable;
 
-// ==== Function prototypes =====
+// ====== Function prototypes =======================
 
 /*
  * @brief Initialize symbol table
