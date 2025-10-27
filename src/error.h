@@ -2,7 +2,7 @@
  * @file error.h
  * @brief Error handling definitions
  * @author Patrik Lošťák (xlostap00)
- * @details This file contains the definitions and declarations for error handlingin the IFJ project.
+ * @details This file contains the definitions and declarations for error handling in the IFJ project.
  */
 
 #ifndef IFJ_ERROR_H
