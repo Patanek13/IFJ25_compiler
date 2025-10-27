@@ -42,6 +42,9 @@ typedef enum {
     RETURN, VAR, WHILE, IFJ, STATIC, IMPORT, FOR,
     INT_TYPE, STR_TYPE, NULL_TYPE, BOOL_TYPE,
 
+    // That shit
+    COLON, QUESTION,
+
     // Special tokens
     NEW_LINE,
     EOF_TOKEN,

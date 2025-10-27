@@ -45,7 +45,7 @@ Token add_token(TokenType type) {
     Token token;
     token.type = type;
 
-    if (token.type == STRING || token.type == ID) {
+    if (token.type == STRING || token.type == ID || token.type == GLOBAL_ID) {
         strncpy(token.value.string, buffer, i);
         token.value.string[i] = '\0';
     }
@@ -121,6 +121,20 @@ Token get_token() {
         }
     }
 
+    // Global ID
+    else if (c == '_'){
+        if (match('_')) {
+            c = advance(); // consume second '_'
+            while (peek() >= 'a' && peek() <= 'z' || peek() >= 'A' && peek() <= 'Z') {
+                c = advance();
+            }
+            return add_token(GLOBAL_ID);
+        }
+        else {
+            return add_token(ERROR);
+        }
+    }
+
     // TODO number
     else if (c >= '1' && c <= '9') {
         while (peek() >= '0' && peek() <= '9') {
@@ -134,6 +148,14 @@ Token get_token() {
     else if (c == '/' && match('/')) {
         while (c != '\n') {
             c = advance();
+        }
+        return get_token(); // Recursively get the next token
+    }
+
+    // Multiline comments
+    else if (c == '/' && match('*')) {
+        while (c == '*' && match('/')) {
+            advance();
         }
         return get_token(); // Recursively get the next token
     }
@@ -159,6 +181,7 @@ Token get_token() {
         case '(': return add_token(BRACKET_START);
         case ')': return add_token(BRACKET_END);
         case '.': return add_token(DOT);
+        case ',': return add_token(COMMA);
         case '+': return add_token(PLUS);
         case '-': return add_token(MINUS);
         case '*': return add_token(MULTIPLY);
@@ -170,6 +193,9 @@ Token get_token() {
         case '!': return add_token(match('=') ? NOT_EQUAL : NOT);
         case '&': return add_token(match('&') ? AND : ERROR);
         case '|': return add_token(match('|') ? OR : ERROR);
+        // This shit
+        case ':': return add_token(COLON);
+        case '?': return add_token(QUESTION);
         // Special cases
         case '\n': return add_token(NEW_LINE);
         default: return add_token(ERROR);
@@ -231,6 +257,8 @@ void print_token(Token token) {
         fprintf(output_file, "         STR[%s]", token.value.string);
     } else if (token.type == ID) {
         fprintf(output_file, "             STR[%s]", token.value.string);
+    } else if (token.type == GLOBAL_ID) {
+        fprintf(output_file, "      STR[%s]", token.value.string);
     }
 
     fprintf(output_file, "\n");
