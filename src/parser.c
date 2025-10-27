@@ -41,19 +41,32 @@ void stack_push_state(Stack* stack, STATES state, bool terminal){
     stack->element[stack->topIndex].terminal = terminal;
 }
 
-int command_push(Stack* stack){ /* nedokncene !*/
+bool is_operator(Token token){ /* doplnit!!!*/
+    return ((token.type == MULTIPLY) || (token.type == PLUS) || (token.type == MINUS) || (token.type == DIVIDE));
+}
+
+bool is_operand(Token token){
+    return((token.type == ID) || (token.type == GLOBAL_ID) || (token.type == NUMBER) || (token.type == STRING)); /* plus func return*/
+}
+
+int command_push(Stack* stack){ /* nedokoncene pozor na nacitanie tokenu! tu by mal byt iba vyber state a automaticke popnutie stacku*/
     Token token;
     token = get_token();
 
-    TokenType token_id_switch = token.type;
-
-    switch(token_id_switch){
+    switch(token.type){
         case IFJ:
             stack_rule_push(BUILT_IN, stack);
             return 0;
         case ID:
-            stack_rule_push(FUNC_CALL, stack);
-            return 1;
+            token = get_token();
+            if (token.type == DOT){
+                stack_rule_push(FUNC_CALL, stack);
+                return 1;
+            } else if (is_operator(token)){
+                stack_rule_push(EXPRESSION, stack);
+                return 1;
+            }
+            return -1;
         case GLOBAL_ID:
         case VAR:
             stack_rule_push(DECLARE, stack);
@@ -96,7 +109,7 @@ int stack_rule_push(STATES state, Stack* stack){ /* poupravit aby sa tokeny spra
             stack_push_token(stack, ID, "for", true);
             stack_push_token(stack, STRING, "ifj25", true);
             stack_push_token(stack, IMPORT, "import", true);
-            return 0;
+            return 1;
         case PROGRAM:
             stack_push_state(stack, BLOCK, false);
             stack_push_token(stack, ID, "Program", true);
@@ -108,24 +121,24 @@ int stack_rule_push(STATES state, Stack* stack){ /* poupravit aby sa tokeny spra
             stack_push_state(stack, COMMAND, false);
             stack_push_token(stack, NEW_LINE, "\n", true);
             stack_push_token(stack, BLOCK_START, "{", true);
-            return 2;
-        case COMMAND:
+            return 1;
+        case COMMAND: /* tu pozor na chybajuce command_n*/
             if (command_push(stack) < 0){
                 printf("SYNTAX ERROR\n");
                 return -1;
             }
             stack_push_token(stack, NEW_LINE, "newline", true);
-            return 3;
+            return 1;
         case COMMAND_N: /* este doplnit to aby command-n nemusel existovat*/
             stack_push_token(stack, NEW_LINE, "newline", true);
             stack_rule_push(COMMAND, stack);
-            return 4;
+            return 1;
         case FUNCTION:
             stack_push_state(stack, BLOCK, false);
             stack_push_state(stack, BRACKETS, false);
             stack_push_token(stack, ID, "\0", true);
             stack_push_token(stack, STATIC, "static", true);
-            return 5;
+            return 1;
         
         case FUNCTION_SETTER:
             stack_push_state(stack, BLOCK, false);
@@ -134,7 +147,27 @@ int stack_rule_push(STATES state, Stack* stack){ /* poupravit aby sa tokeny spra
             stack_push_token(stack, BRACKET_START, "(", true);
             stack_push_token(stack, ID, "\0", true);
             stack_push_token(stack, STATIC, "static", true);
-            return 6;
+            return 1;
+        
+        case FUNC_CALL:
+            stack_push_token(stack, NEW_LINE, "newline", true);
+            stack_push_token(stack, BRACKET_END, ")", true);
+            stack_push_state(stack, PARAMS_N, false);
+            stack_push_state(stack, PARAMS, false);
+            stack_push_token(stack, BRACKET_START, "(", true);
+            stack_push_token(stack, ID, "\0", true);
+            return 1;
+
+        case BUILT_IN:
+            stack_push_state(stack, COMMAND_N, false);
+            stack_push_token(stack, BRACKET_END, ")", true);
+            stack_push_state(stack, PARAMS_N, false);
+            stack_push_state(stack, PARAMS, false);
+            stack_push_token(stack, BRACKET_START, "(", true);
+            stack_push_token(stack, ID, "\0", true);
+            stack_push_token(stack, DOT, ".", true);
+            /* pripadne aj IFJ*/
+            return 1;
 
         case PARAMS: /* este doplnit to aby nemusel existovat a bool ()*/ 
             Token token;
@@ -143,21 +176,40 @@ int stack_rule_push(STATES state, Stack* stack){ /* poupravit aby sa tokeny spra
                 printf("SYNTAX ERROR\n");
                 return -1;
             }
-            return 7;
+            return 1;
 
         case PARAMS_N: /* este doplnit to aby nemusel existovat (var)*/
             stack_push_state(stack, PARAMS_N, false);
             stack_push_state(stack, PARAMS, false);
             stack_push_token(stack, COMMA, ",", true);
-            return 8;
+            return 1;
         
         case EXPRESSION:
             stack_push_state(stack, EXPRESSION_N, false);
             stack_push_state(stack, OPERAND, false);
             stack_push_state(stack, OPERATOR, false);
             stack_push_state(stack, OPERAND, false);
-            return 9;
+            return 1;
         
+        case EXPRESSION_N:
+            stack_push_state(stack, EXPRESSION_N, false);
+            stack_push_state(stack, OPERAND, false);
+            stack_push_state(stack, OPERATOR, false);
+            return 1;
+        
+        case OPERAND:
+            if (is_operand(token)){
+                return 1;
+            }else{
+                return -1;
+            }
+
+        case OPERATOR:
+            if (is_operator(token)){
+                return 1;
+            } else {
+                return -1;
+            }
         
             
         default: 
