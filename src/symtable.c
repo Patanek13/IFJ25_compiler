@@ -9,6 +9,15 @@
 
 #include "symtable.h"
 
+// Local strdup replacement to avoid implicit declaration issues on strict standards
+static char *str_dup(const char *s) {
+  if (s == NULL) return NULL;
+  size_t len = strlen(s) + 1;
+  char *d = malloc(len);
+  if (d) memcpy(d, s, len);
+  return d;
+}
+
 /* PJW Hash Function
  * @link https://ssojet.com/compare-hashing-algorithms/bernsteins-hash-djb2-vs-pjw-hash--elf-hash
  *
@@ -105,7 +114,7 @@ ErrorCode symtable_insert(SymTable *table, const char *key, SymbolData data) {
     SymItem *item = &table->items[pos];
 
     if (item->state == SLOT_EMPTY || item->state == SLOT_DELETED) {
-      item->key = strdup(key);
+      item->key = str_dup(key);
       if (item->key == NULL) {
         return ERR_INTERNAL; // Memory allocation failure
       }
@@ -157,7 +166,7 @@ ErrorCode symtable_delete(SymTable *table, const char *key) {
 }
 
 
-SymbolData symtable_make_variable(DataType type) {
+SymbolData create_variable_symbol(DataType type) {
   SymbolData data;
   data.kind = SYM_VARIABLE;
   data.type = type;
@@ -165,7 +174,7 @@ SymbolData symtable_make_variable(DataType type) {
   return data;
 }
 
-SymbolData symtable_make_function(DataType return_type,size_t param_count) {
+SymbolData create_function_symbol(DataType return_type, size_t param_count) {
   SymbolData data;
   data.kind = SYM_FUNCTION;
   data.type = return_type;
@@ -190,15 +199,15 @@ SymbolData symtable_make_function(DataType return_type,size_t param_count) {
 }
 
 
-SymbolData symtable_make_getter(DataType type) {
-  SymbolData data = symtable_make_function(type, 0);
+SymbolData create_getter_symbol(DataType type) {
+  SymbolData data = create_function_symbol(type, 0);
   data.kind = SYM_GETTER;
   data.defined = true;
   return data;
 }
 
-SymbolData symtable_make_setter(DataType param_type) {
-  SymbolData data = symtable_make_function(TYPE_NULL, 1);
+SymbolData create_setter_symbol(DataType param_type) {
+  SymbolData data = create_function_symbol(TYPE_NULL, 1);
   data.kind = SYM_SETTER;
   data.defined = true;
 
