@@ -85,9 +85,9 @@ SymbolData *symtable_lookup(SymTable *table, const char *key) {
     return NULL;
   }
 
-  size_t index = symtable_hash(key);
-  for (size_t idx = 0; idx < table->size; idx++) {
-    size_t pos = (index + idx) % table->size;
+  unsigned index = symtable_hash(key);
+  for (unsigned idx = 0; idx < table->size; idx++) {
+    unsigned pos = (index + idx) % table->size;
     SymItem *item = &table->items[pos];
 
     if (item->state == SLOT_EMPTY) {
@@ -107,14 +107,14 @@ ErrorCode symtable_insert(SymTable *table, const char *key, SymbolData data) {
     return ERR_INTERNAL;
   }
 
-  size_t index = symtable_hash(key);
+  unsigned index = symtable_hash(key);
 
-  for (size_t idx = 0; idx < table->size; idx++) {
-    size_t pos = (index + idx) % table->size;
+  for (unsigned idx = 0; idx < table->size; idx++) {
+    unsigned pos = (index + idx) % table->size;
     SymItem *item = &table->items[pos];
 
     if (item->state == SLOT_EMPTY || item->state == SLOT_DELETED) {
-      item->key = str_dup(key);
+      item->key = str_dup(key); // Duplicate the key
       if (item->key == NULL) {
         return ERR_INTERNAL; // Memory allocation failure
       }
@@ -139,10 +139,10 @@ ErrorCode symtable_delete(SymTable *table, const char *key) {
     return ERR_INTERNAL;
   }
 
-  size_t index = symtable_hash(key);
+  unsigned index = symtable_hash(key);
 
-  for (size_t idx = 0; idx < table->size; idx++) {
-    size_t pos = (index + idx) % table->size;
+  for (unsigned idx = 0; idx < table->size; idx++) {
+    unsigned pos = (index + idx) % table->size;
     SymItem *item = &table->items[pos];
 
     if (item->state == SLOT_EMPTY) {
@@ -188,7 +188,7 @@ SymbolData create_function_symbol(DataType return_type, size_t param_count) {
       data.info.function.param_count = 0;
     }
 
-    for (size_t idx = 0; idx < param_count; idx++) {
+    for (unsigned idx = 0; idx < param_count; idx++) {
       data.info.function.param_types[idx] = TYPE_UNDEFINED; // Initialize parameter types
     }
 
@@ -220,16 +220,29 @@ SymbolData create_setter_symbol(DataType param_type) {
 
 
 char *make_function_key(const char *name, size_t param_count) {
-  // Calculate the length needed for the new key
-  size_t name_len = strlen(name);
-  size_t key_len = name_len + 1 + 20; // 1 for '#' and 20 for param_count (enough for size_t)
+  if (name == NULL) return NULL;
 
-  char *key = malloc(key_len);
-  if (key == NULL) {
-    return NULL; // Memory allocation failure
+  /* name + '#' + decimal digits of param_count + '\0' */
+  size_t name_len = strlen(name);
+
+  size_t digits;
+  if (param_count == 0) {
+    digits = 1;
+  } else {
+    digits = 0;
+    size_t tmp = param_count;
+    while (tmp > 0) {
+      digits++;
+      tmp /= 10;
+    }
   }
 
+  size_t key_len = name_len + 1 + digits + 1; /* name + '#' + digits + '\0' */
+  char *key = malloc(key_len);
+  if (key == NULL) return NULL;
+
   snprintf(key, key_len, "%s#%zu", name, param_count);
+  // Have to free the key after use
   return key;
 }
 
