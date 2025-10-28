@@ -45,6 +45,10 @@ typedef struct SymbolData {
             DataType* param_types; // array of parameter types
             size_t param_count; // number of parameters
         } function;
+        // For setter
+        struct {
+            DataType param_type; // type of the parameter
+        } setter;
     } info;
 } SymbolData;
 
