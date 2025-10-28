@@ -1,11 +1,23 @@
+/**
+ * @file parser.h
+ * @author Šimon Čorej xcorejs00
+ * @brief Parser header fiel for definitions of stack functions and states
+ * @date 2025-10-28
+ * 
+ */
+
+#ifndef PARSER_H
+#define PARSER_H
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
 
 #include "scanner.h"
+#include "error.h"
 
-#define MAX_SIZE 10
+#define MAX_SIZE 150
 
 
 // FILE *file;
@@ -34,7 +46,6 @@ typedef enum{
     DECLARE, /* declaration of global or local variables*/
     COND_LOOP, /* if or while functions*/
     COND_LOOP_N, /* else loop only possible for if*/
-    END, /* newline character*/
     BUILT_IN, /* call of built in functions Ifj. ...*/
     BRACKETS, /* additional (<params> <params-n>) rule to differentiate setters getters and user made functions*/
 }STATES;
@@ -50,7 +61,7 @@ typedef enum{
 typedef struct{
     STATES state;
     TokenType type;
-    char* value;
+    // char* value;
     bool terminal;
 } StackElement;
 
@@ -62,3 +73,4 @@ typedef struct{
 
 
 
+#endif

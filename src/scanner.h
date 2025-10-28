@@ -33,7 +33,7 @@ typedef enum {
     // Literals
     ID,
     GLOBAL_ID,
-    INTEGER,
+    NUMBER,
     STRING,
     BOOLEAN,
 

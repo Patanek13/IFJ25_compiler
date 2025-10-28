@@ -50,7 +50,7 @@ Token add_token(TokenType type) {
         token.value.string[i] = '\0';
     }
 
-    if (token.type == INTEGER) {
+    if (token.type == NUMBER) {
         buffer[i] = '\0';
         token.value.integer = atoi(buffer);
     }
@@ -141,7 +141,7 @@ Token get_token() {
             c = advance();
         }
         
-        return add_token(INTEGER);
+        return add_token(NUMBER);
     }
 
     // TODO comments
@@ -222,7 +222,7 @@ void print_token(Token token) {
         case STR_TYPE:      fprintf(output_file, "STR_TYPE"); break;
         case NULL_TYPE:     fprintf(output_file, "NULL_TYPE"); break;
         case BOOL_TYPE:     fprintf(output_file, "BOOL_TYPE"); break;
-        case INTEGER:       fprintf(output_file, "INTEGER"); break;
+        case NUMBER:       fprintf(output_file, "NUMBER"); break;
         case STRING:        fprintf(output_file, "STRING"); break;
         case BOOLEAN:       fprintf(output_file, "BOOLEAN"); break;
         case BLOCK_START:   fprintf(output_file, "BLOCK_START"); break;
@@ -251,7 +251,7 @@ void print_token(Token token) {
         default:            fprintf(output_file, "UNKNOWN"); break;
     }
 
-    if (token.type == INTEGER) {
+    if (token.type == NUMBER) {
         fprintf(output_file, "        INT[%d]", token.value.integer);
     } else if (token.type == STRING) {
         fprintf(output_file, "         STR[%s]", token.value.string);
