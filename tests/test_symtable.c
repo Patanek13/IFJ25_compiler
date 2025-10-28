@@ -122,6 +122,32 @@ int main(void) {
     // Cleanup small table
     symtable_free(&small);
 
+    /* Test multiple functions with same name but different parameter counts */
+    SymTable funcs = {0};
+    rc = symtable_init(&funcs);
+    ASSERT(rc == ERR_OK, "init funcs table");
+
+    char *k1 = make_function_key("over", 1);
+    char *k2 = make_function_key("over", 2);
+    ASSERT(k1 != NULL && k2 != NULL, "make_function_key for overloaded names");
+
+    SymbolData of1 = create_function_symbol(TYPE_NUM, 1);
+    SymbolData of2 = create_function_symbol(TYPE_NUM, 2);
+
+    rc = symtable_insert(&funcs, k1, of1);
+    ASSERT(rc == ERR_OK, "insert overloaded function over#1");
+    rc = symtable_insert(&funcs, k2, of2);
+    ASSERT(rc == ERR_OK, "insert overloaded function over#2");
+
+    SymbolData *got1 = symtable_lookup(&funcs, k1);
+    SymbolData *got2 = symtable_lookup(&funcs, k2);
+    ASSERT(got1 != NULL && got2 != NULL, "lookup both overloaded functions");
+    if (got1) ASSERT(got1->info.function.param_count == 1, "over#1 has 1 param");
+    if (got2) ASSERT(got2->info.function.param_count == 2, "over#2 has 2 params");
+
+    free(k1); free(k2);
+    symtable_free(&funcs);
+
     printf("\nTests passed: %d, failed: %d\n", tests_passed, tests_failed);
 
     return tests_failed == 0 ? 0 : 1;
