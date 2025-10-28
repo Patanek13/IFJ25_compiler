@@ -32,7 +32,7 @@ size_t symtable_hash(const char *key) {
   while (*key) {
     hash = (hash << 4) + (unsigned char)(*key++);
     if ((high = hash & high_mask) != 0) {
-      hash ^= (high >> (8 * (sizeof(size_t) - 8))); // Clear high bits
+      hash ^= (high >> (8 * sizeof(size_t) - 8)); // Clear high bits
     }
     hash &= ~high; // Clear high bits
   }
