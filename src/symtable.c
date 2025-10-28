@@ -85,9 +85,9 @@ SymbolData *symtable_lookup(SymTable *table, const char *key) {
     return NULL;
   }
 
-  unsigned index = symtable_hash(key);
-  for (unsigned idx = 0; idx < table->size; idx++) {
-    unsigned pos = (index + idx) % table->size;
+  size_t index = symtable_hash(key);
+  for (size_t idx = 0; idx < table->size; idx++) {
+    size_t pos = (index + idx) % table->size;
     SymItem *item = &table->items[pos];
 
     if (item->state == SLOT_EMPTY) {
@@ -107,10 +107,10 @@ ErrorCode symtable_insert(SymTable *table, const char *key, SymbolData data) {
     return ERR_INTERNAL;
   }
 
-  unsigned index = symtable_hash(key);
+  size_t index = symtable_hash(key);
 
-  for (unsigned idx = 0; idx < table->size; idx++) {
-    unsigned pos = (index + idx) % table->size;
+  for (size_t idx = 0; idx < table->size; idx++) {
+    size_t pos = (index + idx) % table->size;
     SymItem *item = &table->items[pos];
 
     if (item->state == SLOT_EMPTY || item->state == SLOT_DELETED) {
@@ -139,10 +139,10 @@ ErrorCode symtable_delete(SymTable *table, const char *key) {
     return ERR_INTERNAL;
   }
 
-  unsigned index = symtable_hash(key);
+  size_t index = symtable_hash(key);
 
-  for (unsigned idx = 0; idx < table->size; idx++) {
-    unsigned pos = (index + idx) % table->size;
+  for (size_t idx = 0; idx < table->size; idx++) {
+    size_t pos = (index + idx) % table->size;
     SymItem *item = &table->items[pos];
 
     if (item->state == SLOT_EMPTY) {
@@ -188,7 +188,7 @@ SymbolData create_function_symbol(DataType return_type, size_t param_count) {
       data.info.function.param_count = 0;
     }
 
-    for (unsigned idx = 0; idx < param_count; idx++) {
+    for (size_t idx = 0; idx < param_count; idx++) {
       data.info.function.param_types[idx] = TYPE_UNDEFINED; // Initialize parameter types
     }
 
