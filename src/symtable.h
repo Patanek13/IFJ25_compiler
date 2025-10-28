@@ -11,7 +11,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <stdlib.h>
+#include <stdio.h>
 #include "error.h"
 
 #define SYMTABLE_DEFAULT_SIZE 27457 // A prime number for better hash distribution
@@ -118,7 +118,6 @@ ErrorCode symtable_delete(SymTable* table, const char* key);
 /*
  * @brief Create a variable symbol
  * @param type Data type of the variable
- * @param is_global Whether the variable is global
  * @return SymbolData for the variable
  */
 SymbolData create_variable_symbol(DataType type);
