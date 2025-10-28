@@ -232,26 +232,30 @@ void stack_clear(Stack* stack){
 //     return -1;
 // }
 
+bool match(TokenType type){
+    token = get_token();
+    return (token.type == type);
+}
+
 int func_call(){
     switch(token.type){
         case ID:
-            token = get_token();
-            if (token.type != BRACKET_START){ return SYNTAX_ERROR;}
+            if (!match(BRACKET_START)){ return SYNTAX_ERROR; }
             return func_call();
         break;
 
         case BRACKET_START:
-            token = get_token();
-            if (token.type != PARAMS){ return SYNTAX_ERROR;}
-            return func_call();
+            if (match(BRACKET_END)){ 
+                return func_call();
+            } else {
+                return params();
+            }
         break;
-
         case PARAMS:
-        case PARAMS_N:
             /* chod do params switchu*/
         case BRACKET_END:
             token = get_token();
-            if (token.type != NEW_LINE){ return SYNTAX_ERROR;}
+            if (token.type != NEW_LINE){ return SYNTAX_ERROR; }
             return ERR_OK;
         break;
 
@@ -287,8 +291,7 @@ int command(){
         case GLOBAL_ID:
         case VAR:
         case IF:
-        case STATIC:
-        case 
+        case STATIC: 
 
    }
 }
