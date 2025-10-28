@@ -222,9 +222,9 @@ SymbolData create_setter_symbol(DataType param_type) {
 char *make_function_key(const char *name, size_t param_count) {
   if (name == NULL) return NULL;
 
-  /* name + '#' + decimal digits of param_count + '\0' */
   size_t name_len = strlen(name);
 
+  // Calculate number of digits in param_count
   size_t digits;
   if (param_count == 0) {
     digits = 1;
