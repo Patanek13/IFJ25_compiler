@@ -185,10 +185,12 @@ Token get_token() {
 
     // Strings, TODO Multiline strings
     else if (c == '"') {
+        reset_buffer();
         c = advance();
         if (c == '"') {
             c = advance();
             if (c == '"') { // multiline string start
+                reset_buffer();
                 int counter = 0;
                 while (true) 
                 {
@@ -203,8 +205,10 @@ Token get_token() {
                         counter = 0;
                     }
                 }
+                i -= 3;
                 return add_token(STRING); // multiline string
             } else {
+                reset_buffer();
                 return add_token(STRING); // empty string
             }
         }
@@ -213,6 +217,7 @@ Token get_token() {
                 c = advance();
             }
             if (c == '"') {
+                i -= 1;
                 return add_token(STRING);
             } else {
                 return add_token(ERROR);
