@@ -28,7 +28,13 @@ bool is_operator(){
             || (token.type == DIVIDE));
 }
 
+/**
+ * @brief Function <BLOCK> on default calls command function
+ * 
+ * @return SYNTAX_ERROR for errors, function return value (recursion), OK if finished
+ */
 int block(){
+    /* RULE: <BLOCK> -> <{> <NEWLINE> <COMMANDS> <}> <ELSE>*/
     switch(token.type){
         case BLOCK_START:
             if (!match(NEW_LINE)){ return SYNTAX_ERROR; }
@@ -52,7 +58,13 @@ int block(){
     }
 }
 
+/**
+ * @brief Function to call user made functions
+ * 
+ * @return Function return value (recursive), SYNTAX_ERROR for errors, OK if finished
+ */
 int func_call(){
+    /* RULE: <FUNC_CALL> -> ID <(>  <PARAMS>  <)>*/
     switch(token.type){
         case ID:
             if (!match(BRACKET_START)){ return SYNTAX_ERROR; }
@@ -76,7 +88,13 @@ int func_call(){
     }
 }
 
+/**
+ * @brief Function to call built in functions
+ * 
+ * @return OK or SYNTAX_ERROR
+ */
 int built_in_call(){
+    /* RULE: <BUILT_IN_CALL> -> <IFJ> <.> <KW> <(> <PARAMS> <)> */
     switch(token.type){
         case IFJ:
             if (!match(DOT)){ return SYNTAX_ERROR; }
@@ -107,11 +125,22 @@ int built_in_call(){
     }
 }
 
+/**
+ * @brief Function to use conditions and while loops
+ * @todo correctly check while {} else {} cannot happen
+ * 
+ * @return OK or SYNTAX_ERROR
+ */
 int cond_loop(){
     switch(token.type){
         case IF:
             if (!match(BRACKET_START)){ return SYNTAX_ERROR; }
             return cond_loop;
+            break;
+        
+        case WHILE:
+            if (!match(BRACKET_START)){ return SYNTAX_ERROR; }
+            return cond_loop();
             break;
 
         case BRACKET_START:
@@ -141,7 +170,13 @@ int cond_loop(){
     }
 }
 
+/**
+ * @brief Function to assign value or expression
+ * 
+ * @return OK or SYNTAX_ERROR
+ */
 int assign(){
+    /* RULE: <ASSIGN> -> <ID> <=> <LITERAL> (or) <EXPRESSION> */
     switch(token.type){
 
         case EQUAL:
@@ -167,7 +202,13 @@ int assign(){
     }
 }
 
-int func_decl(){ /* <func_decl> -> STATIC ID <=?> <brackets> <block>*/
+/**
+ * @brief Function to declare user made functions
+ * 
+ * @return OK or SYNTAX_ERROR 
+ */
+int func_decl(){
+    /* RULE:  <FUNC_DECL> -> <STATIC> <ID> <=?> <BRACKETS> <BLOCK> */
     switch(token.type){
         case STATIC:
             if (!match(ID)){ return SYNTAX_ERROR; }
