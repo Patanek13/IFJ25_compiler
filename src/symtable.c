@@ -8,15 +8,8 @@
  */
 
 #include "symtable.h"
+#include "strutils.h"
 
-// Local strdup replacement to avoid implicit declaration issues on strict standards
-static char *str_dup(const char *s) {
-  if (s == NULL) return NULL;
-  size_t len = strlen(s) + 1;
-  char *d = malloc(len);
-  if (d) memcpy(d, s, len);
-  return d;
-}
 
 /* PJW Hash Function
  * @link https://ssojet.com/compare-hashing-algorithms/bernsteins-hash-djb2-vs-pjw-hash--elf-hash
