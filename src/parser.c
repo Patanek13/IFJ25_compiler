@@ -28,6 +28,35 @@ bool is_operator(){
             || (token.type == DIVIDE));
 }
 
+int params(){
+    switch(token.type){
+        case BRACKET_START:
+            if (match(COMMA)){ return SYNTAX_ERROR; }
+            return params();
+            break;
+        
+        case ID:
+        case STRING:
+        case NUMBER:
+        case GLOBAL_ID:
+        case BOOLEAN: /* tu este mozno doriesit (ifj.read) alebo (foo(a))*/
+            if ((!match(COMMA)) || (token.type != BRACKET_END)){ return SYNTAX_ERROR; }
+            return params();
+            break;
+
+        case COMMA:
+            if (match(BRACKET_END)){ return SYNTAX_ERROR; }
+            return params();
+            break;
+
+        case BRACKET_END:
+            return OK;
+            break;
+
+        return SYNTAX_ERROR;
+    }   
+}
+
 /**
  * @brief Function <BLOCK> on default calls command function
  * 
