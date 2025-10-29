@@ -41,7 +41,7 @@ int block(){
             break;
 
         default:
-            return command();
+            if (command() == OK){ return block(); }
             break;
         
     }
@@ -58,7 +58,7 @@ int func_call(){
             if (match(BRACKET_END)){ 
                 return func_call();
             } else {
-                return params();
+                if (params() == OK){ return func_call(); }
             }
             break;
 
@@ -89,7 +89,7 @@ int built_in_call(){
             if (match(BRACKET_END)){ 
                 return built_in_call();
             } else {
-                return params();
+                if (params() == OK){ return built_in_call(); }
             }
             break;
 
@@ -113,7 +113,7 @@ int cond_loop(){
             if (match(BRACKET_END)){ 
                 return SYNTAX_ERROR;
             } else {
-                return params();
+                if (params() == OK) { return cond_loop(); }
             }
             break;
 
@@ -121,7 +121,7 @@ int cond_loop(){
             if (!match(BLOCK_START)){
                 return SYNTAX_ERROR;
             } else {
-                return block();
+                if (block() == OK) { return cond_loop(); }
             }
             break;
 
@@ -129,7 +129,7 @@ int cond_loop(){
             if (!match(BLOCK_START)){
                 return SYNTAX_ERROR;
             } else {
-                return block();
+                if (block() == OK) { return OK; }
             }
             break;
         return SYNTAX_ERROR;
@@ -164,7 +164,7 @@ int func_decl(){ /* <func_decl> -> STATIC ID <=?> <brackets> <block>*/
             if (match(BRACKET_END)){ 
                 return func_decl();
             } else {
-                return params();
+                if (params() == OK){ return func_decl(); }
             }
             break;
         
@@ -174,8 +174,7 @@ int func_decl(){ /* <func_decl> -> STATIC ID <=?> <brackets> <block>*/
             break;
         
         case BLOCK_START:
-            if (!match(NEW_LINE)){ return SYNTAX_ERROR; }
-            return block();
+            if (block() == OK){ return OK; }
             break;
         
         return SYNTAX_ERROR;
@@ -187,28 +186,33 @@ int command(){
    switch(token.type){
         case ID:
             if (match(BRACKET_START)){ 
-                return func_call();
+                if (func_call() == OK){ return command(); }
             } else if (is_operator(token.type)) {
-                return expression(); /* PSA */
+                if (expression() == OK){ return command(); } /* PSA */
             } else {
                 return SYNTAX_ERROR;
             }
             break;
 
         case IFJ:
-            return built_in_call();
+            if (built_in_call() == OK){ return command(); }
             break;
 
         case RETURN:
-            token = get_token();
-            if ((token.type != ID) && (token.type != GLOBAL_ID) && (token.type != NUMBER) 
-                && (token.type != STRING) && (token.type != BOOLEAN)){ return SYNTAX_ERROR; }
+            if ((!match(ID)) && (token.type != GLOBAL_ID) && (token.type != NUMBER) 
+                && (token.type != STRING) && (token.type != BOOLEAN)){ 
+                return SYNTAX_ERROR;
+            } else if(!match(NEW_LINE)) {
+                return SYNTAX_ERROR; 
+            } else {
+                return command();
+            }
             break;
 
         case GLOBAL_ID:
         case VAR:
             if (match(EQUAL)){ 
-                return assign();
+                if (assign() == OK){ return command(); }
             } else if (token.type == NEW_LINE){
                 return command();
             } else {
@@ -217,14 +221,15 @@ int command(){
             break;
 
         case IF:
-            return cond_loop();
+            if (cond_loop() == OK){ return command(); }
             break;
 
         case STATIC:
-            return func_decl();
+            if (func_decl() == OK){ return command(); }
             break;
         
         case NEW_LINE:
+            token = get_token();
             return command();
             break;
 
