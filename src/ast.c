@@ -76,10 +76,25 @@ void ast_print_debug(const ASTNode *node, int depth) {
         printf("  ");
     }
 
+    // Type of node
+    static const char *node_type_strings[] = {
+        "PROGRAM",
+        "FUNCTION",
+        "SETTER",
+        "GETTER",
+        "ID",
+        "BLOCK",
+        "RETURN",
+        "ASSIGN",
+        "CALL",
+        "BINOP",
+        "LITERAL"
+    };
+
     // Print node information
-    printf("Node Type: %d", node->type);
+    printf("%s", node_type_strings[node->type]);
     if (node->value) {
-        printf(", Value: %s", node->value);
+        printf(" (%s)", node->value);
     }
     printf("\n");
 
