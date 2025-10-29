@@ -12,11 +12,13 @@
 #include <stdbool.h>
 #include "scanner.h"
 
+//DEBUG
 FILE *file;
 FILE *output_file;
-char c;
+
+char c;                     // Current character
 char buffer[BUFFER_SIZE];
-int i = 0; 
+int i = 0;                  // Buffer index
 
 void reset_buffer() {
     memset(buffer, 0, BUFFER_SIZE);
@@ -58,6 +60,8 @@ Token add_token(TokenType type) {
     return token;
 }
 
+
+// === Keyword lookup table ========================================
 typedef struct {
     char* keyword;
     TokenType token_type;
@@ -76,11 +80,11 @@ static KeywordEntry keyword_table[] = {
     {"static", STATIC},
     {"import", IMPORT},
     {"for", FOR},
-    {"Num", INT_TYPE},
+    {"Num", NUM_TYPE},
     {"String", STR_TYPE},
     {"Null", NULL_TYPE},
     {"Bool", BOOL_TYPE},
-    {NULL, 0}
+    {NULL, 0}               // Terminator
 };
 
 TokenType lookup_keyword(const char* word) {
@@ -92,37 +96,71 @@ TokenType lookup_keyword(const char* word) {
     return ID;
 }
 
+// === Where magic happens ========================================
 Token get_token() {
 
+    // Reset buffer and read first character
     reset_buffer();
-
     c = advance();
 
-    // Whitespace
-    while (c == ' ' || c == '\r' || c == '\t') {
+    // Ignore whitespace
+    while (c == ' ' || c == '\t') {
         reset_buffer();
         c = advance();
     }
 
+    // End of file
     if (c == EOF) { return add_token(EOF_TOKEN); }
 
-    // TODO Keywords and ID
-    else if (c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z') {
-        while (peek() >= 'a' && peek() <= 'z' || peek() >= 'A' && peek() <= 'Z') {
-            c = advance();
+    // Comments, division operator
+    if (c == '/') {
+
+        // Single-line comment
+        if (match('/')) {
+            advance();
+            while (c != '\n' && c != EOF) {
+                c = advance();
+            }
+            return get_token();
         }
 
-        // Check if is keyword
-        TokenType lookup_keyword_result = lookup_keyword(buffer);
-        if (lookup_keyword_result != ID) {
-            return add_token(lookup_keyword_result);
-        } else {
-            return add_token(ID);
+        // Multi-line comment
+        else if (match('*')) {
+            advance();
+            c = advance();
+            while (true) {
+                if (c == EOF) {
+                    return add_token(ERROR);
+                }
+                if (c == '*' && match('/')) {
+                    advance();
+                    break;
+                }
+                c = advance();
+            }
+            return get_token();
+        }
+
+        // Division operator
+        else {
+            return add_token(DIVIDE);
         }
     }
 
+    // TODO Keywords and ID
+    else if (c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z') {
+        char p = peek();
+        while (p >= 'a' && p <= 'z' || p >= 'A' && p <= 'Z') {
+            c = advance();
+            p = peek();
+        }
+
+        // Keyword check
+        return add_token(lookup_keyword(buffer));
+    }
+
     // Global ID
-    else if (c == '_'){
+    else if (c == '_') {
         if (match('_')) {
             c = advance();
             while (peek() >= 'a' && peek() <= 'z' || peek() >= 'A' && peek() <= 'Z') {
@@ -144,25 +182,6 @@ Token get_token() {
         return add_token(INTEGER);
     }
 
-    // TODO comments
-    else if (c == '/' && match('/')) {
-        advance();
-        while (c != '\n') {
-            c = advance();
-        }
-        return get_token();
-    }
-
-    // Multiline comments
-    else if (c == '/' && match('*')) {
-        advance();
-        advance();
-        while (!(c == '*' && match('/'))) {
-            advance();
-        }
-        return get_token();
-    }
-
     // String token
     else if (c == '"') {
         reset_buffer();
@@ -179,8 +198,7 @@ Token get_token() {
     }
 
     else switch (c) {
-        // One character tokens
-        case '{': return add_token(BLOCK_START);
+        case '{': return add_token(BLOCK_START);                        // One character tokens
         case '}': return add_token(BLOCK_END);
         case '(': return add_token(BRACKET_START);
         case ')': return add_token(BRACKET_END);
@@ -189,18 +207,15 @@ Token get_token() {
         case '+': return add_token(PLUS);
         case '-': return add_token(MINUS);
         case '*': return add_token(MULTIPLY);
-        case '/': return add_token(DIVIDE);
         case ':': return add_token(COLON);
         case '?': return add_token(QUESTION);
-        // Two character tokens
-        case '=': return add_token(match('=') ? EQUAL_EQUAL : EQUAL);
+        case '=': return add_token(match('=') ? EQUAL_EQUAL : EQUAL);   // Two character tokens
         case '<': return add_token(match('=') ? LESS_EQUAL : LESS);
         case '>': return add_token(match('=') ? MORE_EQUAL : MORE);
         case '!': return add_token(match('=') ? NOT_EQUAL : NOT);
         case '&': return add_token(match('&') ? AND : ERROR);
         case '|': return add_token(match('|') ? OR : ERROR);
-        // Special cases
-        case '\n': return add_token(NEW_LINE);
+        case '\n': return add_token(NEW_LINE);                          // Special cases
         default: return add_token(ERROR);
     }
 }
@@ -221,17 +236,20 @@ void print_token(Token token) {
         case STATIC:        fprintf(output_file, "STATIC"); break;
         case IMPORT:        fprintf(output_file, "IMPORT"); break;
         case FOR:           fprintf(output_file, "FOR"); break;
-        case INT_TYPE:      fprintf(output_file, "INT_TYPE"); break;
+        case NUM_TYPE:      fprintf(output_file, "NUM_TYPE"); break;
         case STR_TYPE:      fprintf(output_file, "STR_TYPE"); break;
         case NULL_TYPE:     fprintf(output_file, "NULL_TYPE"); break;
         case BOOL_TYPE:     fprintf(output_file, "BOOL_TYPE"); break;
         case INTEGER:       fprintf(output_file, "INTEGER"); break;
+        case FLOATING:      fprintf(output_file, "FLOATING"); break;
         case STRING:        fprintf(output_file, "STRING"); break;
         case BOOLEAN:       fprintf(output_file, "BOOLEAN"); break;
         case BLOCK_START:   fprintf(output_file, "BLOCK_START"); break;
         case BLOCK_END:     fprintf(output_file, "BLOCK_END"); break;
         case BRACKET_START: fprintf(output_file, "BRACKET_START"); break;
         case BRACKET_END:   fprintf(output_file, "BRACKET_END"); break;
+        case COLON:         fprintf(output_file, "COLON"); break;
+        case QUESTION:      fprintf(output_file, "QUESTION"); break;
         case DOT:           fprintf(output_file, "DOT"); break;
         case COMMA:         fprintf(output_file, "COMMA"); break;
         case PLUS:          fprintf(output_file, "PLUS"); break;
