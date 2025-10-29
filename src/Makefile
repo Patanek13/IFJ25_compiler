@@ -14,7 +14,7 @@ all:
 
 test:
 	mkdir -p $(BUILDDIR)
-	$(CC) $(CFLAGS) -o $(BUILDDIR)/symtable_test symtable.c $(TESTDIR)/test_symtable.c
+		$(CC) $(CFLAGS) -o $(BUILDDIR)/symtable_test symtable.c strutils.c $(TESTDIR)/test_symtable.c
 	@echo "Running symtable tests..."
 	$(BUILDDIR)/symtable_test
 
