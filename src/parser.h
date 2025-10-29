@@ -70,7 +70,7 @@ typedef struct{
     int topIndex;
 }Stack;
 
-
+bool is_operator();
 
 
 #endif

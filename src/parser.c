@@ -23,6 +23,11 @@ bool match(TokenType type){
     return (token.type == type);
 }
 
+bool is_operator(){
+    return ((token.type == PLUS) || (token.type == MINUS) || (token.type == MULTIPLY)
+            || (token.type == DIVIDE));
+}
+
 int block(){
     switch(token.type){
         case BLOCK_START:
@@ -136,6 +141,32 @@ int cond_loop(){
     }
 }
 
+int assign(){
+    switch(token.type){
+
+        case EQUAL:
+            return assign();
+            break;
+
+        case ID:
+        case STRING:
+        case NUMBER:
+        case GLOBAL_ID:
+        case BOOLEAN:
+            token = get_token();
+            if (is_operator()){
+                return expression();
+            } else if (token.type == NEW_LINE) {
+                return OK;
+            } else {
+                return SYNTAX_ERROR;
+            }
+            break;
+
+        return SYNTAX_ERROR;
+    }
+}
+
 int func_decl(){ /* <func_decl> -> STATIC ID <=?> <brackets> <block>*/
     switch(token.type){
         case STATIC:
@@ -147,7 +178,7 @@ int func_decl(){ /* <func_decl> -> STATIC ID <=?> <brackets> <block>*/
             if (match(BRACKET_START)){ /* user made */
                 return func_decl();
             } else if (token.type == EQUAL){ /* setter */
-                return func_decl;
+                return func_decl();
             } else if (token.type == BLOCK_START){ /* getter */
                 return func_decl();
             } else {
