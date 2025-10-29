@@ -21,7 +21,7 @@ typedef enum {
     BLOCK_START, BLOCK_END,
     BRACKET_START, BRACKET_END,
     PLUS, MINUS, MULTIPLY, DIVIDE,
-    DOT, COMMA,
+    DOT, COMMA, COLON, QUESTION,
 
     // One or two character tokens
     EQUAL, EQUAL_EQUAL,
@@ -34,16 +34,14 @@ typedef enum {
     ID,
     GLOBAL_ID,
     INTEGER,
+    FLOATING,
     STRING,
     BOOLEAN,
 
     // Keywords
     CLASS, IF, ELSE, IS, NULL_KEYWORD,
     RETURN, VAR, WHILE, IFJ, STATIC, IMPORT, FOR,
-    INT_TYPE, STR_TYPE, NULL_TYPE, BOOL_TYPE,
-
-    // That shit
-    COLON, QUESTION,
+    NUM_TYPE, STR_TYPE, NULL_TYPE, BOOL_TYPE,
 
     // Special tokens
     NEW_LINE,
@@ -51,15 +49,17 @@ typedef enum {
     ERROR
 } TokenType;
 
+typedef union {
+    int integer;
+    float floating;
+    char string[BUFFER_SIZE];
+    bool boolean;
+} TokenValue;
+
 // Token structure prototype
 typedef struct {
     TokenType type;
-    union {
-        int integer;
-        double floating;
-        char string[BUFFER_SIZE];
-        bool boolean;
-    } value;
+    TokenValue value;
 } Token;
 
 #endif // SCANNER_H
