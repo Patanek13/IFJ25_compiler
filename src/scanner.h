@@ -16,7 +16,7 @@
 
 // Token types enum prototype
 typedef enum {
-    
+
     // Single character tokens
     BLOCK_START, BLOCK_END,
     BRACKET_START, BRACKET_END,
@@ -61,5 +61,7 @@ typedef struct {
         bool boolean;
     } value;
 } Token;
+
+void parser_function(bool debug);
 
 #endif // SCANNER_H
