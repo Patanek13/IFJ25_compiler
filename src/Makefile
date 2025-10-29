@@ -12,12 +12,18 @@ all:
 	mkdir -p $(BUILDDIR)
 	$(CC) $(CFLAGS) -o $(BUILDDIR)/$(OUTFILE) *.c
 
-test:
+test-symtable:
 	mkdir -p $(BUILDDIR)
 		$(CC) $(CFLAGS) -o $(BUILDDIR)/symtable_test symtable.c strutils.c $(TESTDIR)/test_symtable.c
 	@echo "Running symtable tests..."
 	$(BUILDDIR)/symtable_test
 
+test-ast:
+	mkdir -p $(BUILDDIR)
+		$(CC) $(CFLAGS) -o $(BUILDDIR)/ast_test ast.c strutils.c $(TESTDIR)/test_ast.c
+	@echo "Running AST tests..."
+	$(BUILDDIR)/ast_test
+	
 doc: doxygen Doxyfile
 
 clean:
