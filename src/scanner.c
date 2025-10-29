@@ -12,7 +12,6 @@
 #include <stdbool.h>
 #include "scanner.h"
 
-//DEBUG
 FILE *file;
 FILE *output_file;
 
@@ -150,7 +149,7 @@ Token get_token() {
     // TODO Keywords and ID
     else if (c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z') {
         char p = peek();
-        while (p >= 'a' && p <= 'z' || p >= 'A' && p <= 'Z') {
+        while (p >= 'a' && p <= 'z' || p >= 'A' && p <= 'Z' || p >= '0' && p <= '9' || p == '_') {
             c = advance();
             p = peek();
         }
@@ -163,8 +162,10 @@ Token get_token() {
     else if (c == '_') {
         if (match('_')) {
             c = advance();
-            while (peek() >= 'a' && peek() <= 'z' || peek() >= 'A' && peek() <= 'Z') {
+            char p = peek();
+            while (p >= 'a' && p <= 'z' || p >= 'A' && p <= 'Z' || p >= '0' && p <= '9' || p == '_') {
                 c = advance();
+                p = peek();
             }
             return add_token(GLOBAL_ID);
         }
@@ -173,7 +174,7 @@ Token get_token() {
         }
     }
 
-    // TODO number
+    // Integers, TODO float, hex, exponents
     else if (c >= '1' && c <= '9') {
         while (peek() >= '0' && peek() <= '9') {
             c = advance();
@@ -182,19 +183,41 @@ Token get_token() {
         return add_token(INTEGER);
     }
 
-    // String token
+    // Strings, TODO Multiline strings
     else if (c == '"') {
-        reset_buffer();
         c = advance();
-        while (c != '"' && c != '\n' && c != EOF) {
-            c = advance();
-        }
         if (c == '"') {
-            i--;
-            buffer[i] = '\0';
-            return add_token(STRING);
+            c = advance();
+            if (c == '"') { // multiline string start
+                int counter = 0;
+                while (true) 
+                {
+                    c = advance();
+                    if (c == '"') {
+                        counter++;
+                        if (counter == 3) {
+                            break;
+                        }
+                    }
+                    else {
+                        counter = 0;
+                    }
+                }
+                return add_token(STRING); // multiline string
+            } else {
+                return add_token(STRING); // empty string
+            }
         }
-        return add_token(ERROR);
+        else {
+            while (c != '"' && c != EOF && c != '\n') {
+                c = advance();
+            }
+            if (c == '"') {
+                return add_token(STRING);
+            } else {
+                return add_token(ERROR);
+            }
+        }
     }
 
     else switch (c) {
@@ -295,7 +318,7 @@ void prototype_parser_function() {
 
 int main(int argc, char const *argv[])
 {
-    file = fopen("../samples/ahoj.IFJcode25", "r");
+    file = fopen("../samples/ex4-multiline-strings.wren", "r");
     if (!file) {return 1;}
 
     output_file = fopen("../build/tokens.txt", "w");
