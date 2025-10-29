@@ -6,8 +6,7 @@
  */
 
 #include "ast.h"
-// For strdup because C17 does not guarantee its declaration in string.h
-extern char* strdup(const char*);
+#include "strutils.h"
 
 ASTNode *ast_create_node(ASTNodeType type, const char *value) {
     ASTNode *node = (ASTNode *)malloc(sizeof(ASTNode));
@@ -16,7 +15,7 @@ ASTNode *ast_create_node(ASTNodeType type, const char *value) {
     }
     node->type = type;
     if (value) {
-        node->value = strdup(value);
+        node->value = str_dup(value);
         if (!node->value) {
             free(node);
             return NULL; // Memory allocation failed
