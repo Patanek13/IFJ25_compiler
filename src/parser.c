@@ -34,7 +34,9 @@ int block(){
             if (match(ELSE)){ 
                 return cond_loop();
             } else if (token.type == NEW_LINE){
-                return ERR_OK;
+                return OK;
+            } else { /* toto nie je iste */
+                return SYNTAX_ERROR;
             }
             break;
 
@@ -62,7 +64,7 @@ int func_call(){
 
         case BRACKET_END:
             if (!match(NEW_LINE)){ return SYNTAX_ERROR; }
-            return ERR_OK;
+            return OK;
             break;
 
         return SYNTAX_ERROR;
@@ -93,7 +95,7 @@ int built_in_call(){
 
         case BRACKET_END:
             if (!match(NEW_LINE)){ return SYNTAX_ERROR; }
-            return ERR_OK;
+            return OK;
             break;
         
         return SYNTAX_ERROR;
@@ -130,6 +132,52 @@ int cond_loop(){
                 return block();
             }
             break;
+        return SYNTAX_ERROR;
+    }
+}
+
+int func_decl(){ /* <func_decl> -> STATIC ID <=?> <brackets> <block>*/
+    switch(token.type){
+        case STATIC:
+            if (!match(ID)){ return SYNTAX_ERROR; }
+            return func_decl();
+            break;
+        
+        case ID:
+            if (match(BRACKET_START)){ /* user made */
+                return func_decl();
+            } else if (token.type == EQUAL){ /* setter */
+                return func_decl;
+            } else if (token.type == BLOCK_START){ /* getter */
+                return func_decl();
+            } else {
+                return SYNTAX_ERROR;
+            }
+            break;
+        
+        case EQUAL:
+            if (!match(BRACKET_START)){ return SYNTAX_ERROR; }
+            return func_decl();
+            break;
+        
+        case BRACKET_START:
+            if (match(BRACKET_END)){ 
+                return func_decl();
+            } else {
+                return params();
+            }
+            break;
+        
+        case BRACKET_END:
+            if (!match(BLOCK_START)){ return SYNTAX_ERROR; }
+            return func_decl();
+            break;
+        
+        case BLOCK_START:
+            if (!match(NEW_LINE)){ return SYNTAX_ERROR; }
+            return block();
+            break;
+        
         return SYNTAX_ERROR;
     }
 }
@@ -175,9 +223,13 @@ int command(){
         case STATIC:
             return func_decl();
             break;
+        
+        case NEW_LINE:
+            return command();
+            break;
 
         case BLOCK_END:
-            return ERR_OK; /* no other commands end block*/
+            return OK; /* no other commands end block*/
             break;
         
         return SYNTAX_ERROR;

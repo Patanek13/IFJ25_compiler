@@ -9,7 +9,7 @@
 #define IFJ_ERROR_H
 
 typedef enum {
-    ERR_OK = 0,            // No error
+    OK = 0,            // No error
     LEXICAL_ERROR = 1,      // Lexical error (invalid token)
     SYNTAX_ERROR = 2,       // Syntax error (parsing error)
     ERR_SEMANTIC_UNDEFINED = 3, // Semantic error: Undefined identifier or function
