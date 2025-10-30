@@ -13,6 +13,10 @@
 #include <string.h>
 #include "parser.h"
 
+
+// TODO doplnit floating ako lirteral
+// mozno vyuzit lookup kde treba check scanner.c
+
 FILE* in;
 FILE* out;
 
@@ -54,12 +58,20 @@ int params(){  /* dokoncit chyba pri (arg is Num)*/
         case STRING:
         case NUMBER:
         case GLOBAL_ID:
-        case BOOLEAN: /* tu este mozno doriesit (ifj.read) alebo (foo(a))*/
+        case BOOLEAN: /* tu este mozno doriesit (ifj.read) alebo (foo(a)) go to expr ak token nie je ) alebo is == != ! ...*/
             fprintf(out, "WEEEE CHECKIN\n");
-            if ((!match_token(BRACKET_END)) && (!is_param_expr())){ return SYNTAX_ERROR; }
+            if ((!match_token(BRACKET_END)) && (!is_param_expr())){ return expression(); }
             if (is_param_expr()){
                 token = get_token();
             }
+            return params();
+            break;
+        
+        case NUM_TYPE:
+        case STR_TYPE:
+        case NULL_TYPE:
+        case BOOL_TYPE:
+            if (!match_token(BRACKET_END)){ return SYNTAX_ERROR; }
             return params();
             break;
 
@@ -410,13 +422,8 @@ int valid(){
 
     switch(token.type){
         case IMPORT:
-            if (match_token(STRING)){
-                return valid();
-            } else if (token.type == NEW_LINE){
-                return valid();
-            } else {
-                return SYNTAX_ERROR;
-            }
+            if ((!match_token(STRING)) && (token.type != NEW_LINE)){ return SYNTAX_ERROR; }
+            return valid();
             break;
         
         case STRING:
@@ -429,13 +436,18 @@ int valid(){
             break;
         
         case FOR:
-            if (!match_token(IFJ)){ return SYNTAX_ERROR; }
+            if (!match_token(IFJ) && (token.type != NEW_LINE)){ return SYNTAX_ERROR; }
             return valid();
             break;
         
         case IFJ:
             if (match_token(NEW_LINE)){ return OK; }
             return SYNTAX_ERROR;
+            break;
+        
+        case NEW_LINE:
+            token = get_token();
+            return valid();
             break;
         
         return SYNTAX_ERROR;

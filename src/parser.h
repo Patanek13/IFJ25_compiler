@@ -1,7 +1,7 @@
 /**
  * @file parser.h
  * @author Šimon Čorej xcorejs00
- * @brief Parser header fiel for definitions of stack functions and states
+ * @brief Parser header file
  * @date 2025-10-28
  * 
  */
