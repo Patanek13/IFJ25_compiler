@@ -18,6 +18,11 @@ char c;
 char buffer[BUFFER_SIZE];
 int i = 0; 
 
+void scanner_innit(FILE* source, FILE* output){
+    file = source;
+    output_file = output;
+}
+
 void reset_buffer() {
     memset(buffer, 0, BUFFER_SIZE);
     i = 0;
@@ -272,19 +277,19 @@ void prototype_parser_function() {
     } while (token.type != EOF_TOKEN);
 }
 
-int main(int argc, char const *argv[])
-{
-    file = fopen("../samples/ahoj.IFJcode25", "r");
-    if (!file) {return 1;}
+// int main(int argc, char const *argv[])
+// {
+//     file = fopen("../samples/ahoj.IFJcode25", "r");
+//     if (!file) {return 1;}
 
-    output_file = fopen("../build/tokens.txt", "w");
-    if (!output_file) {return 1;}
+//     output_file = fopen("../build/tokens.txt", "w");
+//     if (!output_file) {return 1;}
 
-    prototype_parser_function();
+//     prototype_parser_function();
 
-    fclose(file);
-    fclose(output_file);
+//     fclose(file);
+//     fclose(output_file);
 
-    return 0;
-}
+//     return 0;
+// }
 
