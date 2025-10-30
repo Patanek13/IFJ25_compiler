@@ -13,9 +13,6 @@
 #include <string.h>
 #include "parser.h"
 
-FILE* src;
-FILE* out;
-
 Token token;
 
 bool match(TokenType type){
@@ -60,7 +57,7 @@ int params(){
 /**
  * @brief Function <BLOCK> on default calls command function
  * 
- * @return SYNTAX_ERROR for errors, function return value (recursion), OK if finished
+ * @return SYNTAX_ERROR or OK if finished
  */
 int block(){
     /* RULE: <BLOCK> -> <{> <NEWLINE> <COMMANDS> <}> <ELSE>*/
@@ -341,3 +338,66 @@ int command(){
         return SYNTAX_ERROR;
    }
 }
+
+int valid(){
+    switch(token.type){
+        case IMPORT:
+            if (match(STRING)){
+                return valid();
+            } else if (token.type == NEW_LINE){
+                return valid();
+            } else {
+                return SYNTAX_ERROR;
+            }
+            break;
+        
+        case STRING:
+            if (strcmp(token.value.string, "ifj25") == 0){
+                if (!match(FOR)){ return SYNTAX_ERROR; }
+                return valid();
+            } else {
+                return SYNTAX_ERROR;
+            }
+            break;
+        
+        case FOR:
+            if (!match(IFJ)){ return SYNTAX_ERROR; }
+            return valid();
+            break;
+        
+        case IFJ:
+            if (match(NEW_LINE)){ return OK; }
+            return SYNTAX_ERROR;
+            break;
+        
+        return SYNTAX_ERROR;
+        
+    }
+}
+
+int program(){
+    switch(token.type){
+        case CLASS:
+            if (match(STRING)){ return program(); }
+            return SYNTAX_ERROR;
+            break;
+        
+        case STRING:
+            if (strcmp(token.value.string, "Program") != 0){
+                return SYNTAX_ERROR;
+            } else {
+                if (!match(BLOCK_START)){ return SYNTAX_ERROR; }
+                return program();
+            }
+            break;
+        
+        case BLOCK_START:
+            return block();
+            break;
+
+        return SYNTAX_ERROR;
+    }
+}
+
+
+
