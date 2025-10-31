@@ -22,6 +22,9 @@
 
 Token get_token();
 void print_token(Token token);
+int cond_loop();
+int command();
+void scanner_innit(FILE* source, FILE* output);
 
 typedef struct{
     TokenType type;
