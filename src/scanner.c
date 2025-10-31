@@ -53,7 +53,7 @@ Token add_token(TokenType type) {
 
     if (token.type == INTEGER) {
         buffer[i] = '\0';
-        token.value.integer = atoi(buffer);
+        token.value.integer = strtol(buffer, NULL, 0);
     }
 
     if (token.type == FLOATING) {
@@ -192,7 +192,7 @@ Token get_token() {
         }
     }
 
-    // Integers, TODO float, hex, exponents
+    // Integer, floating, hex, exponents
     else if (c >= '1' && c <= '9') {
         while (peek() >= '0' && peek() <= '9') {
             c = advance();
@@ -215,6 +215,7 @@ Token get_token() {
         }
     }
 
+    // Zero, floating, hexadecimal
     else if (c == '0') {
         if (match('.')) {
             c = advance();
@@ -226,7 +227,27 @@ Token get_token() {
             } else {
                 return add_token(ERROR);
             }
-        } else {
+        }
+
+        else if (match('x')) {
+            c = advance();
+            char p = peek();
+            if ((p >= '0' && p <= '9') ||
+                (p >= 'a' && p <= 'f') ||
+                (p >= 'A' && p <= 'F')) {
+                while ((p >= '0' && p <= '9') ||
+                       (p >= 'a' && p <= 'f') ||
+                       (p >= 'A' && p <= 'F')) {
+                    c = advance();
+                    p = peek();
+                }
+                return add_token(INTEGER);
+            } else {
+                return add_token(ERROR);
+            }
+        }
+
+        else {
             return add_token(INTEGER);
         }
     }
