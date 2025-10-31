@@ -323,15 +323,13 @@ void prototype_parser_function() {
 
 int main(int argc, char const *argv[])
 {
-    file = fopen("../samples/ex4-multiline-strings.wren", "r");
-    if (!file) {return 1;}
+    file = stdin;
 
     output_file = fopen("../build/tokens.txt", "w");
     if (!output_file) {return 1;}
 
     prototype_parser_function();
 
-    fclose(file);
     fclose(output_file);
 
     return 0;
