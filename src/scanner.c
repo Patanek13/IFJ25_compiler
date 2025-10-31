@@ -12,12 +12,12 @@
 #include <stdbool.h>
 #include "scanner.h"
 
-FILE *file;
-FILE *out;
-
+FILE *file;                 // Input file from stdin
+FILE *out;                  // Output file to build/tokens.txt
 char c;                     // Current character
-char buffer[BUFFER_SIZE];
+char buffer[BUFFER_SIZE];   // Current token buffer
 int i = 0;                  // Buffer index
+
 
 void reset_buffer() {
     memset(buffer, 0, BUFFER_SIZE);
@@ -323,6 +323,7 @@ void prototype_parser_function() {
 
 int main(int argc, char const *argv[])
 {
+
     file = stdin;
 
     out = fopen("../build/tokens.txt", "w");

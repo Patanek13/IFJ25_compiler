@@ -14,7 +14,10 @@
 
 #define BUFFER_SIZE 1024
 
-// Token types enum prototype
+/**
+ * @enum TokenType
+ * @brief Token types recognized by the scanner
+ */
 typedef enum {
     
     // Single character tokens
@@ -49,6 +52,11 @@ typedef enum {
     ERROR
 } TokenType;
 
+/**
+ * @union TokenValue
+ * @brief Union for storing int, float, string, or boolean token values
+ * 
+ */
 typedef union {
     int integer;
     float floating;
@@ -56,7 +64,11 @@ typedef union {
     bool boolean;
 } TokenValue;
 
-// Token structure prototype
+/**
+ * @struct Token
+ * @brief Token structure for storing token type and value
+ * 
+ */
 typedef struct {
     TokenType type;
     TokenValue value;
