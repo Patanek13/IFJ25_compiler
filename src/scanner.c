@@ -56,6 +56,11 @@ Token add_token(TokenType type) {
         token.value.integer = atoi(buffer);
     }
 
+    if (token.type == FLOATING) {
+        buffer[i] = '\0';
+        token.value.floating = atof(buffer);
+    }
+
     return token;
 }
 
@@ -102,6 +107,7 @@ Token single_line_comment() {
     while (c != '\n' && c != EOF) {
         c = advance();
     }
+    ungetc(c, file);
     return get_token();
 }
 
@@ -149,14 +155,16 @@ Token get_token() {
     }
 
     // End of file
-    if (c == EOF) { return add_token(EOF_TOKEN); }
+    if (c == EOF) {
+        return add_token(EOF_TOKEN);
+    }
 
     // Single and multi-line comments, division operator
     if (c == '/') {
         return handle_slash();
     }
 
-    // TODO Keywords and ID
+    // Keyword, ID
     else if (c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z') {
         char p = peek();
         while (p >= 'a' && p <= 'z' || p >= 'A' && p <= 'Z' || p >= '0' && p <= '9' || p == '_') {
@@ -189,8 +197,38 @@ Token get_token() {
         while (peek() >= '0' && peek() <= '9') {
             c = advance();
         }
-        
-        return add_token(INTEGER);
+
+        if (match('.')) {
+            c = advance();
+            if (peek() >= '0' && peek() <= '9') {
+                while (peek() >= '0' && peek() <= '9') {
+                    c = advance();
+                }
+                return add_token(FLOATING);
+            } else {
+                return add_token(ERROR);
+            }
+        }
+
+        else {
+            return add_token(INTEGER);
+        }
+    }
+
+    else if (c == '0') {
+        if (match('.')) {
+            c = advance();
+            if (peek() >= '0' && peek() <= '9') {
+                while (peek() >= '0' && peek() <= '9') {
+                    c = advance();
+                }
+                return add_token(FLOATING);
+            } else {
+                return add_token(ERROR);
+            }
+        } else {
+            return add_token(INTEGER);
+        }
     }
 
     // Strings, TODO Multiline strings
@@ -313,7 +351,7 @@ void print_token(Token token) {
     if (token.type == INTEGER) {
         fprintf(out, "        INT[%d]", token.value.integer);
     } else if (token.type == FLOATING) {
-        fprintf(out, "      FLT[%f]", token.value.floating);
+        fprintf(out, "       FLT[%f]", token.value.floating);
     } else if (token.type == STRING) {
         fprintf(out, "         STR[%s]", token.value.string);
     } else if (token.type == ID) {
