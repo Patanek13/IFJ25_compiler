@@ -74,4 +74,7 @@ typedef struct {
     TokenValue value;
 } Token;
 
+// === Function declarations ========================================
+Token get_token();
+
 #endif // SCANNER_H

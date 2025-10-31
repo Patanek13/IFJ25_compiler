@@ -95,6 +95,46 @@ TokenType lookup_keyword(const char* word) {
     return ID;
 }
 
+
+// === Token loops ===========================================
+Token single_line_comment() {
+    advance();
+    while (c != '\n' && c != EOF) {
+        c = advance();
+    }
+    return get_token();
+}
+
+Token multi_line_comment() {
+    advance();
+    c = advance();
+    while (true) {
+        if (c == EOF) {
+            return add_token(ERROR);
+        }
+        if (c == '*' && match('/')) {
+            advance();
+            break;
+        }
+        c = advance();
+    }
+    return get_token();
+}
+
+Token handle_slash() {
+    if (match('/')) {
+        return single_line_comment();
+    }
+
+    else if (match('*')) {
+        return multi_line_comment();
+    }
+
+    else {
+        return add_token(DIVIDE);
+    }
+}
+
 // === Where magic happens ========================================
 Token get_token() {
 
@@ -111,39 +151,9 @@ Token get_token() {
     // End of file
     if (c == EOF) { return add_token(EOF_TOKEN); }
 
-    // Comments, division operator
+    // Single and multi-line comments, division operator
     if (c == '/') {
-
-        // Single-line comment
-        if (match('/')) {
-            advance();
-            while (c != '\n' && c != EOF) {
-                c = advance();
-            }
-            return get_token();
-        }
-
-        // Multi-line comment
-        else if (match('*')) {
-            advance();
-            c = advance();
-            while (true) {
-                if (c == EOF) {
-                    return add_token(ERROR);
-                }
-                if (c == '*' && match('/')) {
-                    advance();
-                    break;
-                }
-                c = advance();
-            }
-            return get_token();
-        }
-
-        // Division operator
-        else {
-            return add_token(DIVIDE);
-        }
+        return handle_slash();
     }
 
     // TODO Keywords and ID
@@ -302,6 +312,8 @@ void print_token(Token token) {
 
     if (token.type == INTEGER) {
         fprintf(out, "        INT[%d]", token.value.integer);
+    } else if (token.type == FLOATING) {
+        fprintf(out, "      FLT[%f]", token.value.floating);
     } else if (token.type == STRING) {
         fprintf(out, "         STR[%s]", token.value.string);
     } else if (token.type == ID) {
@@ -323,7 +335,6 @@ void prototype_parser_function() {
 
 int main(int argc, char const *argv[])
 {
-
     file = stdin;
 
     out = fopen("../build/tokens.txt", "w");
