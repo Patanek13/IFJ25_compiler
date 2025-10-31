@@ -16,7 +16,7 @@
 
 // Token types enum prototype
 typedef enum {
-    
+
     // Single character tokens
     BLOCK_START, BLOCK_END,
     BRACKET_START, BRACKET_END,
@@ -40,7 +40,7 @@ typedef enum {
     // Keywords
     CLASS, IF, ELSE, IS, NULL_KEYWORD,
     RETURN, VAR, WHILE, IFJ, STATIC, IMPORT, FOR,
-    INT_TYPE, STR_TYPE, NULL_TYPE, BOOL_TYPE,
+    NUM_TYPE, STR_TYPE, NULL_TYPE, BOOL_TYPE,
 
     // That shit
     COLON, QUESTION,
@@ -61,5 +61,7 @@ typedef struct {
         bool boolean;
     } value;
 } Token;
+
+void parser_function(bool debug);
 
 #endif // SCANNER_H

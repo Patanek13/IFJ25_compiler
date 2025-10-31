@@ -44,7 +44,7 @@ int expression(){
         token = get_token();
     }
     fprintf(out, "___________\n expression OK return \n_____________\n");
-    return OK;
+    return ERR_OK;
 }
 
 int params(){
@@ -84,7 +84,7 @@ int params(){
 
         case BRACKET_END:
             fprintf(out, "___________\n params OK return\n_____________\n");
-            return OK;
+            return ERR_OK;
             break;
 
         default:
@@ -115,14 +115,14 @@ int block(){
                 return cond_loop();
             } else if (token.type == NEW_LINE){
                 fprintf(out, "___________\n block OK return \n_____________\n");
-                return OK;
+                return ERR_OK;
             } else { /* toto nie je iste */
                 return SYNTAX_ERROR;
             }
             break;
 
         default:
-            if (command() == OK){ return block(); }
+            if (command() == ERR_OK){ return block(); }
             break;
         
     }
@@ -149,14 +149,14 @@ int func_call(){
             if (match_token(BRACKET_END)){ 
                 return func_call();
             } else {
-                if (params() == OK){ return func_call(); }
+                if (params() == ERR_OK){ return func_call(); }
             }
             break;
 
         case BRACKET_END:
             if (!match_token(NEW_LINE)){ return SYNTAX_ERROR; }
             fprintf(out, "___________\n func_call OK return \n_____________\n");
-            return OK;
+            return ERR_OK;
             break;
 
         default:
@@ -169,7 +169,7 @@ int func_call(){
 /**
  * @brief Function to call built in functions
  * 
- * @return OK or SYNTAX_ERROR
+ * @return ERR_OK or SYNTAX_ERROR
  */
 int built_in_call(){
     fprintf(out, "nasli sme token v b_i_c: ");
@@ -193,14 +193,14 @@ int built_in_call(){
             if (match_token(BRACKET_END)){ 
                 return built_in_call();
             } else {
-                if (params() == OK){ return built_in_call(); }
+                if (params() == ERR_OK){ return built_in_call(); }
             }
             break;
 
         case BRACKET_END:
             if (!match_token(NEW_LINE)){ return SYNTAX_ERROR; }
             fprintf(out, "___________\n built_in_call OK return \n_____________\n");
-            return OK;
+            return ERR_OK;
             break;
         
         default:
@@ -214,7 +214,7 @@ int built_in_call(){
  * @brief Function to use conditions and while loops
  * @todo correctly check while {} else {} cannot happen
  * 
- * @return OK or SYNTAX_ERROR
+ * @return ERR_OK or SYNTAX_ERROR
  */
 int cond_loop(){
     fprintf(out, "nasli sme token v cond_loop: ");
@@ -234,8 +234,8 @@ int cond_loop(){
         case BRACKET_START:
             if (match_token(BRACKET_END)){ 
                 return SYNTAX_ERROR;
-            } else { /* neskor bude treba zmenit na expression() == ok*/
-                if (params() == OK) { return cond_loop(); }
+            } else { /* neskor bude treba zmenit na expression() == ERR_OK*/
+                if (params() == ERR_OK) { return cond_loop(); }
             }
             break;
 
@@ -245,8 +245,8 @@ int cond_loop(){
             break;
         
         case BLOCK_START:
-            if ((block() == OK) && (token.type == ELSE)){ return cond_loop(); }
-            if ((block() == OK) && (token.type == NEW_LINE)){ fprintf(out, "___________\n cond_loop OK return \n_____________\n"); return OK; }
+            if ((block() == ERR_OK) && (token.type == ELSE)){ return cond_loop(); }
+            if ((block() == ERR_OK) && (token.type == NEW_LINE)){ fprintf(out, "___________\n cond_loop OK return \n_____________\n"); return ERR_OK; }
             return SYNTAX_ERROR;
             break;
 
@@ -254,7 +254,7 @@ int cond_loop(){
             if (!match_token(BLOCK_START)){
                 return SYNTAX_ERROR;
             } else {
-                if (block() == OK) { return OK; }
+                if (block() == ERR_OK) { return ERR_OK; }
             }
             break;
         
@@ -268,7 +268,7 @@ int cond_loop(){
 /**
  * @brief Function to assign value or expression
  * 
- * @return OK or SYNTAX_ERROR
+ * @return ERR_OK or SYNTAX_ERROR
  */
 int assign(){ /* TODO poriadne otestovat nove riadky kde mozu a nemozu byt */
     fprintf(out, "nasli sme token v assign: ");
@@ -299,12 +299,12 @@ int assign(){ /* TODO poriadne otestovat nove riadky kde mozu a nemozu byt */
             break;
         
         case IFJ:
-            if (built_in_call() == OK){ return assign(); }
+            if (built_in_call() == ERR_OK){ return assign(); }
             return SYNTAX_ERROR;
             break;
         
         case NEW_LINE:
-            return OK;
+            return ERR_OK;
             break;
 
         default:
@@ -317,7 +317,7 @@ int assign(){ /* TODO poriadne otestovat nove riadky kde mozu a nemozu byt */
 /**
  * @brief Function to declare user made functions
  * 
- * @return OK or SYNTAX_ERROR 
+ * @return ERR_OK or SYNTAX_ERROR 
  */
 int func_decl(){
     fprintf(out, "nasli sme token v func_decl: ");
@@ -351,7 +351,7 @@ int func_decl(){
             if (match_token(BRACKET_END)){ 
                 return func_decl();
             } else {
-                if (params() == OK){ return func_decl(); }
+                if (params() == ERR_OK){ return func_decl(); }
             }
             break;
         
@@ -361,7 +361,7 @@ int func_decl(){
             break;
         
         case BLOCK_START:
-            if (block() == OK){ fprintf(out, "___________\n func_decl OK return \n_____________\n"); return OK; }
+            if (block() == ERR_OK){ fprintf(out, "___________\n func_decl OK return \n_____________\n"); return ERR_OK; }
             break;
         
         default:
@@ -379,9 +379,9 @@ int command(){
    switch(token.type){
         case ID:
             if (match_token(BRACKET_START)){ 
-                if (func_call() == OK){ return command(); }
+                if (func_call() == ERR_OK){ return command(); }
             } else if (token.type == EQUAL){
-                if (assign() == OK){ return command(); }
+                if (assign() == ERR_OK){ return command(); }
             } else {
                 fprintf(out, "ERROR command id else\n");
                 return SYNTAX_ERROR;
@@ -389,7 +389,7 @@ int command(){
             break;
 
         case IFJ:
-            if (built_in_call() == OK){ return command(); }
+            if (built_in_call() == ERR_OK){ return command(); }
             break;
 
         case RETURN:
@@ -407,7 +407,7 @@ int command(){
         case GLOBAL_ID:
         case VAR:
             if (match_token(EQUAL)){ 
-                if (assign() == OK){ return command(); }
+                if (assign() == ERR_OK){ return command(); }
             } else if (token.type == NEW_LINE){
                 return command();
             } else {
@@ -416,11 +416,11 @@ int command(){
             break;
 
         case IF:
-            if (cond_loop() == OK){ return command(); }
+            if (cond_loop() == ERR_OK){ return command(); }
             break;
 
         case STATIC:
-            if (func_decl() == OK){ return command(); }
+            if (func_decl() == ERR_OK){ return command(); }
             break;
         
         case NEW_LINE:
@@ -430,7 +430,7 @@ int command(){
 
         case BLOCK_END:
             fprintf(out, "___________\n command OK return \n_____________\n");
-            return OK; /* no other commands end block*/
+            return ERR_OK; /* no other commands end block*/
             break;
         
         default:
@@ -467,7 +467,7 @@ int valid(){
             break;
         
         case IFJ:
-            if (match_token(NEW_LINE)){ return OK; }
+            if (match_token(NEW_LINE)){ return ERR_OK; }
             return SYNTAX_ERROR;
             break;
         
@@ -538,7 +538,7 @@ int main (int argc, char** argv){
 
     token = get_token();
 
-    if (valid() == OK){
+    if (valid() == ERR_OK){
         fprintf(out, "VALID OK\n");
         ok = program();
     } else {
@@ -549,5 +549,5 @@ int main (int argc, char** argv){
     fclose(in);
     fclose(out);
 
-    return ok;
+    return ERR_OK;
 }

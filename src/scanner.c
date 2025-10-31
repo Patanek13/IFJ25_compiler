@@ -11,15 +11,16 @@
 #include <string.h>
 #include <stdbool.h>
 #include "scanner.h"
+#include "error.h"
 
-FILE *file;
+FILE *input_file;
 FILE *output_file;
 char c;
 char buffer[BUFFER_SIZE];
-int i = 0; 
+int i = 0;
 
 void scanner_innit(FILE* source, FILE* output){
-    file = source;
+    input_file = source;
     output_file = output;
 }
 
@@ -29,15 +30,15 @@ void reset_buffer() {
 }
 
 char advance() {
-    c = fgetc(file);
+    c = fgetc(input_file);
     buffer[i] = c;
     i++;
     return c;
 }
 
 char peek() {
-    c = fgetc(file);
-    ungetc(c, file);
+    c = fgetc(input_file);
+    ungetc(c, input_file);
     return c;
 }
 
@@ -81,7 +82,7 @@ static KeywordEntry keyword_table[] = {
     {"static", STATIC},
     {"import", IMPORT},
     {"for", FOR},
-    {"Num", INT_TYPE},
+    {"Num", NUM_TYPE},
     {"String", STR_TYPE},
     {"Null", NULL_TYPE},
     {"Boolean", BOOL_TYPE},
@@ -145,7 +146,7 @@ Token get_token() {
         while (peek() >= '0' && peek() <= '9') {
             c = advance();
         }
-        
+
         return add_token(NUMBER);
     }
 
@@ -223,7 +224,7 @@ void print_token(Token token) {
         case STATIC:        fprintf(output_file, "STATIC"); break;
         case IMPORT:        fprintf(output_file, "IMPORT"); break;
         case FOR:           fprintf(output_file, "FOR"); break;
-        case INT_TYPE:      fprintf(output_file, "INT_TYPE"); break;
+        case NUM_TYPE:      fprintf(output_file, "INT_TYPE"); break;
         case STR_TYPE:      fprintf(output_file, "STR_TYPE"); break;
         case NULL_TYPE:     fprintf(output_file, "NULL_TYPE"); break;
         case BOOL_TYPE:     fprintf(output_file, "BOOL_TYPE"); break;
@@ -270,26 +271,33 @@ void print_token(Token token) {
 }
 
 void prototype_parser_function() {
-    Token token;
-    do {
-        token = get_token();
-        print_token(token);
-    } while (token.type != EOF_TOKEN);
+  Token token;
+  output_file = fopen("../build/tokens.txt", "w");
+  if (!output_file) {
+    fprintf(stderr, "Unable to open output_file");
+    return;
+  }
+
+  do {
+    token = get_token();
+    print_token(token);
+  } while (token.type != EOF_TOKEN);
+
+  fclose(output_file);
 }
 
-// int main(int argc, char const *argv[])
-// {
-//     file = fopen("../samples/ahoj.IFJcode25", "r");
-//     if (!file) {return 1;}
+void parser_function(bool debug) {
+  if (debug) {
+    input_file = fopen("../samples/ahoj.IFJcode25", "r");
+    if (!input_file) {
+      fprintf(stderr, "Invalid file");
+      return;
+    }
+    prototype_parser_function();
+    fclose(input_file);
+  }
 
-//     output_file = fopen("../build/tokens.txt", "w");
-//     if (!output_file) {return 1;}
+  //TODO: prerobit na citanie z STDIN
 
-//     prototype_parser_function();
-
-//     fclose(file);
-//     fclose(output_file);
-
-//     return 0;
-// }
+}
 
