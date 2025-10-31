@@ -165,9 +165,9 @@ Token get_token() {
     }
 
     // Keyword, ID
-    else if (c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z') {
+    else if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
         char p = peek();
-        while (p >= 'a' && p <= 'z' || p >= 'A' && p <= 'Z' || p >= '0' && p <= '9' || p == '_') {
+        while ((p >= 'a' && p <= 'z') || (p >= 'A' && p <= 'Z') || (p >= '0' && p <= '9') || (p == '_')) {
             c = advance();
             p = peek();
         }
@@ -181,7 +181,7 @@ Token get_token() {
         if (match('_')) {
             c = advance();
             char p = peek();
-            while (p >= 'a' && p <= 'z' || p >= 'A' && p <= 'Z' || p >= '0' && p <= '9' || p == '_') {
+            while ((p >= 'a' && p <= 'z') || (p >= 'A' && p <= 'Z') || (p >= '0' && p <= '9') || (p == '_')) {
                 c = advance();
                 p = peek();
             }
@@ -192,6 +192,7 @@ Token get_token() {
         }
     }
 
+    // TODO Exponents
     // Integer, floating, hex, exponents
     else if (c >= '1' && c <= '9') {
         while (peek() >= '0' && peek() <= '9') {
@@ -252,7 +253,7 @@ Token get_token() {
         }
     }
 
-    // Strings, TODO Multiline strings
+    // Strings, Multiline strings
     else if (c == '"') {
         reset_buffer();
         c = advance();
@@ -392,7 +393,7 @@ void prototype_parser_function() {
     } while (token.type != EOF_TOKEN);
 }
 
-int main(int argc, char const *argv[])
+int main()
 {
     file = stdin;
 
