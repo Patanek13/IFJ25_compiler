@@ -43,6 +43,11 @@ bool is_operator(){
     return ((token.type == PLUS) || (token.type == MINUS) || (token.type == MULTIPLY) || (token.type == DIVIDE));
 }
 
+bool is_operand(){
+    return ((token.type == ID) || (token.type == GLOBAL_ID) || (token.type == STRING) 
+            || (token.type == FLOATING) || (token.type == BOOLEAN) || (token.type == INTEGER));
+}
+
 bool is_param_expr(){
     for (int i = 0; i < 10; i++){
         if (list_param_ops[i] == token.type){ return true; }
@@ -54,6 +59,7 @@ int expression(){ /* pozor pri assign konci az po nacitani ")" chyba, a = a + 5*
     while(token.type != BRACKET_END){
         token = get_token();
     }
+    token = get_token();
     fprintf(out, "___________\n expression OK return \n_____________\n");
     return ERR_OK;
 }
@@ -165,6 +171,7 @@ int func_call(){
 
         case BRACKET_END:
             // if (!match_token(NEW_LINE)){ return SYNTAX_ERROR; }
+            token = get_token();
             fprintf(out, "___________\n func_call OK return \n_____________\n");
             return ERR_OK;
             break;
@@ -218,6 +225,7 @@ int built_in_call(){
 
         case BRACKET_END:
             // if (!match_token(NEW_LINE)){ return SYNTAX_ERROR; }
+            token = get_token();
             fprintf(out, "___________\n built_in_call OK return \n_____________\n");
             return ERR_OK;
             break;
@@ -269,11 +277,10 @@ int cond_loop(){
             if (cond_state == 0){
                 if ((block() == ERR_OK) && (token.type == ELSE)){ return cond_loop(); }
                 if ((block() == ERR_OK) && (token.type == NEW_LINE)){ fprintf(out, "___________\n cond_loop OK return \n_____________\n"); return ERR_OK; }
-                return SYNTAX_ERROR;
             } else {
                 if ((block() == ERR_OK) && (token.type == NEW_LINE)){ return ERR_OK; }
-                return SYNTAX_ERROR;
             }
+            return SYNTAX_ERROR;
             break;
 
         case ELSE:
@@ -318,7 +325,6 @@ int assign(){ /* TODO poriadne otestovat nove riadky kde mozu a nemozu byt */
             token = get_token();
             if (is_operator()){ /* assigned expression */
                 if (expression() == ERR_OK){
-                    token = get_token();
                     return assign();
                 } 
                 return SYNTAX_ERROR;
@@ -333,7 +339,6 @@ int assign(){ /* TODO poriadne otestovat nove riadky kde mozu a nemozu byt */
         
         case IFJ:
             if (built_in_call() == ERR_OK){
-                token = get_token();
                 return assign();
             }
             return SYNTAX_ERROR;
@@ -387,7 +392,6 @@ int func_decl(){
             if (match_token(BRACKET_END)){ 
                 return func_decl();
             } else if (params() == ERR_OK){
-                token = get_token();
                 return func_decl();
             } else {
                 return SYNTAX_ERROR;
@@ -418,7 +422,7 @@ int command(){
    switch(token.type){
         case ID:
             if (match_token(BRACKET_START)){ 
-                if ((func_call() == ERR_OK) && (match_token(NEW_LINE))){ return command(); }
+                if ((func_call() == ERR_OK) && (token.type == NEW_LINE)){ return command(); }
             } else if (token.type == EQUAL){
                 if (assign() == ERR_OK){ return command(); }
             } else {
@@ -429,23 +433,32 @@ int command(){
             break;
 
         case IFJ:
-            if (built_in_call() == ERR_OK){
-                token = get_token();
+            if ((built_in_call() == ERR_OK) && (token.type == NEW_LINE)){
                 return command();
             }
             return SYNTAX_ERROR;
             break;
 
         case RETURN:
-            print_token(token);
-            fprintf(out, "\n");
-            if ((!match_token(ID)) && (token.type != GLOBAL_ID) && (token.type != INTEGER) 
-                && (token.type != STRING) && (token.type != BOOLEAN) && (token.type != NEW_LINE)){ 
-                return SYNTAX_ERROR;
-            } else {
-                token = get_token(); /* pozor tu treba priradit hodnotu*/
+            token = get_token();
+            if (token.type == ID){
+                if (match_token(BRACKET_START)){ return func_call(); }
+                if (is_operator()){ return expression(); }
+                if (token.type == NEW_LINE){ return command(); }
+
+            } else if (token.type == IFJ){
                 return command();
+
+            } else if ((token.type == GLOBAL_ID) || (token.type == INTEGER) || (token.type == STRING) 
+                        || (token.type == BOOLEAN) || (token.type == FLOATING)){
+                if (match_token(NEW_LINE)){ return command(); }
+                if (is_operator()){ return expression(); }
+
+            } else {
+                return SYNTAX_ERROR;
+                break;
             }
+            return SYNTAX_ERROR;
             break;
 
         case GLOBAL_ID:
