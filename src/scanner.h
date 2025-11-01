@@ -14,14 +14,17 @@
 
 #define BUFFER_SIZE 1024
 
-// Token types enum prototype
+/**
+ * @enum TokenType
+ * @brief Token types recognized by the scanner
+ */
 typedef enum {
 
     // Single character tokens
     BLOCK_START, BLOCK_END,
     BRACKET_START, BRACKET_END,
     PLUS, MINUS, MULTIPLY, DIVIDE,
-    DOT, COMMA,
+    DOT, COMMA, COLON, QUESTION,
 
     // One or two character tokens
     EQUAL, EQUAL_EQUAL,
@@ -33,7 +36,8 @@ typedef enum {
     // Literals
     ID,
     GLOBAL_ID,
-    NUMBER,
+    INTEGER,
+    FLOATING,
     STRING,
     BOOLEAN,
 
@@ -42,26 +46,35 @@ typedef enum {
     RETURN, VAR, WHILE, IFJ, STATIC, IMPORT, FOR,
     NUM_TYPE, STR_TYPE, NULL_TYPE, BOOL_TYPE,
 
-    // That shit
-    COLON, QUESTION,
-
     // Special tokens
     NEW_LINE,
     EOF_TOKEN,
     ERROR
 } TokenType;
 
-// Token structure prototype
+/**
+ * @union TokenValue
+ * @brief Union for storing int, float, string, or boolean token values
+ * 
+ */
+typedef union {
+    int integer;
+    float floating;
+    char string[BUFFER_SIZE];
+    bool boolean;
+} TokenValue;
+
+/**
+ * @struct Token
+ * @brief Token structure for storing token type and value
+ * 
+ */
 typedef struct {
     TokenType type;
-    union {
-        int integer;
-        double floating;
-        char string[BUFFER_SIZE];
-        bool boolean;
-    } value;
+    TokenValue value;
 } Token;
 
-void parser_function(bool debug);
+// === Function declarations ========================================
+Token get_token();
 
 #endif // SCANNER_H
