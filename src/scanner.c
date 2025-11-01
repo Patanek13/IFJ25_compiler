@@ -113,8 +113,8 @@ Token get_token() {
     if (c == EOF) { return add_token(EOF_TOKEN); }
 
     // TODO Keywords and ID
-    else if (c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z') {
-        while (peek() >= 'a' && peek() <= 'z' || peek() >= 'A' && peek() <= 'Z') {
+    else if (((c >= 'a') && (c <= 'z')) || ((c >= 'A') && (c <= 'Z'))) {
+        while ((peek() >= 'a' && peek() <= 'z') || ((peek() >= 'A') && (peek() <= 'Z'))) {
             c = advance();
         }
 
@@ -131,7 +131,7 @@ Token get_token() {
     else if (c == '_'){
         if (match('_')) {
             c = advance(); // consume second '_'
-            while (peek() >= 'a' && peek() <= 'z' || peek() >= 'A' && peek() <= 'Z') {
+            while (((peek() >= 'a') && (peek() <= 'z')) || ((peek() >= 'A') && (peek() <= 'Z'))) {
                 c = advance();
             }
             return add_token(GLOBAL_ID);
@@ -142,8 +142,8 @@ Token get_token() {
     }
 
     // TODO number
-    else if (c >= '1' && c <= '9') {
-        while (peek() >= '0' && peek() <= '9') {
+    else if ((c >= '1') && (c <= '9')) {
+        while ((peek() >= '0') && (peek() <= '9')) {
             c = advance();
         }
 
