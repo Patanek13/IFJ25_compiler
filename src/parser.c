@@ -70,7 +70,8 @@ int params(){
         
         case ID:
         case STRING:
-        case NUMBER:
+        case INTEGER:
+        case FLOATING:
         case GLOBAL_ID:
         case BOOLEAN: /* tu este mozno doriesit (ifj.read) alebo (foo(a)) go to expr ak token nie je ) alebo is == != ! ...*/
             if ((!match_token(BRACKET_END)) && (!is_param_expr())){ return expression(); }
@@ -307,7 +308,8 @@ int assign(){ /* TODO poriadne otestovat nove riadky kde mozu a nemozu byt */
 
         case ID:
         case STRING:
-        case NUMBER:
+        case INTEGER:
+        case FLOATING:
         case GLOBAL_ID:
         case BOOLEAN:
             token = get_token();
@@ -418,7 +420,7 @@ int command(){
         case RETURN:
             print_token(token);
             fprintf(out, "\n");
-            if ((!match_token(ID)) && (token.type != GLOBAL_ID) && (token.type != NUMBER) 
+            if ((!match_token(ID)) && (token.type != GLOBAL_ID) && (token.type != INTEGER) 
                 && (token.type != STRING) && (token.type != BOOLEAN) && (token.type != NEW_LINE)){ 
                 return SYNTAX_ERROR;
             } else {
