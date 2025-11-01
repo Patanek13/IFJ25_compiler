@@ -19,13 +19,23 @@
 
 #define MAX_SIZE 150
 
-
+/*=============== Scanner function declaration ===============*/
 Token get_token();
 void print_token(Token token);
+void scanner_innit(FILE* source, FILE* output);
+
+/*=============== Parser function declaration ================*/
 int cond_loop();
 int command();
 int assign();
-void scanner_innit(FILE* source, FILE* output);
+int block();
+int built_in_call();
+int func_decl();
+int func_call();
+int params();
+int valid();
+int program();
+
 
 typedef struct{
     TokenType type;

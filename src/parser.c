@@ -50,7 +50,7 @@ bool is_param_expr(){
     return false;
 }
 
-int expression(){
+int expression(){ /* pozor pri assign konci az po nacitani ")" chyba, a = a + 5*/
     while(token.type != BRACKET_END){
         token = get_token();
     }
@@ -68,12 +68,15 @@ int params(){
             return params();
             break;
         
-        case ID:
+        case IFJ:
+            return built_in_call();
+            break;
+        case ID: /* tu doplnit volanie funkcie user made*/
         case STRING:
         case INTEGER:
         case FLOATING:
         case GLOBAL_ID:
-        case BOOLEAN: /* tu este mozno doriesit (ifj.read) alebo (foo(a)) go to expr ak token nie je ) alebo is == != ! ...*/
+        case BOOLEAN: /* tu este mozno doriesit (ifj.read) alebo (foo(a)) go to expr ak token nie je ) */
             if ((!match_token(BRACKET_END)) && (!is_param_expr())){ return expression(); }
             if (is_param_expr()){
                 token = get_token();
@@ -85,7 +88,7 @@ int params(){
         case STR_TYPE:
         case NULL_TYPE:
         case BOOL_TYPE:
-            if (!match_token(BRACKET_END)){ return SYNTAX_ERROR; }
+            if ((!match_token(BRACKET_END)) && (token.type != COMMA)){ return SYNTAX_ERROR; }
             return params();
             break;
 
@@ -161,7 +164,7 @@ int func_call(){
             break;
 
         case BRACKET_END:
-            if (!match_token(NEW_LINE)){ return SYNTAX_ERROR; }
+            // if (!match_token(NEW_LINE)){ return SYNTAX_ERROR; }
             fprintf(out, "___________\n func_call OK return \n_____________\n");
             return ERR_OK;
             break;
@@ -214,7 +217,7 @@ int built_in_call(){
             break;
 
         case BRACKET_END:
-            if (!match_token(NEW_LINE)){ return SYNTAX_ERROR; }
+            // if (!match_token(NEW_LINE)){ return SYNTAX_ERROR; }
             fprintf(out, "___________\n built_in_call OK return \n_____________\n");
             return ERR_OK;
             break;
@@ -277,7 +280,7 @@ int cond_loop(){
             if (match_token(IF)){
                 return cond_loop();
             } else if (token.type == BLOCK_START){
-                if ((block() == ERR_OK) && (token.type != ELSE)){ return ERR_OK; }
+                if ((block() == ERR_OK) && (token.type == NEW_LINE)){ return ERR_OK; }
             }
             fprintf(out, "SYNTAX ERROR ELSE");
             return SYNTAX_ERROR;
@@ -314,7 +317,12 @@ int assign(){ /* TODO poriadne otestovat nove riadky kde mozu a nemozu byt */
         case BOOLEAN:
             token = get_token();
             if (is_operator()){ /* assigned expression */
-                return expression();
+                if (expression() == ERR_OK){
+                    token = get_token();
+                    return assign();
+                } 
+                return SYNTAX_ERROR;
+
             } else if (token.type == NEW_LINE) { /* declaration tuto pozor na x<NLx> = x<NLx> *<NL*> 5<NL+>*/
                 fprintf(out, "___________\n assign OK return \n_____________\n");
                 return assign();
@@ -324,7 +332,10 @@ int assign(){ /* TODO poriadne otestovat nove riadky kde mozu a nemozu byt */
             break;
         
         case IFJ:
-            if (built_in_call() == ERR_OK){ return assign(); }
+            if (built_in_call() == ERR_OK){
+                token = get_token();
+                return assign();
+            }
             return SYNTAX_ERROR;
             break;
         
@@ -375,8 +386,11 @@ int func_decl(){
         case BRACKET_START:
             if (match_token(BRACKET_END)){ 
                 return func_decl();
+            } else if (params() == ERR_OK){
+                token = get_token();
+                return func_decl();
             } else {
-                if (params() == ERR_OK){ return func_decl(); }
+                return SYNTAX_ERROR;
             }
             break;
         
@@ -404,17 +418,22 @@ int command(){
    switch(token.type){
         case ID:
             if (match_token(BRACKET_START)){ 
-                if (func_call() == ERR_OK){ return command(); }
+                if ((func_call() == ERR_OK) && (match_token(NEW_LINE))){ return command(); }
             } else if (token.type == EQUAL){
                 if (assign() == ERR_OK){ return command(); }
             } else {
                 fprintf(out, "ERROR command id else\n");
                 return SYNTAX_ERROR;
             }
+            return SYNTAX_ERROR;
             break;
 
         case IFJ:
-            if (built_in_call() == ERR_OK){ return command(); }
+            if (built_in_call() == ERR_OK){
+                token = get_token();
+                return command();
+            }
+            return SYNTAX_ERROR;
             break;
 
         case RETURN:
@@ -536,9 +555,12 @@ int program(){
             break;
         
         case NEW_LINE: /* nebezpecne opravit */
-            token = get_token();
+            if (!match_token(CLASS)){ return SYNTAX_ERROR; }
             return program();
             break;
+        
+        // case BLOCK_END:
+        //     return ERR_OK;
 
         
         default:
@@ -568,14 +590,19 @@ int main (int argc, char** argv){
 
     if (valid() == ERR_OK){
         fprintf(out, "VALID OK\n");
-        ok = program();
+        if (program() == ERR_OK){
+            ok = 1;
+        } else {
+            ok = 0;
+        }
     } else {
         fprintf(out, "VALID NOT OK\n");
     }
 
-
+    fprintf(out, "Program ended %s\n", (ok == 1) ? "successfully" : "with error");
     fclose(in);
     fclose(out);
 
+    
     return ok;
 }
