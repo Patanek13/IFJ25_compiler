@@ -24,11 +24,12 @@ Token get_token();
 void print_token(Token token);
 int cond_loop();
 int command();
+int assign();
 void scanner_innit(FILE* source, FILE* output);
 
 typedef struct{
     TokenType type;
-    bool terminal;
+    char value;
 } StackElement;
 
 typedef struct{

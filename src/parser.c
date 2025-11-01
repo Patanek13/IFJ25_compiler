@@ -20,12 +20,23 @@
 FILE* in;
 FILE* out;
 
+/* condition state 0 = IF 1 = WHILE */
+bool cond_state = 0;
+
 Token token;
 TokenType list_param_ops[] = {IS, EQUAL_EQUAL, LESS, LESS_EQUAL, MORE, MORE_EQUAL, NOT, NOT_EQUAL, AND, OR};
+char* built_in_string[] = {"read_str", "read_num", "write", "floor", "str", "length", "substring", "strcmp", "ord", "chr", "read_bool"};
 
 bool match_token(TokenType type){
     token = get_token();
     return (token.type == type);
+}
+
+bool is_built_in_func(){
+    for (int i = 0; i < 11; i++){
+        if (strcmp(token.value.string, built_in_string[i]) == 0){ return true; }
+    }
+    return false;
 }
 
 bool is_operator(){
@@ -110,15 +121,10 @@ int block(){
             return block();
             break;
 
-        case BLOCK_END:
-            if (match_token(ELSE)){ 
-                return cond_loop();
-            } else if (token.type == NEW_LINE){
-                fprintf(out, "___________\n block OK return \n_____________\n");
-                return ERR_OK;
-            } else { /* toto nie je iste */
-                return SYNTAX_ERROR;
-            }
+        case BLOCK_END: /* vrat iba OK */
+            fprintf(out, "___________\n block OK return \n_____________\n");
+            token = get_token();
+            return ERR_OK;
             break;
 
         default:
@@ -183,11 +189,20 @@ int built_in_call(){
             break;
         
         case DOT: /* built in functions */
-            if (!match_token(STRING)){ return SYNTAX_ERROR; }
+            if (!match_token(ID)){ print_token(token); return SYNTAX_ERROR; }
             return built_in_call();
             break;
 
-        /* built in functions KW ...*/
+        case ID:
+            fprintf(out, "reading string and comparing\n");
+            if (is_built_in_func()){
+                token = get_token();
+                print_token(token);
+                return built_in_call();
+            }
+            return SYNTAX_ERROR;
+            break;
+    
 
         case BRACKET_START:
             if (match_token(BRACKET_END)){ 
@@ -212,7 +227,7 @@ int built_in_call(){
 
 /**
  * @brief Function to use conditions and while loops
- * @todo correctly check while {} else {} cannot happen
+ * @todo doplnit kde mozu byt newlines
  * 
  * @return ERR_OK or SYNTAX_ERROR
  */
@@ -223,11 +238,13 @@ int cond_loop(){
     switch(token.type){
         case IF:
             if (!match_token(BRACKET_START)){ return SYNTAX_ERROR; }
+            cond_state = 0;
             return cond_loop();
             break;
         
         case WHILE:
-            if (!match_token(BRACKET_START)){ return SYNTAX_ERROR; }
+            if (!match_token(BRACKET_START)){ fprintf(out, "failed while"); return SYNTAX_ERROR; }
+            cond_state = 1;
             return cond_loop();
             break;
 
@@ -245,17 +262,24 @@ int cond_loop(){
             break;
         
         case BLOCK_START:
-            if ((block() == ERR_OK) && (token.type == ELSE)){ return cond_loop(); }
-            if ((block() == ERR_OK) && (token.type == NEW_LINE)){ fprintf(out, "___________\n cond_loop OK return \n_____________\n"); return ERR_OK; }
-            return SYNTAX_ERROR;
+            if (cond_state == 0){
+                if ((block() == ERR_OK) && (token.type == ELSE)){ return cond_loop(); }
+                if ((block() == ERR_OK) && (token.type == NEW_LINE)){ fprintf(out, "___________\n cond_loop OK return \n_____________\n"); return ERR_OK; }
+                return SYNTAX_ERROR;
+            } else {
+                if ((block() == ERR_OK) && (token.type == NEW_LINE)){ return ERR_OK; }
+                return SYNTAX_ERROR;
+            }
             break;
 
         case ELSE:
-            if (!match_token(BLOCK_START)){
-                return SYNTAX_ERROR;
-            } else {
-                if (block() == ERR_OK) { return ERR_OK; }
+            if (match_token(IF)){
+                return cond_loop();
+            } else if (token.type == BLOCK_START){
+                if ((block() == ERR_OK) && (token.type != ELSE)){ return ERR_OK; }
             }
+            fprintf(out, "SYNTAX ERROR ELSE");
+            return SYNTAX_ERROR;
             break;
         
         default:
@@ -276,7 +300,6 @@ int assign(){ /* TODO poriadne otestovat nove riadky kde mozu a nemozu byt */
     fprintf(out, "\n");
     /* RULE: <ASSIGN> -> <ID> <=> <LITERAL> (or) <EXPRESSION> */
     switch(token.type){
-
         case EQUAL:
             token = get_token();
             return assign();
@@ -416,11 +439,14 @@ int command(){
             break;
 
         case IF:
+        case WHILE:
             if (cond_loop() == ERR_OK){ return command(); }
+            return SYNTAX_ERROR;
             break;
 
         case STATIC:
             if (func_decl() == ERR_OK){ return command(); }
+            return SYNTAX_ERROR;
             break;
         
         case NEW_LINE:
@@ -527,14 +553,14 @@ int main (int argc, char** argv){
     (void)argv;
 
     in = fopen("../samples/ahoj.IFJcode25", "r");
-    if (!in){ return SYNTAX_ERROR; }
+    if (!in){ printf("nejde otvorit\n"); return SYNTAX_ERROR; }
 
     out = fopen("../samples/outfile.txt", "w");
     if (!out){ return SYNTAX_ERROR; }
 
     scanner_innit(in, out);
 
-    bool ok;
+    int ok;
 
     token = get_token();
 
@@ -549,5 +575,5 @@ int main (int argc, char** argv){
     fclose(in);
     fclose(out);
 
-    return ERR_OK;
+    return ok;
 }
