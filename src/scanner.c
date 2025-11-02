@@ -12,6 +12,8 @@
 #include <stdbool.h>
 #include "scanner.h"
 
+// TODO if last token type is NEW_LINE, ignore next NEW_LINE token
+
 FILE *file;                 // Input file from stdin
 FILE *out;                  // Output file to build/tokens.txt
 char c;                     // Current character
@@ -46,17 +48,24 @@ Token add_token(TokenType type) {
     Token token;
     token.type = type;
 
-    if (token.type == STRING || token.type == ID || token.type == GLOBAL_ID) {
+    if (token.type == ID || token.type == GLOBAL_ID) {
         strncpy(token.value.string, buffer, i);
         token.value.string[i] = '\0';
     }
 
-    if (token.type == INTEGER) {
+    else if (token.type == STRING) {
+        strncpy(token.value.string, buffer, i);
+        token.value.string[i] = '\0';
+
+        // Handle string escaping
+    }
+
+    else if (token.type == INTEGER) {
         buffer[i] = '\0';
         token.value.integer = strtol(buffer, NULL, 0);
     }
 
-    if (token.type == FLOATING) {
+    else if (token.type == FLOATING) {
         buffer[i] = '\0';
         token.value.floating = atof(buffer);
     }
@@ -328,6 +337,26 @@ Token get_token() {
         }
         else {
             while (c != '"' && c != EOF && c != '\n') {
+                if (c == '\\') { // handle escape sequences
+                    c = advance();
+                    if (c == 'n') {
+                        buffer[i - 2] = '\n';
+                        i -= 1;
+                    } else if (c == 't') {
+                        buffer[i - 2] = '\t';
+                        i -= 1;
+                    } else if (c == 'r') {
+                        buffer[i - 2] = '\r';
+                    } else if (c == '"') {
+                        buffer[i - 2] = '"';
+                        i -= 1;
+                    } else if (c == '\\') {
+                        buffer[i - 2] = '\\';
+                        i -= 1;
+                    } else {
+                        return add_token(ERROR);
+                    }
+                }
                 c = advance();
             }
             if (c == '"') {
