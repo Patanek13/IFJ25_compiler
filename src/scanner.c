@@ -1,7 +1,7 @@
 /**
  * @file scanner.c
  * @author Petr David Lanca
- * @brief Scanner implementation for tokenizing input
+ * @brief Scanner for tokenizing input
  * @date 2025-10-01
  *
  */
@@ -10,9 +10,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <ctype.h>
 #include "scanner.h"
-
-// TODO if last token type is NEW_LINE, ignore next NEW_LINE token
 
 FILE *file;                 // Input file from stdin
 FILE *out;                  // Output file to build/tokens.txt
@@ -22,6 +21,7 @@ int i = 0;                  // Buffer index
 bool was_new_line = false;  // Last generated token was NEW_LINE
 
 
+// === Character and Buffer handling ========================================
 void reset_buffer() {
     memset(buffer, 0, BUFFER_SIZE);
     i = 0;
@@ -149,6 +149,312 @@ Token handle_slash() {
     }
 }
 
+// Helper functions for better code organization
+bool is_identifier_char(char ch) {
+    return isalnum(ch) || ch == '_';
+}
+
+Token scan_identifier() {
+    // Continue reading while we have valid identifier characters
+    while (is_identifier_char(peek()) && i < BUFFER_SIZE - 1) {
+        c = advance();
+    }
+    
+    // Null-terminate the buffer for string comparison
+    buffer[i] = '\0';
+    
+    // Check if it's a keyword or regular identifier
+    return add_token(lookup_keyword(buffer));
+}
+
+Token scan_global_id() {
+    // Advance past the second underscore
+    c = advance();
+    
+    // Continue reading while we have valid identifier characters
+    while (is_identifier_char(peek()) && i < BUFFER_SIZE - 1) {
+        c = advance();
+    }
+    
+    // Null-terminate the buffer for string comparison
+    buffer[i] = '\0';
+    
+    return add_token(GLOBAL_ID);
+}
+
+// Number parsing helper functions
+bool is_digit(char ch) {
+    return ch >= '0' && ch <= '9';
+}
+
+bool is_hex_digit(char ch) {
+    return is_digit(ch) || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F');
+}
+
+bool scan_digits() {
+    if (!is_digit(peek())) {
+        return false;
+    }
+    while (is_digit(peek()) && i < BUFFER_SIZE - 1) {
+        c = advance();
+    }
+    return true;
+}
+
+Token scan_exponent() {
+    if (!match('e') && !match('E')) {
+        return add_token(FLOATING);
+    }
+    
+    c = advance(); // consume 'e' or 'E'
+    
+    if (match('+') || match('-')) {
+        c = advance();
+    }
+    
+    if (scan_digits()) {
+        return add_token(FLOATING);
+    } else {
+        return add_token(ERROR);
+    }
+}
+
+Token scan_decimal_number() {
+    // Scan integer part (already scanned first digit)
+    while (is_digit(peek()) && i < BUFFER_SIZE - 1) {
+        c = advance();
+    }
+    
+    // Check for decimal point
+    if (match('.')) {
+        c = advance();
+        if (!scan_digits()) {
+            return add_token(ERROR);
+        }
+        return scan_exponent();
+    }
+    
+    // Check for exponent
+    if (match('e') || match('E')) {
+        c = advance();
+        if (match('+') || match('-')) {
+            c = advance();
+        }
+        if (scan_digits()) {
+            return add_token(FLOATING);
+        } else {
+            return add_token(ERROR);
+        }
+    }
+    
+    return add_token(INTEGER);
+}
+
+Token scan_hex_number() {
+    c = advance(); // consume 'x'
+    
+    if (!is_hex_digit(peek())) {
+        return add_token(ERROR);
+    }
+    
+    while (is_hex_digit(peek()) && i < BUFFER_SIZE - 1) {
+        c = advance();
+    }
+    
+    return add_token(INTEGER);
+}
+
+Token scan_zero() {
+    if (match('.')) {
+        c = advance();
+        if (!scan_digits()) {
+            return add_token(ERROR);
+        }
+        return scan_exponent();
+    }
+    
+    if (match('x') || match('X')) {
+        return scan_hex_number();
+    }
+    
+    return add_token(INTEGER);
+}
+
+// String parsing helper functions
+void add_char_to_buffer(char ch) {
+    if (i < BUFFER_SIZE - 1) {
+        buffer[i] = ch;
+        i++;
+    }
+}
+
+bool handle_escape_sequence() {
+    c = advance(); // consume the character after backslash
+    
+    switch (c) {
+        case 'n':
+            add_char_to_buffer('\n');
+            return true;
+        case 't':
+            add_char_to_buffer('\t');
+            return true;
+        case 'r':
+            add_char_to_buffer('\r');
+            return true;
+        case '"':
+            add_char_to_buffer('"');
+            return true;
+        case '\\':
+            add_char_to_buffer('\\');
+            return true;
+        case 'x': {
+            char hex1 = advance();
+            char hex2 = advance();
+            if (is_hex_digit(hex1) && is_hex_digit(hex2)) {
+                char hex_str[3] = {hex1, hex2, '\0'};
+                char hex_char = (char) strtol(hex_str, NULL, 16);
+                add_char_to_buffer(hex_char);
+                return true;
+            } else {
+                return false; // Error
+            }
+        }
+        default:
+            return false; // Error
+    }
+}
+
+Token scan_regular_string() {
+    reset_buffer();
+    
+    while (c != '"' && c != EOF && c != '\n' && i < BUFFER_SIZE - 1) {
+        if (c == '\\') {
+            if (!handle_escape_sequence()) {
+                return add_token(ERROR);
+            }
+            // Don't call advance() here - handle_escape_sequence already advanced
+        } else {
+            add_char_to_buffer(c);
+            c = advance();
+        }
+    }
+    
+    if (c == '"') {
+        buffer[i] = '\0';
+        return add_token(STRING);
+    } else {
+        return add_token(ERROR);
+    }
+}
+
+Token scan_multiline_string() {
+    reset_buffer();
+    int quote_count = 0;
+    
+    while (i < BUFFER_SIZE - 1) {
+        c = advance();
+        
+        if (c == EOF) {
+            return add_token(ERROR);
+        }
+        
+        if (c == '"') {
+            quote_count++;
+            if (quote_count == 3) {
+                buffer[i] = '\0';
+                return add_token(STRING);
+            }
+        } else {
+            // Add any accumulated quotes to buffer
+            while (quote_count > 0) {
+                add_char_to_buffer('"');
+                quote_count--;
+            }
+            add_char_to_buffer(c);
+        }
+    }
+    
+    return add_token(ERROR); // Buffer overflow or unterminated
+}
+
+Token scan_string() {
+    c = advance(); // consume opening quote
+    
+    if (c == '"') {
+        c = advance();
+        if (c == '"') {
+            // Triple quote - multiline string
+            return scan_multiline_string();
+        } else {
+            // Empty string
+            reset_buffer();
+            return add_token(STRING);
+        }
+    } else {
+        // Regular string - c is already the first character
+        return scan_regular_string();
+    }
+}
+
+// Operator parsing helper functions
+Token scan_single_char_operator(char op) {
+    switch (op) {
+        case '{': return add_token(BLOCK_START);
+        case '}': return add_token(BLOCK_END);
+        case '(': return add_token(BRACKET_START);
+        case ')': return add_token(BRACKET_END);
+        case '.': return add_token(DOT);
+        case ',': return add_token(COMMA);
+        case '+': return add_token(PLUS);
+        case '-': return add_token(MINUS);
+        case '*': return add_token(MULTIPLY);
+        case ':': return add_token(COLON);
+        case '?': return add_token(QUESTION);
+        default:  return add_token(ERROR);
+    }
+}
+
+Token scan_comparison_operator(char op) {
+    switch (op) {
+        case '=':
+            return add_token(match('=') ? EQUAL_EQUAL : EQUAL);
+        case '<':
+            return add_token(match('=') ? LESS_EQUAL : LESS);
+        case '>':
+            return add_token(match('=') ? MORE_EQUAL : MORE);
+        case '!':
+            return add_token(match('=') ? NOT_EQUAL : NOT);
+        default:
+            return add_token(ERROR);
+    }
+}
+
+Token scan_logical_operator(char op) {
+    switch (op) {
+        case '&':
+            return add_token(match('&') ? AND : ERROR);
+        case '|':
+            return add_token(match('|') ? OR : ERROR);
+        default:
+            return add_token(ERROR);
+    }
+}
+
+Token scan_operator(char op) {
+    // Check for comparison operators
+    if (op == '=' || op == '<' || op == '>' || op == '!') {
+        return scan_comparison_operator(op);
+    }
+    
+    // Check for logical operators
+    if (op == '&' || op == '|') {
+        return scan_logical_operator(op);
+    }
+    
+    // Check for single character operators
+    return scan_single_char_operator(op);
+}
+
 // === Where magic happens ========================================
 Token get_token() {
 
@@ -183,230 +489,37 @@ Token get_token() {
     was_new_line = false;
 
     // Keyword, ID
-    if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
-        char p = peek();
-        while ((p >= 'a' && p <= 'z') || (p >= 'A' && p <= 'Z') || (p >= '0' && p <= '9') || (p == '_')) {
-            c = advance();
-            p = peek();
-        }
-
-        // Keyword check
-        return add_token(lookup_keyword(buffer));
+    if (isalpha(c)) {
+        return scan_identifier();
     }
 
     // Global ID
     else if (c == '_') {
         if (match('_')) {
-            c = advance();
-            char p = peek();
-            while ((p >= 'a' && p <= 'z') || (p >= 'A' && p <= 'Z') || (p >= '0' && p <= '9') || (p == '_')) {
-                c = advance();
-                p = peek();
-            }
-            return add_token(GLOBAL_ID);
+            return scan_global_id();
         }
         else {
             return add_token(ERROR);
         }
     }
 
-    // Integer, floating, hex, exponents
-    else if (c >= '1' && c <= '9') {
-        while (peek() >= '0' && peek() <= '9') {
-            c = advance();
-        }
-
-        if (match('.')) {
-            c = advance();
-            if (peek() >= '0' && peek() <= '9') {
-                while (peek() >= '0' && peek() <= '9') {
-                    c = advance();
-                }
-            } else {
-                return add_token(ERROR);
-            }
-
-            if (match('e') || match('E')) {
-                c = advance();
-                if (match('+') || match('-')) {
-                    c = advance();
-                }
-                if (peek() >= '0' && peek() <= '9') {
-                    while (peek() >= '0' && peek() <= '9') {
-                        c = advance();
-                    }
-                    return add_token(FLOATING);
-                } else {
-                    return add_token(ERROR);
-                }
-            }
-
-        }
-
-        if (match('e') || match('E')) {
-            c = advance();
-            if (match('+') || match('-')) {
-                c = advance();
-            }
-            if (peek() >= '0' && peek() <= '9') {
-                while (peek() >= '0' && peek() <= '9') {
-                    c = advance();
-                }
-                return add_token(FLOATING);
-            } else {
-                return add_token(ERROR);
-            }
-        }
-
-        else {
-            return add_token(INTEGER);
+    // Numbers (integers, floats, hex, exponents)
+    else if (isdigit(c)) {
+        if (c == '0') {
+            return scan_zero();
+        } else {
+            return scan_decimal_number();
         }
     }
 
-    // Zero, floating, hexadecimal, exponents
-    else if (c == '0') {
-        if (match('.')) {
-            c = advance();
-            if (peek() >= '0' && peek() <= '9') {
-                while (peek() >= '0' && peek() <= '9') {
-                    c = advance();
-                }
-            } else {
-                return add_token(ERROR);
-            }
-
-            if (match('e') || match('E')) {
-                c = advance();
-                if (match('+') || match('-')) {
-                    c = advance();
-                }
-                if (peek() >= '0' && peek() <= '9') {
-                    while (peek() >= '0' && peek() <= '9') {
-                        c = advance();
-                    }
-                } else {
-                    return add_token(ERROR);
-                }
-            }
-
-            return add_token(FLOATING);
-        }
-
-        else if (match('x')) {
-            c = advance();
-            char p = peek();
-            if ((p >= '0' && p <= '9') ||
-                (p >= 'a' && p <= 'f') ||
-                (p >= 'A' && p <= 'F')) {
-                while ((p >= '0' && p <= '9') ||
-                       (p >= 'a' && p <= 'f') ||
-                       (p >= 'A' && p <= 'F')) {
-                    c = advance();
-                    p = peek();
-                }
-                return add_token(INTEGER);
-            } else {
-                return add_token(ERROR);
-            }
-        }
-
-        else {
-            return add_token(INTEGER);
-        }
-    }
-
-    // Strings, Multiline strings
+    // Strings (regular, empty, multiline)
     else if (c == '"') {
-        reset_buffer();
-        c = advance();
-        if (c == '"') {
-            c = advance();
-            if (c == '"') { // multiline string start
-                reset_buffer();
-                int counter = 0;
-                while (true) 
-                {
-                    c = advance();
-                    if (c == '"') {
-                        counter++;
-                        if (counter == 3) {
-                            break;
-                        }
-                    }
-                    else {
-                        counter = 0;
-                    }
-                }
-                i -= 3;
-                return add_token(STRING); // multiline string
-            } else {
-                reset_buffer();
-                return add_token(STRING); // empty string
-            }
-        }
-        else {
-            while (c != '"' && c != EOF && c != '\n') {
-                if (c == '\\') { // handle escape sequences
-                    c = advance();
-                    if (c == 'n') {
-                        buffer[i - 2] = '\n';
-                        i -= 1;
-                    } else if (c == 't') {
-                        buffer[i - 2] = '\t';
-                        i -= 1;
-                    } else if (c == 'r') {
-                        buffer[i - 2] = '\r';
-                    } else if (c == '"') {
-                        buffer[i - 2] = '"';
-                        i -= 1;
-                    } else if (c == '\\') {
-                        buffer[i - 2] = '\\';
-                        i -= 1;
-                    } else if (c == 'x') {
-                        char hex1 = advance();
-                        char hex2 = advance();
-                        if (((hex1 >= '0' && hex1 <= '9') || (hex1 >= 'a' && hex1 <= 'f') || (hex1 >= 'A' && hex1 <= 'F')) &&
-                            ((hex2 >= '0' && hex2 <= '9') || (hex2 >= 'a' && hex2 <= 'f') || (hex2 >= 'A' && hex2 <= 'F'))) {
-                            char hex_str[3] = {hex1, hex2, '\0'};
-                            buffer[i - 2] = (char) strtol(hex_str, NULL, 16);
-                            i -= 1;
-                        } else {
-                            return add_token(ERROR);
-                        }
-                    } else {
-                        return add_token(ERROR);
-                    }
-                }
-                c = advance();
-            }
-            if (c == '"') {
-                i -= 1;
-                return add_token(STRING);
-            } else {
-                return add_token(ERROR);
-            }
-        }
+        return scan_string();
     }
 
-    else switch (c) {
-        case '{': return add_token(BLOCK_START);                        // One character tokens
-        case '}': return add_token(BLOCK_END);
-        case '(': return add_token(BRACKET_START);
-        case ')': return add_token(BRACKET_END);
-        case '.': return add_token(DOT);
-        case ',': return add_token(COMMA);
-        case '+': return add_token(PLUS);
-        case '-': return add_token(MINUS);
-        case '*': return add_token(MULTIPLY);
-        case ':': return add_token(COLON);
-        case '?': return add_token(QUESTION);
-        case '=': return add_token(match('=') ? EQUAL_EQUAL : EQUAL);   // Two character tokens
-        case '<': return add_token(match('=') ? LESS_EQUAL : LESS);
-        case '>': return add_token(match('=') ? MORE_EQUAL : MORE);
-        case '!': return add_token(match('=') ? NOT_EQUAL : NOT);
-        case '&': return add_token(match('&') ? AND : ERROR);
-        case '|': return add_token(match('|') ? OR : ERROR);
-        default: return add_token(ERROR);
+    // Operators and punctuation
+    else {
+        return scan_operator(c);
     }
 }
 

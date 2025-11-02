@@ -25,6 +25,7 @@ typedef enum {
     BRACKET_START, BRACKET_END,
     PLUS, MINUS, MULTIPLY, DIVIDE,
     DOT, COMMA, COLON, QUESTION,
+    NEW_LINE,
 
     // One or two character tokens
     EQUAL, EQUAL_EQUAL,
@@ -47,7 +48,6 @@ typedef enum {
     NUM_TYPE, STR_TYPE, NULL_TYPE, BOOL_TYPE,
 
     // Special tokens
-    NEW_LINE,
     EOF_TOKEN,
     ERROR
 } TokenType;
@@ -55,11 +55,11 @@ typedef enum {
 /**
  * @union TokenValue
  * @brief Union for storing int, float, string, or boolean token values
- * 
+ * @var integer Integer value
  */
 typedef union {
     int integer;
-    float floating;
+    double floating;
     char string[BUFFER_SIZE];
     bool boolean;
 } TokenValue;
@@ -94,6 +94,33 @@ TokenType lookup_keyword(const char* word);
 Token single_line_comment();
 Token multi_line_comment();
 Token handle_slash();
+
+// Helper functions
+bool is_identifier_char(char ch);
+Token scan_identifier();
+Token scan_global_id();
+
+// Number parsing functions
+bool is_digit(char ch);
+bool is_hex_digit(char ch);
+bool scan_digits();
+Token scan_exponent();
+Token scan_decimal_number();
+Token scan_hex_number();
+Token scan_zero();
+
+// String parsing functions
+void add_char_to_buffer(char ch);
+bool handle_escape_sequence();
+Token scan_regular_string();
+Token scan_multiline_string();
+Token scan_string();
+
+// Operator parsing functions
+Token scan_single_char_operator(char op);
+Token scan_comparison_operator(char op);
+Token scan_logical_operator(char op);
+Token scan_operator(char op);
 
 // Main tokenizer function
 Token get_token();
