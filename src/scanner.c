@@ -353,6 +353,17 @@ Token get_token() {
                     } else if (c == '\\') {
                         buffer[i - 2] = '\\';
                         i -= 1;
+                    } else if (c == 'x') {
+                        char hex1 = advance();
+                        char hex2 = advance();
+                        if (((hex1 >= '0' && hex1 <= '9') || (hex1 >= 'a' && hex1 <= 'f') || (hex1 >= 'A' && hex1 <= 'F')) &&
+                            ((hex2 >= '0' && hex2 <= '9') || (hex2 >= 'a' && hex2 <= 'f') || (hex2 >= 'A' && hex2 <= 'F'))) {
+                            char hex_str[3] = {hex1, hex2, '\0'};
+                            buffer[i - 2] = (char) strtol(hex_str, NULL, 16);
+                            i -= 1;
+                        } else {
+                            return add_token(ERROR);
+                        }
                     } else {
                         return add_token(ERROR);
                     }
