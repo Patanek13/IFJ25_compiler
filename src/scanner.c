@@ -205,6 +205,36 @@ Token get_token() {
                 while (peek() >= '0' && peek() <= '9') {
                     c = advance();
                 }
+            } else {
+                return add_token(ERROR);
+            }
+
+            if (match('e') || match('E')) {
+                c = advance();
+                if (match('+') || match('-')) {
+                    c = advance();
+                }
+                if (peek() >= '0' && peek() <= '9') {
+                    while (peek() >= '0' && peek() <= '9') {
+                        c = advance();
+                    }
+                    return add_token(FLOATING);
+                } else {
+                    return add_token(ERROR);
+                }
+            }
+
+        }
+
+        if (match('e') || match('E')) {
+            c = advance();
+            if (match('+') || match('-')) {
+                c = advance();
+            }
+            if (peek() >= '0' && peek() <= '9') {
+                while (peek() >= '0' && peek() <= '9') {
+                    c = advance();
+                }
                 return add_token(FLOATING);
             } else {
                 return add_token(ERROR);
@@ -216,7 +246,7 @@ Token get_token() {
         }
     }
 
-    // Zero, floating, hexadecimal
+    // Zero, floating, hexadecimal, exponents
     else if (c == '0') {
         if (match('.')) {
             c = advance();
@@ -224,10 +254,25 @@ Token get_token() {
                 while (peek() >= '0' && peek() <= '9') {
                     c = advance();
                 }
-                return add_token(FLOATING);
             } else {
                 return add_token(ERROR);
             }
+
+            if (match('e') || match('E')) {
+                c = advance();
+                if (match('+') || match('-')) {
+                    c = advance();
+                }
+                if (peek() >= '0' && peek() <= '9') {
+                    while (peek() >= '0' && peek() <= '9') {
+                        c = advance();
+                    }
+                } else {
+                    return add_token(ERROR);
+                }
+            }
+
+            return add_token(FLOATING);
         }
 
         else if (match('x')) {

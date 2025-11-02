@@ -3,6 +3,7 @@ class Program {
     // funkce bez parametru
     static getAnswer() {
         return 42  // prikaz navratu z funkce
+        0.5e-5
     }
 
     // pretizena verze funkce vyse s jednim parametrem
