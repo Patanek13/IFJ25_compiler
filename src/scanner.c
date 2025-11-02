@@ -192,7 +192,6 @@ Token get_token() {
         }
     }
 
-    // TODO Exponents
     // Integer, floating, hex, exponents
     else if (c >= '1' && c <= '9') {
         while (peek() >= '0' && peek() <= '9') {

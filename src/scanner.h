@@ -75,6 +75,31 @@ typedef struct {
 } Token;
 
 // === Function declarations ========================================
+
+// Buffer management functions
+void reset_buffer();
+
+// Character processing functions
+char advance();
+char peek();
+bool match(char d);
+
+// Token creation functions
+Token add_token(TokenType type);
+
+// Keyword and identifier functions
+TokenType lookup_keyword(const char* word);
+
+// Comment handling functions
+Token single_line_comment();
+Token multi_line_comment();
+Token handle_slash();
+
+// Main tokenizer function
 Token get_token();
+
+// Output and utility functions
+void print_token(Token token);
+void prototype_parser_function();
 
 #endif // SCANNER_H
