@@ -1,21 +1,17 @@
 /**
  * @file scanner.h
  * @author Petr David Lanca
- * @brief Lexical analyzer (scanner) for the IFJ compiler project
- * @version 1.0
- * @date 2025-11-02
+ * @brief Scanner header file
+ * @date 2.11.2025
  * 
- * This header defines the lexical analyzer interface for tokenizing source code
- * in the IFJ language. The scanner converts raw character input into a stream
- * of tokens that can be processed by the parser.
+ * Buffer size
  * 
- * Features:
- * - Safe buffer management with overflow protection
- * - Support for comments (single-line and multi-line)
- * - String literals with escape sequences (including hex escapes)
- * - Numeric literals (integers, floats, hex, scientific notation)
- * - All IFJ language operators and keywords
- * - Comprehensive error handling
+ * Token structure
+ * - Token types enum
+ * - Token value union
+ * 
+ * Function prototypes
+ * 
  */
 
 #ifndef SCANNER_H
@@ -27,181 +23,139 @@
 
 /**
  * @def BUFFER_SIZE
- * @brief Maximum size for token buffers
+ * @brief Amount of saved characters while scanning a single token
  * 
- * This defines the maximum length of any single token that can be processed.
- * Tokens longer than this will be truncated but scanning will continue safely.
  */
 #define BUFFER_SIZE 1024
 
 /**
  * @enum TokenType
- * @brief Enumeration of all token types recognized by the scanner
+ * @brief Enum for all token types recognized by the scanner
  * 
- * This enum defines every possible token type that the scanner can produce.
- * Tokens are grouped by category for better organization and maintenance.
  */
+
 typedef enum {
     
-    // Single character tokens (punctuation and simple operators)
-    BLOCK_START,        /**< '{' - Opening brace */
-    BLOCK_END,          /**< '}' - Closing brace */
-    BRACKET_START,      /**< '(' - Opening parenthesis */
-    BRACKET_END,        /**< ')' - Closing parenthesis */
-    PLUS,               /**< '+' - Addition operator */
-    MINUS,              /**< '-' - Subtraction operator */
-    MULTIPLY,           /**< '*' - Multiplication operator */
-    DIVIDE,             /**< '/' - Division operator */
-    DOT,                /**< '.' - Member access operator */
-    COMMA,              /**< ',' - Comma separator */
-    COLON,              /**< ':' - Type annotation separator */
-    QUESTION,           /**< '?' - Ternary operator */
-    NEW_LINE,           /**< '\n' - Line terminator */
+    BLOCK_START,        /**< { */
+    BLOCK_END,          /**< } */
+    BRACKET_START,      /**< ( */
+    BRACKET_END,        /**< ) */
+    PLUS,               /**< + */
+    MINUS,              /**< - */
+    MULTIPLY,           /**< * */
+    DIVIDE,             /**< / */
+    DOT,                /**< . */
+    COMMA,              /**< , */
+    COLON,              /**< : */
+    QUESTION,           /**< ? */
+    NEW_LINE,           /**< \n */
 
-    // One or two character tokens (comparison and logical operators)
-    EQUAL,              /**< '=' - Assignment operator */
-    EQUAL_EQUAL,        /**< '==' - Equality comparison */
-    LESS,               /**< '<' - Less than comparison */
-    LESS_EQUAL,         /**< '<=' - Less than or equal comparison */
-    MORE,               /**< '>' - Greater than comparison */
-    MORE_EQUAL,         /**< '>=' - Greater than or equal comparison */
-    NOT,                /**< '!' - Logical NOT operator */
-    NOT_EQUAL,          /**< '!=' - Not equal comparison */
-    AND,                /**< '&&' - Logical AND operator */
-    OR,                 /**< '||' - Logical OR operator */
+    EQUAL,              /**< = */
+    EQUAL_EQUAL,        /**< == */
+    LESS,               /**< < */
+    LESS_EQUAL,         /**< <= */
+    MORE,               /**< > */
+    MORE_EQUAL,         /**< >= */
+    NOT,                /**< ! */
+    NOT_EQUAL,          /**< != */
+    AND,                /**< && */
+    OR,                 /**< || */
 
-    // Literals (user-defined values)
-    ID,                 /**< Regular identifier (e.g., variable names) */
-    GLOBAL_ID,          /**< Global identifier starting with '__' */
-    INTEGER,            /**< Integer literal (decimal or hexadecimal) */
-    FLOATING,           /**< Floating-point literal */
-    STRING,             /**< String literal (single or multi-line) */
-    BOOLEAN,            /**< Boolean literal (true/false) */
+    ID,                 /**< Identifier - variable and function names */
+    GLOBAL_ID,          /**< Global identifier - starts with '__' */
+    INTEGER,            /**< Integer - normal, hexadecimal */
+    FLOATING,           /**< Floating - decimal, exponential */
+    STRING,             /**< String literal - normal and multi-line */
+    BOOLEAN,            /**< Boolean literal - true or false */
 
-    // Keywords (reserved language constructs)
-    CLASS,              /**< 'class' keyword */
-    IF,                 /**< 'if' keyword */
-    ELSE,               /**< 'else' keyword */
-    IS,                 /**< 'is' keyword */
-    NULL_KEYWORD,       /**< 'null' keyword */
-    RETURN,             /**< 'return' keyword */
-    VAR,                /**< 'var' keyword */
-    WHILE,              /**< 'while' keyword */
-    IFJ,                /**< 'Ifj' built-in class */
-    STATIC,             /**< 'static' keyword */
-    IMPORT,             /**< 'import' keyword */
-    FOR,                /**< 'for' keyword */
-    NUM_TYPE,           /**< 'Num' type keyword */
-    STR_TYPE,           /**< 'String' type keyword */
-    NULL_TYPE,          /**< 'Null' type keyword */
-    BOOL_TYPE,          /**< 'Bool' type keyword */
+    CLASS,              /**< class */
+    IF,                 /**< if */
+    ELSE,               /**< else */
+    IS,                 /**< is */
+    NULL_KEYWORD,       /**< null */
+    RETURN,             /**< return */
+    VAR,                /**< var */
+    WHILE,              /**< while */
+    IFJ,                /**< Ifj */
+    STATIC,             /**< static */
+    IMPORT,             /**< import */
+    FOR,                /**< for */
+    NUM_TYPE,           /**< Num */
+    STR_TYPE,           /**< String */
+    NULL_TYPE,          /**< Null */
+    BOOL_TYPE,          /**< Bool */
 
-    // Special tokens (control and error handling)
-    EOF_TOKEN,          /**< End of file marker */
-    ERROR               /**< Lexical error token */
+    EOF_TOKEN,          /**< End of file */
+    ERROR               /**< Lexical error */
+
 } TokenType;
 
 /**
  * @union TokenValue
  * @brief Union for storing different types of token values
  * 
- * This union allows a single token to store different types of values
- * depending on the token type, saving memory and providing type safety.
  */
 typedef union {
-    int integer;                    /**< Integer value for INTEGER tokens */
-    double floating;                /**< Floating-point value for FLOATING tokens */
-    char string[BUFFER_SIZE];       /**< String value for STRING, ID, and GLOBAL_ID tokens */
-    bool boolean;                   /**< Boolean value for BOOLEAN tokens */
+    int integer;                    /**< INTEGER token value */
+    double floating;                /**< FLOATING token value */
+    char string[BUFFER_SIZE];       /**< STRING, ID, GLOBAL_ID token value */
+    bool boolean;                   /**< BOOLEAN token value */
 } TokenValue;
 
 /**
  * @struct Token
- * @brief Complete token structure containing type and value
+ * @brief Token structure to store type and value
  * 
- * This structure represents a complete token as produced by the scanner.
- * It contains both the token type (what kind of token it is) and the
- * associated value (if applicable).
- * 
- * @var type The type of this token (from TokenType enum)
- * @var value The value associated with this token (context-dependent)
+ * @var Token type
+ * @var Token value (optional)
  */
 typedef struct {
-    TokenType type;     /**< The type of this token */
-    TokenValue value;   /**< The value of this token (if applicable) */
+    TokenType type;     /**< Token type */
+    TokenValue value;   /**< Token value (optional) */
 } Token;
 
-/**
- * @section API Function Documentation
- * 
- * The scanner API is organized into logical groups for easy navigation
- * and maintenance. Each function is documented with its purpose,
- * parameters, return values, and any important behavior notes.
- */
+//================================================================================================
+//                                      HELPER FUNCTIONS
+//================================================================================================
 
-// === Buffer Management Functions ===
+//------------------------------------- Buffer ---------------------------------------------------
+
 /**
- * @brief Resets the internal token buffer to empty state
+ * @brief Resets the token buffer
  * 
- * Clears the buffer and resets the buffer index to 0. This should be
- * called before starting to scan a new token.
+ * Sets every character to null and resets index to 0
  */
 void reset_buffer(void);
 
-// === Character Processing Functions ===
+//------------------------------------- Input ----------------------------------------------------
+
 /**
- * @brief Advances to the next character in the input stream
+ * @brief Get next character and save it to buffer
  * 
- * Reads the next character from the input file and adds it to the buffer
- * (if there's space). Always returns the character even if buffer is full.
+ * If buffer is full, character is not saved to buffer
  * 
- * @return The next character from input, or EOF if end of file reached
- * @note Safe against buffer overflow - will not write past buffer bounds
+ * @return Next character
  */
 char advance(void);
 
 /**
- * @brief Peeks at the next character without consuming it
+ * @brief Read next character and put it back to input stream
  * 
- * Looks ahead at the next character in the input stream without advancing
- * the stream position. Used for lookahead in parsing decisions.
- * 
- * @return The next character in the stream, or EOF if end of file
- * @note Does not modify the buffer or current position
+ * @return Next character
  */
 char peek(void);
 
 /**
- * @brief Checks if next character matches expected value and consumes it
+ * @brief Compare character with next character
  * 
- * Tests whether the next character in the stream matches the expected
- * character. If it matches, consumes the character and returns true.
+ * If characters match, save the character to buffer
  * 
- * @param expected The character to match against
- * @return true if next character matches and was consumed, false otherwise
+ * @param expected Character to check
+ * @return true if next characters match, false otherwise
  */
 bool match(char expected);
 
-// === Token Creation Functions ===
-/**
- * @brief Safely copies string data to a token's string value
- * 
- * Copies up to length characters from source to the token's string field,
- * ensuring null termination and preventing buffer overflow.
- * 
- * @param token Pointer to token to store string in
- * @param source Source string to copy from
- * @param length Number of characters to copy
- */
-void safe_copy_to_token_string(Token* token, const char* source, size_t length);
-
-/**
- * @brief Safely null-terminates the internal buffer
- * 
- * Adds a null terminator to the buffer at the current position,
- * with bounds checking to prevent overflow.
- */
-void null_terminate_buffer(void);
+//------------------------------------- Token creation -------------------------------------------
 
 /**
  * @brief Creates a token of the specified type with current buffer contents
@@ -214,7 +168,6 @@ void null_terminate_buffer(void);
  */
 Token add_token(TokenType type);
 
-// === Keyword and Identifier Functions ===
 /**
  * @brief Determines if a word is a keyword or identifier
  * 
@@ -225,6 +178,31 @@ Token add_token(TokenType type);
  * @return Appropriate TokenType (keyword type or ID)
  */
 TokenType lookup_keyword(const char* word);
+
+//================================================================================================
+//                                      SCANNER STATES
+//================================================================================================
+
+/**
+ * @brief Processes single-line comments starting with //
+ * 
+ * @return Next token after the comment
+ */
+Token single_line_comment(void);
+
+/**
+ * @brief Processes multi-line comments
+ * 
+ * @return Next token after the comment, or ERROR if unterminated
+ */
+Token multi_line_comment(void);
+
+/**
+ * @brief Handles the '/' character which could be division or start of comment
+ * 
+ * @return DIVIDE token or result of comment processing
+ */
+Token handle_slash(void);
 
 // === Specialized Scanning Functions ===
 /**

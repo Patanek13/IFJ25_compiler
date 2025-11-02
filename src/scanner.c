@@ -2,9 +2,10 @@
  * @file scanner.c
  * @author Petr David Lanca
  * @brief Scanner for tokenizing input
- * @date 2025-10-01
+ * @date 2.11.2025
  *
  */
+
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,63 +19,46 @@ FILE *out;                  // Output file to build/tokens.txt
 char c;                     // Current character
 char buffer[BUFFER_SIZE];   // Current token buffer
 int i = 0;                  // Buffer index
-bool was_new_line = false;  // Last generated token was NEW_LINE
+bool was_new_line = false;  // If last generated token was NEW_LINE
 
+//================================================================================================
+//                                      HELPER FUNCTIONS
+//================================================================================================
 
-// === Character and Buffer handling ========================================
+//------------------------------------- Buffer ---------------------------------------------------
+
 void reset_buffer() {
     memset(buffer, 0, BUFFER_SIZE);
     i = 0;
 }
 
+//------------------------------------- Character ------------------------------------------------
+
 char advance() {
     c = fgetc(file);
-    
-    // Safe buffer bounds checking - prevent overflow
     if (i < BUFFER_SIZE - 1) {
         buffer[i] = c;
         i++;
     }
-    // If buffer is full, we don't store the character but still advance the stream
-    
     return c;
 }
 
 char peek() {
     char next_char = fgetc(file);
-    
-    // Handle EOF case safely
-    if (next_char != EOF) {
-        ungetc(next_char, file);
-    }
-    
+    ungetc(next_char, file);
     return next_char;
 }
 
 bool match(char expected) {
     char next_char = peek();
-    
     if (next_char == expected) {
-        advance(); // Consume the matched character
+        advance();
         return true;
     }
-    
     return false;
 }
 
-void safe_copy_to_token_string(Token* token, const char* source, size_t length) {
-    size_t copy_len = length < BUFFER_SIZE - 1 ? length : BUFFER_SIZE - 1;
-    strncpy(token->value.string, source, copy_len);
-    token->value.string[copy_len] = '\0';
-}
-
-void null_terminate_buffer() {
-    if (i < BUFFER_SIZE) {
-        buffer[i] = '\0';
-    } else {
-        buffer[BUFFER_SIZE - 1] = '\0';
-    }
-}
+//------------------------------------- Token ----------------------------------------------------
 
 Token add_token(TokenType type) {
     Token token;
@@ -84,16 +68,17 @@ Token add_token(TokenType type) {
         case ID:
         case GLOBAL_ID:
         case STRING:
-            safe_copy_to_token_string(&token, buffer, i);
+            strncpy(token.value.string, buffer, BUFFER_SIZE - 1);
+            token.value.string[BUFFER_SIZE - 1] = '\0';
             break;
 
         case INTEGER:
-            null_terminate_buffer();
+            buffer[i] = '\0';
             token.value.integer = strtol(buffer, NULL, 0);
             break;
 
         case FLOATING:
-            null_terminate_buffer();
+            buffer[i] = '\0';
             token.value.floating = atof(buffer);
             break;
 
