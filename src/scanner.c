@@ -19,6 +19,7 @@ FILE *out;                  // Output file to build/tokens.txt
 char c;                     // Current character
 char buffer[BUFFER_SIZE];   // Current token buffer
 int i = 0;                  // Buffer index
+bool was_new_line = false;  // Last generated token was NEW_LINE
 
 
 void reset_buffer() {
@@ -56,8 +57,6 @@ Token add_token(TokenType type) {
     else if (token.type == STRING) {
         strncpy(token.value.string, buffer, i);
         token.value.string[i] = '\0';
-
-        // Handle string escaping
     }
 
     else if (token.type == INTEGER) {
@@ -173,8 +172,18 @@ Token get_token() {
         return handle_slash();
     }
 
+    // New line
+    if (c == '\n') {
+        if (was_new_line) {
+            return get_token();
+        }
+        was_new_line = true;
+        return add_token(NEW_LINE);
+    }
+    was_new_line = false;
+
     // Keyword, ID
-    else if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
+    if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
         char p = peek();
         while ((p >= 'a' && p <= 'z') || (p >= 'A' && p <= 'Z') || (p >= '0' && p <= '9') || (p == '_')) {
             c = advance();
@@ -397,7 +406,6 @@ Token get_token() {
         case '!': return add_token(match('=') ? NOT_EQUAL : NOT);
         case '&': return add_token(match('&') ? AND : ERROR);
         case '|': return add_token(match('|') ? OR : ERROR);
-        case '\n': return add_token(NEW_LINE);                          // Special cases
         default: return add_token(ERROR);
     }
 }
