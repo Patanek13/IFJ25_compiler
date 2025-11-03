@@ -324,10 +324,15 @@ Token scan_normal_string() {
 }
 
 Token scan_multiline_string() {
-    reset_buffer();
-    int quote_count = 0;
+    int count = 0;
     
-    while (i < BUFFER_SIZE - 1) {
+    // Ignore whitespace
+    while (isspace(peek()) && peek() != '\n') {
+        advance();
+        reset_buffer();
+    }
+
+    while (true) {
         advance();
         
         if (c == EOF) {
@@ -335,22 +340,19 @@ Token scan_multiline_string() {
         }
         
         if (c == '"') {
-            quote_count++;
-            if (quote_count == 3) {
+            count++;
+            if (count == 3) {
+                i -= 3;
                 buffer[i] = '\0';
                 return add_token(STRING);
+                // TODO Ingore whitespace
             }
-        } else {
-            // Add any accumulated quotes to buffer
-            while (quote_count > 0) {
-                replace('"');
-                quote_count--;
-            }
-            replace(c);
+        }
+        
+        else {
+            count = 0;
         }
     }
-    
-    return add_token(ERROR); // Buffer overflow or unterminated
 }
 
 Token scan_string() {
@@ -358,23 +360,36 @@ Token scan_string() {
     advance();
     
     if (c == '"') {
-        if (peek() == '"') {
-            // reset, advance
-            return scan_multiline_string();
+        if (match('"')) {
+            reset_buffer();
+            return scan_multiline_string(); // MULTI-LINE STRING
         }
         
         reset_buffer();
         return add_token(STRING); // EMPTY STRING
     }
     
-    return scan_normal_string();
+    return scan_normal_string(); // STRING
 }
 
-//------------------------------------- Singles and Doubles --------------------------------------
+//------------------------------------- Operands --------------------------------------
 
-// Operator parsing helper functions
-Token scan_single_char_operator(char op) {
+Token scan_operator(char op) {
     switch (op) {
+        case '=':
+            return add_token(match('=') ? EQUAL_EQUAL : EQUAL);
+        case '<':
+            return add_token(match('=') ? LESS_EQUAL : LESS);
+        case '>':
+            return add_token(match('=') ? MORE_EQUAL : MORE);
+        case '!':
+            return add_token(match('=') ? NOT_EQUAL : NOT);
+    
+        case '&':
+            return add_token(match('&') ? AND : ERROR);
+        case '|':
+            return add_token(match('|') ? OR : ERROR);
+    
         case '{': return add_token(BLOCK_START);
         case '}': return add_token(BLOCK_END);
         case '(': return add_token(BRACKET_START);
@@ -390,47 +405,6 @@ Token scan_single_char_operator(char op) {
     }
 }
 
-Token scan_comparison_operator(char op) {
-    switch (op) {
-        case '=':
-            return add_token(match('=') ? EQUAL_EQUAL : EQUAL);
-        case '<':
-            return add_token(match('=') ? LESS_EQUAL : LESS);
-        case '>':
-            return add_token(match('=') ? MORE_EQUAL : MORE);
-        case '!':
-            return add_token(match('=') ? NOT_EQUAL : NOT);
-        default:
-            return add_token(ERROR);
-    }
-}
-
-Token scan_logical_operator(char op) {
-    switch (op) {
-        case '&':
-            return add_token(match('&') ? AND : ERROR);
-        case '|':
-            return add_token(match('|') ? OR : ERROR);
-        default:
-            return add_token(ERROR);
-    }
-}
-
-Token scan_operator(char op) {
-    // Check for comparison operators
-    if (op == '=' || op == '<' || op == '>' || op == '!') {
-        return scan_comparison_operator(op);
-    }
-    
-    // Check for logical operators
-    if (op == '&' || op == '|') {
-        return scan_logical_operator(op);
-    }
-    
-    // Check for single character operators
-    return scan_single_char_operator(op);
-}
-
 //================================================================================================
 //                                      FINITE STATE MACHINE
 //================================================================================================
@@ -442,9 +416,9 @@ Token get_token() {
     reset_buffer();
     advance();
 
-//------------------------------------- Ignore blanks --------------------------------------------
+//------------------------------------- Ignore whitespace ----------------------------------------
 
-    while (isblank(c)) {
+    while (isspace(c) && c != '\n') {
         reset_buffer();
         advance();
     }
