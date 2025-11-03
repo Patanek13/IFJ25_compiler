@@ -14,7 +14,6 @@
 #include "parser.h"
 
 
-// TODO doplnit floating ako lirteral
 // mozno vyuzit lookup kde treba check scanner.c
 
 FILE* in;
@@ -59,7 +58,7 @@ int expression(){ /* pozor pri assign konci az po nacitani ")" chyba, a = a + 5*
     while(token.type != BRACKET_END){
         token = get_token();
     }
-    token = get_token();
+    // token = get_token();
     fprintf(out, "___________\n expression OK return \n_____________\n");
     return ERR_OK;
 }
@@ -75,15 +74,25 @@ int params(){
             break;
         
         case IFJ:
-            return built_in_call();
+            if ((built_in_call() == ERR_OK) && (match_token(BRACKET_END))){ return params(); }
             break;
-        case ID: /* tu doplnit volanie funkcie user made*/
+
+        case ID:
+            if (match_token(BRACKET_START)){
+                if ((func_call() == ERR_OK) && (match_token(BRACKET_END))){ return params(); }
+            } else if (is_param_expr()){
+                token = get_token();
+                return params();
+            }
+            return expression();
+            break;
+            
         case STRING:
         case INTEGER:
         case FLOATING:
         case GLOBAL_ID:
-        case BOOLEAN: /* tu este mozno doriesit (ifj.read) alebo (foo(a)) go to expr ak token nie je ) */
-            if ((!match_token(BRACKET_END)) && (!is_param_expr())){ return expression(); }
+        case BOOLEAN:
+            if ((!match_token(BRACKET_END)) && (!is_param_expr())){ return expression(); } /* tu je chyba pretoze ","*/
             if (is_param_expr()){
                 token = get_token();
             }
@@ -162,16 +171,13 @@ int func_call(){
             break;
 
         case BRACKET_START:
-            if (match_token(BRACKET_END)){ 
-                return func_call();
-            } else {
-                if (params() == ERR_OK){ return func_call(); }
-            }
+            // if (params() == ERR_OK){ return func_call(); }
+            return params();
             break;
 
         case BRACKET_END:
             // if (!match_token(NEW_LINE)){ return SYNTAX_ERROR; }
-            token = get_token();
+            // token = get_token();
             fprintf(out, "___________\n func_call OK return \n_____________\n");
             return ERR_OK;
             break;
@@ -199,13 +205,12 @@ int built_in_call(){
             return built_in_call();
             break;
         
-        case DOT: /* built in functions */
+        case DOT:
             if (!match_token(ID)){ print_token(token); return SYNTAX_ERROR; }
             return built_in_call();
             break;
 
         case ID:
-            fprintf(out, "reading string and comparing\n");
             if (is_built_in_func()){
                 token = get_token();
                 print_token(token);
@@ -216,16 +221,12 @@ int built_in_call(){
     
 
         case BRACKET_START:
-            if (match_token(BRACKET_END)){ 
-                return built_in_call();
-            } else {
-                if (params() == ERR_OK){ return built_in_call(); }
-            }
+            return params();
             break;
 
         case BRACKET_END:
             // if (!match_token(NEW_LINE)){ return SYNTAX_ERROR; }
-            token = get_token();
+            // token = get_token();
             fprintf(out, "___________\n built_in_call OK return \n_____________\n");
             return ERR_OK;
             break;
@@ -325,6 +326,7 @@ int assign(){ /* TODO poriadne otestovat nove riadky kde mozu a nemozu byt */
             token = get_token();
             if (is_operator()){ /* assigned expression */
                 if (expression() == ERR_OK){
+                    token = get_token();
                     return assign();
                 } 
                 return SYNTAX_ERROR;
@@ -339,6 +341,7 @@ int assign(){ /* TODO poriadne otestovat nove riadky kde mozu a nemozu byt */
         
         case IFJ:
             if (built_in_call() == ERR_OK){
+                token = get_token();
                 return assign();
             }
             return SYNTAX_ERROR;
@@ -422,7 +425,7 @@ int command(){
    switch(token.type){
         case ID:
             if (match_token(BRACKET_START)){ 
-                if ((func_call() == ERR_OK) && (token.type == NEW_LINE)){ return command(); }
+                if ((func_call() == ERR_OK) && (match_token(NEW_LINE))){ return command(); }
             } else if (token.type == EQUAL){
                 if (assign() == ERR_OK){ return command(); }
             } else {
@@ -433,7 +436,7 @@ int command(){
             break;
 
         case IFJ:
-            if ((built_in_call() == ERR_OK) && (token.type == NEW_LINE)){
+            if ((built_in_call() == ERR_OK) && (match_token(NEW_LINE))){
                 return command();
             }
             return SYNTAX_ERROR;
@@ -442,8 +445,16 @@ int command(){
         case RETURN:
             token = get_token();
             if (token.type == ID){
-                if (match_token(BRACKET_START)){ return func_call(); }
-                if (is_operator()){ return expression(); }
+                if (match_token(BRACKET_START)){
+                    if ((func_call() == ERR_OK) && (match_token(NEW_LINE))){ return command(); }
+                    fprintf(out, "return ID after func call token:");
+                    print_token(token);
+                    fprintf(out, "\n");
+                    return SYNTAX_ERROR;
+                }
+                if (is_operator()){
+                    if ((expression() == ERR_OK) && (match_token(NEW_LINE))){ return command(); }
+                }
                 if (token.type == NEW_LINE){ return command(); }
 
             } else if (token.type == IFJ){
@@ -452,7 +463,10 @@ int command(){
             } else if ((token.type == GLOBAL_ID) || (token.type == INTEGER) || (token.type == STRING) 
                         || (token.type == BOOLEAN) || (token.type == FLOATING)){
                 if (match_token(NEW_LINE)){ return command(); }
-                if (is_operator()){ return expression(); }
+
+                if (is_operator()){
+                    if ((expression() == ERR_OK) && (match_token(NEW_LINE))){ return command(); }
+                }
 
             } else {
                 return SYNTAX_ERROR;
@@ -589,7 +603,7 @@ int main (int argc, char** argv){
     (void)argc;
     (void)argv;
 
-    in = fopen("../samples/ahoj.IFJcode25", "r");
+    in = fopen("../samples/if_elseif_else.IFJcode25", "r");
     if (!in){ printf("nejde otvorit\n"); return SYNTAX_ERROR; }
 
     out = fopen("../samples/outfile.txt", "w");
