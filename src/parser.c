@@ -586,10 +586,6 @@ int program(){
             return program();
             break;
         
-        // case BLOCK_END:
-        //     return ERR_OK;
-
-        
         default:
             fprintf(out, "ERROR\n");
             return SYNTAX_ERROR;
