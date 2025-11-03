@@ -32,6 +32,11 @@ bool was_new_line = false;          // If last generated token was NEW_LINE
 //                                      BASIC FUNCTIONS
 //================================================================================================
 
+void scanner_init(FILE *input, FILE *output) {
+    file = input;
+    out = output;
+}
+
 //------------------------------------- Buffer ---------------------------------------------------
 
 void reset_buffer() {
@@ -564,33 +569,12 @@ void print_token(Token token) {
 }
 
 void prototype_parser_function() {
-  Token token;
-  output_file = fopen("../build/tokens.txt", "w");
-  if (!output_file) {
-    fprintf(stderr, "Unable to open output_file");
-    return;
-  }
-
-  do {
-    token = get_token();
-    print_token(token);
-  } while (token.type != EOF_TOKEN);
-
-  fclose(output_file);
+    Token token;
+    do {
+        token = get_token();
+        print_token(token);
+    } while (token.type != EOF_TOKEN);
 }
 
-int main()
-{
-    file = stdin;
 
-    out = fopen("../build/tokens.txt", "w");
-    if (!out) {return 1;}
-
-    prototype_parser_function();
-    fclose(input_file);
-  }
-
-    fclose(out);
-
-}
 
