@@ -146,6 +146,7 @@ Token multi_line_comment() {
         }
         advance();
     }
+    ungetc(c, file);
     return get_token();
 }
 
