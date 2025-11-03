@@ -10,6 +10,10 @@
  * - Token types enum
  * - Token value union
  * 
+ * Lookup table
+ * - keyword entry struct
+ * - keyword table
+ * 
  * Function prototypes
  * 
  */
@@ -20,6 +24,10 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stddef.h>
+
+//================================================================================================
+//                                      DEFINITIONS
+//================================================================================================
 
 /**
  * @def BUFFER_SIZE
@@ -114,8 +122,44 @@ typedef struct {
     TokenValue value;   /**< Token value (optional) */
 } Token;
 
+/**
+ * @struct KeywordEntry
+ * @brief Keyword entry to pair each keyword with token type
+ * 
+ * @var char* keyword
+ * @var TokenType type
+ */
+typedef struct {
+    char* keyword;
+    TokenType type;
+} KeywordEntry;
+
+/**
+ * @brief Keyword table to pair each keyword with token type
+ * 
+ */
+static KeywordEntry keyword_table[] = {
+    {"class", CLASS},
+    {"if", IF},
+    {"else", ELSE},
+    {"is", IS},
+    {"null", NULL_KEYWORD},
+    {"return", RETURN},
+    {"var", VAR},
+    {"while", WHILE},
+    {"Ifj", IFJ},
+    {"static", STATIC},
+    {"import", IMPORT},
+    {"for", FOR},
+    {"Num", NUM_TYPE},
+    {"String", STR_TYPE},
+    {"Null", NULL_TYPE},
+    {"Bool", BOOL_TYPE},
+    {NULL, 0}
+};
+
 //================================================================================================
-//                                      HELPER FUNCTIONS
+//                                      FUNCTION PROTOTYPES
 //================================================================================================
 
 //------------------------------------- Buffer ---------------------------------------------------
@@ -155,144 +199,143 @@ char peek(void);
  */
 bool match(char expected);
 
+/**
+ * @brief Replace last char in buffer
+ * 
+ * @param ch Character
+ */
+void replace(char ch);
+
 //------------------------------------- Token creation -------------------------------------------
 
 /**
- * @brief Creates a token of the specified type with current buffer contents
+ * @brief Create a token with type and value
  * 
- * Constructs a complete token from the current buffer state. Automatically
- * handles type-specific value conversion (string, integer, float).
+ * Convert string in buffer to value based on token type
  * 
- * @param type The type of token to create
- * @return A complete Token structure ready for use
+ * @param type Token type
+ * @return Token with TokenType and TokenValue
  */
 Token add_token(TokenType type);
 
+//------------------------------------- Keyword lookup table -------------------------------------
+
 /**
- * @brief Determines if a word is a keyword or identifier
+ * @brief Check the string if it is a keyword
  * 
- * Searches the keyword table to determine if the given word is a
- * reserved keyword or should be treated as a regular identifier.
+ * If it does not match any keyword, return ID
  * 
- * @param word Null-terminated string to check
- * @return Appropriate TokenType (keyword type or ID)
+ * @param word String to check
+ * @return TokenType of correct keyword or ID
  */
 TokenType lookup_keyword(const char* word);
+
+//================================================================================================
+//                                      HELPER FUNCTIONS
+//================================================================================================
+
+
+
+
 
 //================================================================================================
 //                                      SCANNER STATES
 //================================================================================================
 
+//------------------------------------- Comments -------------------------------------------------
+
 /**
- * @brief Processes single-line comments starting with //
+ * @brief Loop until end of line
+ * 
+ * Recursively calls for the next token
  * 
  * @return Next token after the comment
  */
 Token single_line_comment(void);
 
 /**
- * @brief Processes multi-line comments
+ * @brief Loop until end of multi-line comment
  * 
- * @return Next token after the comment, or ERROR if unterminated
+ * Recursively call for the next token
+ * 
+ * @return Next token after the comment, ERROR if unterminated
  */
 Token multi_line_comment(void);
 
 /**
- * @brief Handles the '/' character which could be division or start of comment
+ * @brief Decide if '/' is DIVIDE token or start of Comment or Multiline comment
  * 
- * @return DIVIDE token or result of comment processing
+ * Called when 1st char of new token is '/'
+ * 
+ * @return Divide token (optional)
  */
-Token handle_slash(void);
+Token scan_slash(void);
 
-// === Specialized Scanning Functions ===
-/**
- * @brief Scans and validates identifier characters
- * 
- * @param ch Character to test
- * @return true if character is valid in an identifier
- */
-bool is_identifier_char(char ch);
+//------------------------------------- IDs and keywords -----------------------------------------
 
 /**
- * @brief Scans a complete identifier or keyword token
+ * @brief Scan identifier or keyword
  * 
- * @return Token containing the identifier or keyword
+ * @return TokenType ID or correct keyword
  */
 Token scan_identifier(void);
 
 /**
- * @brief Scans a global identifier (starts with __)
+ * @brief Scan global identifier
  * 
- * @return GLOBAL_ID token or ERROR if malformed
+ * Global ID starts with '__'
+ * 
+ * @return TokenType GLOBAL_ID
  */
 Token scan_global_id(void);
 
-// === Number Parsing Functions ===
-/**
- * @brief Tests if character is a decimal digit
- * 
- * @param ch Character to test
- * @return true if ch is '0'-'9'
- */
-bool is_digit(char ch);
+//------------------------------------- Numbers --------------------------------------------------
 
 /**
- * @brief Tests if character is a hexadecimal digit
+ * @brief Scan exponent notation
  * 
- * @param ch Character to test  
- * @return true if ch is '0'-'9', 'a'-'f', or 'A'-'F'
- */
-bool is_hex_digit(char ch);
-
-/**
- * @brief Scans a sequence of decimal digits
- * 
- * @return true if at least one digit was found
- */
-bool scan_digits(void);
-
-/**
- * @brief Scans scientific notation exponent
- * 
- * @return FLOATING token if valid, ERROR if malformed
+ * @return FLOATING token
  */
 Token scan_exponent(void);
 
 /**
- * @brief Scans decimal numbers (integers and floats)
+ * @brief Scans floating notation
  * 
- * @return INTEGER or FLOATING token
+ * Can diverge into exponent
+ * 
+ * @return FLOATING token
  */
-Token scan_decimal_number(void);
+Token scan_floating(void);
 
 /**
- * @brief Scans hexadecimal numbers (0x...)
+ * @brief Scans hexadecimal notation
  * 
- * @return INTEGER token or ERROR if malformed
+ * @return INTEGER token
  */
-Token scan_hex_number(void);
+Token scan_hex(void);
 
 /**
- * @brief Handles numbers starting with zero
+ * @brief Numbers starting with 0
  * 
- * @return Appropriate numeric token type
+ * Can become floating, hex, or just 0
+ * 
+ * @return INTEGER token
  */
 Token scan_zero(void);
 
-// === String Parsing Functions ===
 /**
- * @brief Safely adds a character to the current buffer
+ * @brief Decide if '-' is part of negative number or MINUS token
  * 
- * @param ch Character to add
+ * @return INTEGER, MINUS TOKEN
  */
-void add_char_to_buffer(char ch);
+Token scan_minus(void);
+
+//------------------------------------- Strings --------------------------------------------------
 
 /**
  * @brief Processes escape sequences in strings
- * 
- * @return true if escape sequence was valid
  */
-bool handle_escape_sequence(void);
+void handle_escape_sequence(void);
 
 /**
  * @brief Scans regular string literals
@@ -362,20 +405,11 @@ Token scan_operator(char op);
  */
 Token get_token(void);
 
-// === Utility and Debug Functions ===
-/**
- * @brief Prints a token to the output stream for debugging
- * 
- * @param token Token to print
- */
-void print_token(Token token);
+//================================================================================================
+//                                      DEBUG
+//================================================================================================
 
-/**
- * @brief Test function that tokenizes entire input and prints results
- * 
- * Utility function for testing and debugging the scanner.
- * Processes input until EOF and prints all tokens found.
- */
+void print_token(Token token);
 void prototype_parser_function(void);
 
 #endif // SCANNER_H
