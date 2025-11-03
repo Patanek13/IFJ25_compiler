@@ -17,6 +17,7 @@
 #include <stdbool.h>
 #include <ctype.h>
 #include "scanner.h"
+#include "error.h"
 
 //------------------------------------- Global variables -----------------------------------------
 
@@ -563,11 +564,19 @@ void print_token(Token token) {
 }
 
 void prototype_parser_function() {
-    Token token;
-    do {
-        token = get_token();
-        print_token(token);
-    } while (token.type != EOF_TOKEN);
+  Token token;
+  output_file = fopen("../build/tokens.txt", "w");
+  if (!output_file) {
+    fprintf(stderr, "Unable to open output_file");
+    return;
+  }
+
+  do {
+    token = get_token();
+    print_token(token);
+  } while (token.type != EOF_TOKEN);
+
+  fclose(output_file);
 }
 
 int main()
@@ -578,9 +587,10 @@ int main()
     if (!out) {return 1;}
 
     prototype_parser_function();
+    fclose(input_file);
+  }
 
     fclose(out);
 
-    return 0;
 }
 

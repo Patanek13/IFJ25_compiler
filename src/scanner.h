@@ -412,4 +412,6 @@ Token get_token(void);
 void print_token(Token token);
 void prototype_parser_function(void);
 
+void parser_function(bool debug);
+
 #endif // SCANNER_H
