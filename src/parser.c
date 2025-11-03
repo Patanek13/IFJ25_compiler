@@ -63,6 +63,20 @@ int expression(){ /* pozor pri assign konci az po nacitani ")" chyba, a = a + 5*
     return ERR_OK;
 }
 
+int ternary(){
+    switch(token.type){
+        case BRACKET_START:
+        case BRACKET_END:
+        case ID:
+        case GLOBAL_ID:
+        case VAR:
+        
+        default:
+            return SYNTAX_ERROR;
+            break;
+    }
+}
+
 int params(){
     fprintf(out, "nasli sme token v params: ");
     print_token(token);
@@ -83,8 +97,10 @@ int params(){
             } else if (is_param_expr()){
                 token = get_token();
                 return params();
+            } else if (is_operator()){
+                return expression();
             }
-            return expression();
+            return params();
             break;
             
         case STRING:
@@ -92,7 +108,9 @@ int params(){
         case FLOATING:
         case GLOBAL_ID:
         case BOOLEAN:
-            if ((!match_token(BRACKET_END)) && (!is_param_expr())){ return expression(); } /* tu je chyba pretoze ","*/
+            if ((!match_token(BRACKET_END)) && (!is_param_expr())){
+                if (expression() == ERR_OK){ return params(); }
+            } /* tu je chyba pretoze ","*/
             if (is_param_expr()){
                 token = get_token();
             }
@@ -221,7 +239,8 @@ int built_in_call(){
     
 
         case BRACKET_START:
-            return params();
+            if (params() == ERR_OK){ return built_in_call(); }
+            return SYNTAX_ERROR;
             break;
 
         case BRACKET_END:
@@ -341,7 +360,11 @@ int assign(){ /* TODO poriadne otestovat nove riadky kde mozu a nemozu byt */
         
         case IFJ:
             if (built_in_call() == ERR_OK){
+                fprintf(out, "old token:");
+                print_token(token);
                 token = get_token();
+                fprintf(out, "new token:");
+                print_token(token);
                 return assign();
             }
             return SYNTAX_ERROR;
@@ -461,7 +484,7 @@ int command(){
                 return command();
 
             } else if ((token.type == GLOBAL_ID) || (token.type == INTEGER) || (token.type == STRING) 
-                        || (token.type == BOOLEAN) || (token.type == FLOATING)){
+                        || (token.type == BOOLEAN) || (token.type == FLOATING) || (token.type == NULL_KEYWORD)){
                 if (match_token(NEW_LINE)){ return command(); }
 
                 if (is_operator()){
@@ -482,6 +505,7 @@ int command(){
             } else if (token.type == NEW_LINE){
                 return command();
             } else {
+                fprintf(out, "globalid or var next token wasnt newline or =\n");
                 return SYNTAX_ERROR;
             }
             break;
@@ -599,13 +623,13 @@ int main (int argc, char** argv){
     (void)argc;
     (void)argv;
 
-    in = fopen("../samples/if_elseif_else.IFJcode25", "r");
+    in = fopen("../samples/ahoj.IFJcode25", "r");
     if (!in){ printf("nejde otvorit\n"); return SYNTAX_ERROR; }
 
     out = fopen("../samples/outfile.txt", "w");
     if (!out){ return SYNTAX_ERROR; }
 
-    scanner_innit(in, out);
+    scanner_init(in, out);
 
     int ok;
 

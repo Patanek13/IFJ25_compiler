@@ -21,8 +21,8 @@
 
 //------------------------------------- Global variables -----------------------------------------
 
-FILE *file;                         // Input file from stdin            //REMOVE//REMOVE//REMOVE//
-FILE *out;                          // Output file to build/tokens.txt //REMOVE//REMOVE//REMOVE//
+FILE *input_file;                         // Input file from stdin            //REMOVE//REMOVE//REMOVE//
+FILE *output_file;                  // Output file to build/tokens.txt //REMOVE//REMOVE//REMOVE//
 char c;                             // Current character
 char buffer[BUFFER_SIZE];           // Current token buffer
 int i = 0;                          // Buffer index
@@ -31,6 +31,11 @@ bool was_new_line = false;          // If last generated token was NEW_LINE
 //================================================================================================
 //                                      BASIC FUNCTIONS
 //================================================================================================
+
+void scanner_init(FILE* in, FILE* out){
+    input_file = in;
+    output_file = out;
+}
 
 //------------------------------------- Buffer ---------------------------------------------------
 
@@ -42,7 +47,7 @@ void reset_buffer() {
 //------------------------------------- Character scanning ---------------------------------------
 
 char advance() {
-    c = fgetc(file);
+    c = fgetc(input_file);
     if (i < BUFFER_SIZE - 1) {
         buffer[i] = c;
         i++;
@@ -51,8 +56,8 @@ char advance() {
 }
 
 char peek() {
-    char next_char = fgetc(file);
-    ungetc(next_char, file);
+    char next_char = fgetc(input_file);
+    ungetc(next_char, input_file);
     return next_char;
 }
 

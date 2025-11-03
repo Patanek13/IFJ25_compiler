@@ -122,10 +122,6 @@ typedef struct {
     TokenValue value;   /**< Token value (optional) */
 } Token;
 
-<<<<<<< HEAD
-// === Function declarations ========================================
-Token get_token();
-=======
 /**
  * @struct KeywordEntry
  * @brief Keyword entry to pair each keyword with token type
@@ -417,6 +413,5 @@ void print_token(Token token);
 void prototype_parser_function(void);
 
 void parser_function(bool debug);
->>>>>>> origin/main
 
 #endif // SCANNER_H

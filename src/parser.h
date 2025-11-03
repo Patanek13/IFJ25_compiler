@@ -22,7 +22,7 @@
 /*=============== Scanner function declaration ===============*/
 Token get_token();
 void print_token(Token token);
-void scanner_innit(FILE* source, FILE* output);
+void scanner_init(FILE* source, FILE* output);
 
 /*=============== Parser function declaration ================*/
 int cond_loop();
