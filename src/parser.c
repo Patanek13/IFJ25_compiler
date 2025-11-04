@@ -149,10 +149,12 @@ int params(){
         case ID:
             if (match_token(BRACKET_START)){
                 if ((func_call() == ERR_OK) && (match_token(BRACKET_END))){ return params(); }
+
             } else if (is_param_expr()){
                 token = get_token();
                 return params();
-            } else if (is_operator()){
+                
+            } else if (token.type == OPERATOR){
                 return expression();
             }
             return params();
@@ -166,8 +168,10 @@ int params(){
             if ((!match_token(BRACKET_END)) && (!is_param_expr())){
                 if (expression() == ERR_OK){ return params(); }
             } /* tu je chyba pretoze ","*/
-            if (is_param_expr()){
+            else if (is_param_expr()){
                 token = get_token();
+            } else if (token.type == OPERATOR){
+                return expression();
             }
             return params();
             break;
@@ -397,19 +401,11 @@ int assign(){ /* TODO poriadne otestovat nove riadky kde mozu a nemozu byt */
         case FLOATING:
         case GLOBAL_ID:
         case BOOLEAN:
-            token = get_token();
-            if (is_operator()){ /* assigned expression */
-                if (expression() == ERR_OK){
-                    token = get_token();
-                    return assign();
-                } 
-                return SYNTAX_ERROR;
-
-            } else if (token.type == NEW_LINE) { /* declaration tuto pozor na x<NLx> = x<NLx> *<NL*> 5<NL+>*/
+            if (match_token(NEW_LINE)) { /* declaration tuto pozor na x<NLx> = x<NLx> *<NL*> 5<NL+>*/
                 fprintf(out, "___________\n assign OK return \n_____________\n");
                 return assign();
             } else {
-                return SYNTAX_ERROR;
+                return assign();
             }
             break;
         
@@ -420,6 +416,14 @@ int assign(){ /* TODO poriadne otestovat nove riadky kde mozu a nemozu byt */
                 token = get_token();
                 fprintf(out, "new token:");
                 print_token(token);
+                return assign();
+            }
+            return SYNTAX_ERROR;
+            break;
+
+        case OPERATOR:
+            if (expression() == ERR_OK){
+                token = get_token();
                 return assign();
             }
             return SYNTAX_ERROR;
@@ -495,6 +499,74 @@ int func_decl(){
     return SYNTAX_ERROR;
 }
 
+int return_func(){
+    fprintf(out, "nasli sme token v return_func: ");
+    print_token(token);
+    fprintf(out, "\n");
+    switch(token.type){
+        case ID:
+            if (match_token(BRACKET_START)){
+                if ((func_call() == ERR_OK) && (((match_token(NEW_LINE)) || (token.type == QUESTION)) || (token.type == OPERATOR))){ return return_func(); }
+            }
+            if (token.type == OPERATOR){ /* expression returns end token either bracket newline or ? */
+                if ((expression() == ERR_OK) && ((token.type == NEW_LINE) || (token.type == QUESTION))){ return return_func(); }
+            }
+            if (token.type == QUESTION){
+                if ((ternary() == ERR_OK) && ((match_token(NEW_LINE)) || (token.type == OPERATOR))){ return return_func(); }
+            }
+            if (token.type == NEW_LINE){ return return_func(); }
+
+            return SYNTAX_ERROR;
+            break;
+
+        case GLOBAL_ID:
+        case VAR:
+        case STRING:
+        case INTEGER:
+        case FLOATING:
+            if (match_token(OPERATOR)){
+                if (expression() == ERR_OK){ return return_func(); }
+            }
+            if (token.type == NEW_LINE){ return return_func(); }
+            return SYNTAX_ERROR;
+            break;
+
+        case BOOLEAN:
+            if (match_token(NEW_LINE)){ return return_func(); }
+            if (token.type == QUESTION){
+                if (ternary() == ERR_OK){ return return_func(); }
+            }
+            return SYNTAX_ERROR;
+            break;
+            
+        case IFJ:
+            if (built_in_call() == ERR_OK){
+                token = get_token();
+                return return_func();
+            }
+            return SYNTAX_ERROR;
+            break;
+
+        case NULL_KEYWORD:
+            if (match_token(NEW_LINE)){ return return_func(); }
+            return SYNTAX_ERROR;
+            break;
+
+        case OPERATOR:
+            if (expression() == ERR_OK){ token = get_token(); return return_func(); }
+            return SYNTAX_ERROR;
+            break;
+
+        case NEW_LINE:
+            return ERR_OK;
+            break;
+
+        default:
+            return SYNTAX_ERROR;
+            break;
+    }
+}
+
 
 int command(){
     fprintf(out, "nasli sme token v command: ");
@@ -521,37 +593,9 @@ int command(){
             break;
 
         case RETURN:
-            token = get_token();
-            if (token.type == ID){
-                if (match_token(BRACKET_START)){
-                    if ((func_call() == ERR_OK) && (match_token(NEW_LINE))){ return command(); }
-                    fprintf(out, "return ID after func call token:");
-                    print_token(token);
-                    fprintf(out, "\n");
-                    return SYNTAX_ERROR;
-                }
-                if (is_operator()){
-                    if ((expression() == ERR_OK) && (match_token(NEW_LINE))){ return command(); }
-                }
-                if (token.type == NEW_LINE){ return command(); }
-
-            } else if (token.type == IFJ){
-                return command();
-
-            } else if ((token.type == GLOBAL_ID) || (token.type == INTEGER) || (token.type == STRING) 
-                        || (token.type == BOOLEAN) || (token.type == FLOATING) || (token.type == NULL_KEYWORD)){
-                if (match_token(NEW_LINE)){ return command(); }
-
-                if (is_operator()){
-                    if ((expression() == ERR_OK) && (match_token(NEW_LINE))){ return command(); }
-                }
-
-            } else {
-                return SYNTAX_ERROR;
-                break;
-            }
+            if (match_token(NEW_LINE)){ return command(); }
+            if (return_func() == ERR_OK){ return command(); }
             return SYNTAX_ERROR;
-            break;
 
         case GLOBAL_ID:
         case VAR:
@@ -678,7 +722,7 @@ int main (int argc, char** argv){
     (void)argc;
     (void)argv;
 
-    in = fopen("../samples/ahoj.IFJcode25", "r");
+    in = fopen("../samples/if_elseif_else.IFJcode25", "r");
     if (!in){ printf("nejde otvorit\n"); return SYNTAX_ERROR; }
 
     out = fopen("../samples/outfile.txt", "w");
