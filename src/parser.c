@@ -14,7 +14,14 @@
 #include "parser.h"
 
 
-// mozno vyuzit lookup kde treba check scanner.c
+// TODO: vlozit do expression() moznost kontroly spravnosti (a+5 == 10)
+// TODO: doplnit moznost ! v parametroch expression ternary atd
+// TODO: doplnit do funkcii assign params return case OPERATOR: return expression 
+// TODO: doplnit do tych istych funkcii case QUESTION: return ternary()
+//      -> ? nesmie byt prvy operator a kontrola ci token pred nim je spravnej hodnoty bude na semantike
+//      -> kontrola a : b bude na ternary() 
+//      -> ternary() bude kontrolovat iba ( ) ? :
+//      -> to co bolo pred ? ci je spravne napisane skontroluje dana funkcia ostatne je na ternary()
 
 FILE* in;
 FILE* out;
@@ -63,13 +70,61 @@ int expression(){ /* pozor pri assign konci az po nacitani ")" chyba, a = a + 5*
     return ERR_OK;
 }
 
-int ternary(){
+int ternary(){ /* var = / global id = / ... ( expr == expr ? "" : "" )*/
     switch(token.type){
         case BRACKET_START:
+            return ternary();
+            break;
+
         case BRACKET_END:
+            if (match_token(QUESTION)){ return ternary(); }
+            return SYNTAX_ERROR;
+            break;
+
         case ID:
         case GLOBAL_ID:
         case VAR:
+        case STRING:
+        case INTEGER:
+        case FLOATING:
+            if (match_token(BRACKET_END)){ return SYNTAX_ERROR; }
+            if (is_param_expr()){
+                if (params() == ERR_OK){ return ternary(); }
+            } else if (is_operator()){
+                if (expression() == ERR_OK){ return ternary(); }
+            }
+            return SYNTAX_ERROR;
+            break;
+
+        case BOOLEAN:
+            if (match_token(BRACKET_END)){ return ternary(); }
+            if (is_param_expr()){
+                if (params() == ERR_OK){ return ternary(); }
+            }
+            return SYNTAX_ERROR;
+            break;
+        
+        case QUESTION:
+            token = get_token();
+            if ((token.type == ID) || (token.type == GLOBAL_ID) || (token.type == VAR) || (token.type == STRING) || (token.type == INTEGER)
+                 || (token.type == FLOATING) || (token.type == BOOLEAN))
+                {
+                    if (match_token(COLON)){ return ternary(); }
+            }
+            return SYNTAX_ERROR;
+            break; 
+            
+        case COLON:
+            token = get_token();
+            if ((token.type == ID) || (token.type == GLOBAL_ID) || (token.type == VAR) || (token.type == STRING) || (token.type == INTEGER)
+                 || (token.type == FLOATING) || (token.type == BOOLEAN))
+                {
+                    return ternary();
+            }
+            return SYNTAX_ERROR;
+            break;
+
+        case NEW_LINE:
         
         default:
             return SYNTAX_ERROR;
