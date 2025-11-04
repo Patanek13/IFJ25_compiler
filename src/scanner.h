@@ -76,6 +76,8 @@ typedef enum {
     STRING,             /**< String literal - normal and multi-line */
     BOOLEAN,            /**< Boolean literal - true or false */
 
+    OPERATOR,           /*  + - / * */
+
     CLASS,              /**< class */
     IF,                 /**< if */
     ELSE,               /**< else */

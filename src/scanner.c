@@ -32,6 +32,29 @@ bool was_new_line = false;          // If last generated token was NEW_LINE
 //                                      BASIC FUNCTIONS
 //================================================================================================
 
+const char* op_string(TokenType type){
+    switch(type){
+        case PLUS:
+            return "+";
+            break;
+        case MINUS:
+            return "-";
+            break;
+        case MULTIPLY:
+            return "*";
+            break;
+        case DIVIDE:
+            return "/";
+            break;
+        
+        default:
+            return "\0";
+            break;
+    }
+}
+
+
+
 void scanner_init(FILE* in, FILE* out){
     input_file = in;
     output_file = out;
@@ -88,6 +111,15 @@ Token add_token(TokenType type) {
         case STRING:
             strncpy(token.value.string, buffer, BUFFER_SIZE - 1);
             token.value.string[BUFFER_SIZE - 1] = '\0';
+            break;
+
+        case PLUS:
+        case MINUS:
+        case MULTIPLY:
+        case DIVIDE:
+            strncpy(token.value.string, op_string(type), BUFFER_SIZE - 1);
+            token.value.string[BUFFER_SIZE - 1] = '\0';
+            token.type = OPERATOR;
             break;
 
         case INTEGER:
@@ -550,6 +582,7 @@ void print_token(Token token) {
         case NEW_LINE:      fprintf(output_file, "NEW_LINE"); break;
         case EOF_TOKEN:     fprintf(output_file, "EOF"); break;
         case ERROR:         fprintf(output_file, "ERROR"); break;
+        case OPERATOR:      fprintf(output_file, "OPERATOR"); break;
         default:            fprintf(output_file, "UNKNOWN"); break;
     }
 
@@ -563,6 +596,8 @@ void print_token(Token token) {
         fprintf(output_file, "             STR[%s]", token.value.string);
     } else if (token.type == GLOBAL_ID) {
         fprintf(output_file, "      STR[%s]", token.value.string);
+    } else if (token.type == OPERATOR) {
+        fprintf(output_file, "      OP[%s]", token.value.string);
     }
 
     fprintf(output_file, "\n");
