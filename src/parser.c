@@ -70,66 +70,76 @@ int expression(){ /* pozor pri assign konci az po nacitani ")" chyba, a = a + 5*
     return ERR_OK;
 }
 
-int ternary(){ /* var = / global id = / ... ( expr == expr ? "" : "" )*/
+int ternary(){ /*cela kontrola tokenov je neskutocne chaba mozno bude treba novy state brackets idk toto je strasna picovina*/
+    fprintf(out, "nasli sme token v ternary: ");
+    print_token(token);
+    fprintf(out, "\n");
     switch(token.type){
         case BRACKET_START:
-            return ternary();
-            break;
-
-        case BRACKET_END:
-            if (match_token(QUESTION)){ return ternary(); }
+            if (!match_token(BRACKET_END)){ return ternary(); }
             return SYNTAX_ERROR;
             break;
 
-        case ID:
+        case BRACKET_END:
+            if (!match_token(BRACKET_START)){ return ternary(); }
+            return SYNTAX_ERROR;
+            break;
+
+
+        case ID: /* neskor doplnit ... ? ID? y : n : n */
+            if (match_token(BRACKET_START)){
+                if ((func_call() == ERR_OK) && (match_token(COLON) || (token.type == OPERATOR) || (token.type == NEW_LINE) || (token.type == BRACKET_END))){
+                    return ternary();
+                }
+            } else if (token.type == OPERATOR){
+                if ((expression() == ERR_OK) && (match_token(COLON) || (token.type == NEW_LINE))){
+                    return ternary();
+                }
+            } else if (token.type == NEW_LINE){ return ternary(); }
+            return SYNTAX_ERROR;
+            break;
+
         case GLOBAL_ID:
         case VAR:
         case STRING:
         case INTEGER:
         case FLOATING:
-            if (match_token(BRACKET_END)){ return SYNTAX_ERROR; }
-            if (is_param_expr()){
-                if (params() == ERR_OK){ return ternary(); }
-            } else if (is_operator()){
-                if (expression() == ERR_OK){ return ternary(); }
-            }
+            if (match_token(OPERATOR)){
+                if ((expression() == ERR_OK) && (match_token(COLON) || (token.type == NEW_LINE))){ return ternary(); }
+            } else if ((token.type == COLON) || (token.type == NEW_LINE)){ return ternary(); }
+
             return SYNTAX_ERROR;
             break;
 
         case BOOLEAN:
-            if (match_token(BRACKET_END)){ return ternary(); }
-            if (is_param_expr()){
-                if (params() == ERR_OK){ return ternary(); }
-            }
-            return SYNTAX_ERROR;
-            break;
-        
-        case QUESTION:
-            token = get_token();
-            if ((token.type == ID) || (token.type == GLOBAL_ID) || (token.type == VAR) || (token.type == STRING) || (token.type == INTEGER)
-                 || (token.type == FLOATING) || (token.type == BOOLEAN))
-                {
-                    if (match_token(COLON)){ return ternary(); }
-            }
-            return SYNTAX_ERROR;
-            break; 
-            
-        case COLON:
-            token = get_token();
-            if ((token.type == ID) || (token.type == GLOBAL_ID) || (token.type == VAR) || (token.type == STRING) || (token.type == INTEGER)
-                 || (token.type == FLOATING) || (token.type == BOOLEAN))
-                {
-                    return ternary();
-            }
+            if (match_token(COLON) || (token.type == NEW_LINE)){ return ternary(); }
             return SYNTAX_ERROR;
             break;
 
+        case OPERATOR:
+            if (expression() == ERR_OK){
+                token = get_token();
+                return ternary();
+            }
+            
+            return SYNTAX_ERROR;
+            break;    
+
+        case COLON:
+        case QUESTION:
+            token = get_token();
+            return ternary();
+
         case NEW_LINE:
+            fprintf(out, "___________\n ternary OK return\n_____________\n");
+            return ERR_OK;
+            break;
         
         default:
             return SYNTAX_ERROR;
             break;
     }
+    return SYNTAX_ERROR;
 }
 
 int params(){
@@ -155,7 +165,7 @@ int params(){
                 return params();
                 
             } else if (token.type == OPERATOR){
-                return expression();
+                if (expression() == ERR_OK){ return params(); }
             }
             return params();
             break;
@@ -171,7 +181,7 @@ int params(){
             else if (is_param_expr()){
                 token = get_token();
             } else if (token.type == OPERATOR){
-                return expression();
+                if (expression() == ERR_OK){ token = get_token(); return params(); }
             }
             return params();
             break;
@@ -217,7 +227,7 @@ int block(){
             return block();
             break;
 
-        case BLOCK_END: /* vrat iba OK */
+        case BLOCK_END:
             fprintf(out, "___________\n block OK return \n_____________\n");
             token = get_token();
             return ERR_OK;
@@ -248,8 +258,8 @@ int func_call(){
             break;
 
         case BRACKET_START:
-            // if (params() == ERR_OK){ return func_call(); }
-            return params();
+            if (params() == ERR_OK){ return func_call(); }
+            return SYNTAX_ERROR;
             break;
 
         case BRACKET_END:
@@ -323,7 +333,7 @@ int built_in_call(){
  * @return ERR_OK or SYNTAX_ERROR
  */
 int cond_loop(){
-    fprintf(out, "nasli sme token v cond_loop: ");
+    fprintf(out, "nasli sme token v cond_loop cond_state: %s: ", (cond_state)? "while":"if");
     print_token(token);
     fprintf(out, "\n");
     switch(token.type){
@@ -353,11 +363,13 @@ int cond_loop(){
             break;
         
         case BLOCK_START:
-            if (cond_state == 0){
-                if ((block() == ERR_OK) && (token.type == ELSE)){ return cond_loop(); }
-                if ((block() == ERR_OK) && (token.type == NEW_LINE)){ fprintf(out, "___________\n cond_loop OK return \n_____________\n"); return ERR_OK; }
+            if (!cond_state){
+                if (block() == ERR_OK){
+                    if (token.type == ELSE){ return cond_loop(); }
+                    else if (token.type == NEW_LINE){ fprintf(out, "___________\n if OK return 1\n_____________\n"); return ERR_OK; }
+                }                
             } else {
-                if ((block() == ERR_OK) && (token.type == NEW_LINE)){ return ERR_OK; }
+                if ((block() == ERR_OK) && (token.type == NEW_LINE)){ fprintf(out, "___________\n while OK return \n_____________\n"); return ERR_OK; }
             }
             return SYNTAX_ERROR;
             break;
@@ -366,7 +378,8 @@ int cond_loop(){
             if (match_token(IF)){
                 return cond_loop();
             } else if (token.type == BLOCK_START){
-                if ((block() == ERR_OK) && (token.type == NEW_LINE)){ return ERR_OK; }
+                fprintf(out, "starting else recursion\n");
+                if ((block() == ERR_OK) && (token.type == NEW_LINE)){ fprintf(out, "___________\n else OK return \n_____________\n"); return ERR_OK; }
             }
             fprintf(out, "SYNTAX ERROR ELSE");
             return SYNTAX_ERROR;
@@ -396,17 +409,33 @@ int assign(){ /* TODO poriadne otestovat nove riadky kde mozu a nemozu byt */
             break;
 
         case ID:
+            if (match_token(BRACKET_START)){
+                if (func_call() == ERR_OK){
+                    token = get_token();
+                    return assign();
+                }
+            } else if ((token.type == NEW_LINE) || (token.type == OPERATOR) || (token.type == QUESTION)){
+                return assign();
+            }
+            return SYNTAX_ERROR;
+            break;
+
         case STRING:
         case INTEGER:
         case FLOATING:
         case GLOBAL_ID:
-        case BOOLEAN:
             if (match_token(NEW_LINE)) { /* declaration tuto pozor na x<NLx> = x<NLx> *<NL*> 5<NL+>*/
                 fprintf(out, "___________\n assign OK return \n_____________\n");
                 return assign();
-            } else {
+            } else if (token.type == OPERATOR){
                 return assign();
             }
+            return SYNTAX_ERROR;
+            break;
+
+        case BOOLEAN:
+            if (match_token(NEW_LINE) || (token.type == QUESTION)){ return assign(); }
+            return SYNTAX_ERROR;
             break;
         
         case IFJ:
@@ -429,7 +458,13 @@ int assign(){ /* TODO poriadne otestovat nove riadky kde mozu a nemozu byt */
             return SYNTAX_ERROR;
             break;
         
+        case QUESTION:
+            if (ternary() == ERR_OK){ fprintf(out, "___________\n assign OK return\n_____________\n"); return ERR_OK; }
+            return SYNTAX_ERROR;
+            break;
+        
         case NEW_LINE:
+            fprintf(out, "___________\n assign OK return\n_____________\n");
             return ERR_OK;
             break;
 
@@ -509,7 +544,7 @@ int return_func(){
                 if ((func_call() == ERR_OK) && (((match_token(NEW_LINE)) || (token.type == QUESTION)) || (token.type == OPERATOR))){ return return_func(); }
             }
             if (token.type == OPERATOR){ /* expression returns end token either bracket newline or ? */
-                if ((expression() == ERR_OK) && ((token.type == NEW_LINE) || (token.type == QUESTION))){ return return_func(); }
+                if ((expression() == ERR_OK) && (match_token(NEW_LINE) || (token.type == QUESTION))){ return return_func(); }
             }
             if (token.type == QUESTION){
                 if ((ternary() == ERR_OK) && ((match_token(NEW_LINE)) || (token.type == OPERATOR))){ return return_func(); }
@@ -525,7 +560,7 @@ int return_func(){
         case INTEGER:
         case FLOATING:
             if (match_token(OPERATOR)){
-                if (expression() == ERR_OK){ return return_func(); }
+                if (expression() == ERR_OK){ token = get_token(); return return_func(); }
             }
             if (token.type == NEW_LINE){ return return_func(); }
             return SYNTAX_ERROR;
@@ -558,6 +593,7 @@ int return_func(){
             break;
 
         case NEW_LINE:
+            fprintf(out, "___________\n return_func OK return\n_____________\n");
             return ERR_OK;
             break;
 
@@ -722,7 +758,7 @@ int main (int argc, char** argv){
     (void)argc;
     (void)argv;
 
-    in = fopen("../samples/if_elseif_else.IFJcode25", "r");
+    in = fopen("../samples/ahoj.IFJcode25", "r");
     if (!in){ printf("nejde otvorit\n"); return SYNTAX_ERROR; }
 
     out = fopen("../samples/outfile.txt", "w");
