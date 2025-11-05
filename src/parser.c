@@ -45,9 +45,9 @@ bool is_built_in_func(){
     return false;
 }
 
-bool is_operator(){
-    return ((token.type == PLUS) || (token.type == MINUS) || (token.type == MULTIPLY) || (token.type == DIVIDE));
-}
+// bool is_operator(){
+//     return ((token.type == PLUS) || (token.type == MINUS) || (token.type == MULTIPLY) || (token.type == DIVIDE));
+// }
 
 bool is_operand(){
     return ((token.type == ID) || (token.type == GLOBAL_ID) || (token.type == STRING) 
@@ -70,7 +70,7 @@ int expression(){ /* pozor pri assign konci az po nacitani ")" chyba, a = a + 5*
     return ERR_OK;
 }
 
-int ternary(){ /*cela kontrola tokenov je neskutocne chaba mozno bude treba novy state brackets idk toto je strasna picovina*/
+int ternary(){ /*mozno do buducna vytvorit <before> : <after> ktore by kontorolovali jednotlive expressions*/
     fprintf(out, "nasli sme token v ternary: ");
     print_token(token);
     fprintf(out, "\n");
@@ -758,7 +758,7 @@ int main (int argc, char** argv){
     (void)argc;
     (void)argv;
 
-    in = fopen("../samples/ahoj.IFJcode25", "r");
+    in = fopen("../samples/test.IFJcode25", "r");
     if (!in){ printf("nejde otvorit\n"); return SYNTAX_ERROR; }
 
     out = fopen("../samples/outfile.txt", "w");
