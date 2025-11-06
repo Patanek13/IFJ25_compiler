@@ -29,7 +29,6 @@ FILE* out;
 /* condition state 0 = IF 1 = WHILE */
 bool cond_state = 0;
 
-Token token;
 TokenType list_param_ops[] = {IS, EQUAL_EQUAL, LESS, LESS_EQUAL, MORE, MORE_EQUAL, NOT, NOT_EQUAL, AND, OR};
 char* built_in_string[] = {"read_str", "read_num", "write", "floor", "str", "length", "substring", "strcmp", "ord", "chr", "read_bool"};
 
@@ -69,6 +68,12 @@ int expression(){ /* pozor pri assign konci az po nacitani ")" chyba, a = a + 5*
     fprintf(out, "___________\n expression OK return \n_____________\n");
     return ERR_OK;
 }
+
+// int ternary_arg_check(){
+//     switch(token.type){
+
+//     }
+// }
 
 int ternary(){ /*mozno do buducna vytvorit <before> : <after> ktore by kontorolovali jednotlive expressions*/
     fprintf(out, "nasli sme token v ternary: ");
@@ -754,6 +759,55 @@ int program(){
 }
 
 
+// ===========================================DEBUG PRECEDENCE=====================================================
+void tok_print(TokenType tok){
+    switch(tok){
+        case LESS:            fprintf(out, "<  |  "); break;
+        case MORE:            fprintf(out, ">  |  "); break;
+        case EQUAL:            fprintf(out, "= |  "); break;
+        case ERROR:            fprintf(out, "ERR  |   "); break;
+
+        default:
+            break;
+    }
+}
+void precedence_check(){
+    Token token1;
+    Token token2;
+    fprintf(out, "table: \n");
+    for (int i = 0; i < 48; i++){
+        token1 = get_token();
+
+        // if (token1.type == EOF_TOKEN){ break; }
+
+        if (token1.type == NEW_LINE){ fprintf(out, "\n"); continue; }
+
+        token2 = get_token();
+
+        fprintf(out, "%s,", token1.value.string);
+
+        if (token2.type == INTEGER){ 
+            fprintf(out, "%d |  ", token2.value.integer);
+        }
+        else if (token2.type == FLOATING){ 
+            fprintf(out, "%f |  ", token2.value.floating);
+        }
+        else if (token2.type == BRACKET_START){
+            fprintf(out, "( |  ");
+        }
+        else if (token2.type == BRACKET_END){
+            fprintf(out, ") |  ");
+        }
+        else {
+            fprintf(out, "%s |  ", token2.value.string);
+        }
+
+        tok_print(precedence_table[token_to_int(token1)][token_to_int(token2)]);
+    }
+}
+// ===============================================================================================================
+
+
 int main (int argc, char** argv){
     (void)argc;
     (void)argv;
@@ -767,21 +821,34 @@ int main (int argc, char** argv){
     scanner_init(in, out);
 
     int ok;
+    ok = 1;
 
     token = get_token();
 
-    if (valid() == ERR_OK){
-        fprintf(out, "VALID OK\n");
-        if (program() == ERR_OK){
-            ok = 1;
-        } else {
-            ok = 0;
-        }
-    } else {
-        fprintf(out, "VALID NOT OK\n");
+    if (token.type == EQUAL){
+        Stack stack;
+        if (stack_init(&stack) != ERR_OK){ return SYNTAX_ERROR; }
+
+        stack_push(&stack, END_EXPR);
+
+        int value;
+        token = get_token();
+        value = expression_val(&stack);
+        fprintf(out, "calculated value: %d\n", value);
     }
 
-    fprintf(out, "Program ended %s\n", (ok == 1) ? "successfully" : "with error");
+    // if (valid() == ERR_OK){
+    //     fprintf(out, "VALID OK\n");
+    //     if (program() == ERR_OK){
+    //         ok = 1;
+    //     } else {
+    //         ok = 0;
+    //     }
+    // } else {
+    //     fprintf(out, "VALID NOT OK\n");
+    // }
+
+    // fprintf(out, "Program ended %s\n", (ok == 1) ? "successfully" : "with error");
     fclose(in);
     fclose(out);
 
