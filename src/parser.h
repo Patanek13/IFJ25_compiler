@@ -19,8 +19,8 @@
 
 #define MAX_SIZE 150
 #define STACK_SIZE 30
-#define ROW 14
-#define COL 14
+#define ROW 7
+#define COL 7
 
 /*============================== Scanner function declaration ==============================*/
 Token get_token();
@@ -55,22 +55,15 @@ int expression_val(Stack* stack);
  * @details ROW = TokenType on top of stack
  * @details COL = TokenType given by scanner
  */
-/*    +     -     /     *      (    )     ID    GID   VAR   STR   INT  FLO   BOOL    $ */
+/*    +      *      (       )      ID      REL_T    $   */
 TokenType precedence_table[ROW][COL] = {
-    {MORE, MORE, LESS, LESS, LESS, MORE, LESS, LESS, LESS, LESS, LESS, LESS, LESS, MORE},           /* + */
-    {MORE, MORE, LESS, LESS, LESS, MORE, LESS, LESS, LESS, LESS, LESS, LESS, LESS, MORE},           /* - */
-    {MORE, MORE, MORE, MORE, LESS, MORE, LESS, LESS, LESS, LESS, LESS, LESS, LESS, MORE},           /* / */
-    {MORE, MORE, MORE, MORE, LESS, MORE, LESS, LESS, LESS, LESS, LESS, LESS, LESS, MORE},           /* * */       
-    {LESS, LESS, LESS, LESS, LESS, EQUAL, LESS, LESS, LESS, LESS, LESS, LESS, LESS, ERROR},         /* ( */
-    {MORE, MORE, MORE, MORE, ERROR, MORE, ERROR, ERROR, ERROR, ERROR, ERROR, ERROR, ERROR, MORE},   /* ) */
-    {MORE, MORE, MORE, MORE, ERROR, MORE, ERROR, ERROR, ERROR, ERROR, ERROR, ERROR, ERROR, MORE},   /* ID */
-    {MORE, MORE, MORE, MORE, ERROR, MORE, ERROR, ERROR, ERROR, ERROR, ERROR, ERROR, ERROR, MORE},   /* GID */
-    {MORE, MORE, MORE, MORE, ERROR, MORE, ERROR, ERROR, ERROR, ERROR, ERROR, ERROR, ERROR, MORE},   /* VAR */
-    {MORE, MORE, MORE, MORE, ERROR, MORE, ERROR, ERROR, ERROR, ERROR, ERROR, ERROR, ERROR, MORE},   /* STR */
-    {MORE, MORE, MORE, MORE, ERROR, MORE, ERROR, ERROR, ERROR, ERROR, ERROR, ERROR, ERROR, MORE},   /* INT */
-    {MORE, MORE, MORE, MORE, ERROR, MORE, ERROR, ERROR, ERROR, ERROR, ERROR, ERROR, ERROR, MORE},   /* FLO */
-    {MORE, MORE, MORE, MORE, ERROR, MORE, ERROR, ERROR, ERROR, ERROR, ERROR, ERROR, ERROR, MORE},   /* BOOL */
-    {LESS, LESS, LESS, LESS, LESS, ERROR, LESS, LESS, LESS, LESS, LESS, LESS, LESS, ERROR}          /* $ */
+    {MORE,  LESS,   LESS,  MORE,   LESS,   ERROR,  MORE},   /* + */
+    {MORE,  MORE,   LESS,  MORE,   LESS,   ERROR,  MORE},   /* * */       
+    {LESS,  LESS,   LESS,  EQUAL,  LESS,   ERROR,  ERROR},  /* ( */
+    {MORE,  MORE,   ERROR, MORE,   ERROR,  MORE,   MORE},   /* ) */
+    {MORE,  MORE,   ERROR, MORE,   ERROR,  MORE,   MORE},   /* IDs */
+    {LESS,  LESS,   LESS,  ERROR,  LESS,   ERROR,  ERROR},  /* REL_T */
+    {LESS,  LESS,   LESS,  ERROR,  LESS,   ERROR,  ERROR}   /* $ */
 };
 
 /*=================================== Precedence table functions ===========================*/
@@ -85,21 +78,38 @@ int token_to_int(Token in_token){
     switch(in_token.type){
         case OPERATOR:
             if (strcmp(in_token.value.string, "+") == 0){ return 0; }
-            if (strcmp(in_token.value.string, "-") == 0){ return 1; }
-            if (strcmp(in_token.value.string, "/") == 0){ return 2; }
-            if (strcmp(in_token.value.string, "*") == 0){ return 3; }
+            if (strcmp(in_token.value.string, "-") == 0){ return 0; }
+            if (strcmp(in_token.value.string, "/") == 0){ return 1; }
+            if (strcmp(in_token.value.string, "*") == 0){ return 1; }
 
             break;
 
-        case BRACKET_START: return 4;
-        case BRACKET_END:   return 5;
-        case ID:            return 6;
-        case GLOBAL_ID:     return 7;
-        case VAR:           return 8;
-        case STRING:        return 9;
-        case INTEGER:       return 10;
-        case FLOATING:      return 11;
-        case BOOLEAN:       return 12;
+        case BRACKET_START: 
+            return 2;
+            break;
+
+        case BRACKET_END:
+            return 3;
+            break;
+
+        case ID:            
+        case GLOBAL_ID:
+        case VAR:
+        case STRING:
+        case INTEGER:
+        case FLOATING:
+        case BOOLEAN:
+            return 4;
+            break;
+        
+        case EQUAL_EQUAL:
+        case NOT_EQUAL:
+        case MORE_EQUAL:
+        case LESS_EQUAL:
+        case MORE:
+        case LESS:
+            return 5;
+            break;
 
         default: 
             return SYNTAX_ERROR;
@@ -110,6 +120,13 @@ int token_to_int(Token in_token){
 
 
 /*=================================== Expression  calculation function =====================*/
+
+/**
+ * E -> E op E
+ * E -> E rel E
+ * E -> id
+ * E -> (E)
+ */
 
 int expression_val(Stack* stack){ /* neskor doplnit relacne negacne a ternarne operatory */
     switch(token.type){
@@ -123,6 +140,14 @@ int expression_val(Stack* stack){ /* neskor doplnit relacne negacne a ternarne o
         case INTEGER:
         case FLOATING:
         case BOOLEAN:
+
+        case EQUAL_EQUAL:
+        case NOT_EQUAL:
+        case MORE_EQUAL:
+        case LESS_EQUAL:
+        case MORE:
+        case LESS:
+            
 
         default:
             return SYNTAX_ERROR;
