@@ -155,6 +155,8 @@ static KeywordEntry keyword_table[] = {
     {"String", STR_TYPE},
     {"Null", NULL_TYPE},
     {"Bool", BOOL_TYPE},
+    {"true", BOOLEAN},
+    {"false", BOOLEAN},
     {NULL, 0}
 };
 

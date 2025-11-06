@@ -100,6 +100,15 @@ Token add_token(TokenType type) {
             token.value.floating = atof(buffer);
             break;
 
+        case BOOLEAN:
+            buffer[i] = '\0';
+            if (strcmp(buffer, "true") == 0) {
+                token.value.boolean = true;
+            } else {
+                token.value.boolean = false;
+            }
+            break;
+
         default:
             break;
     }
@@ -556,14 +565,21 @@ void print_token(Token token) {
 
     if (token.type == INTEGER) {
         fprintf(out, "        INT[%d]", token.value.integer);
-    } else if (token.type == FLOATING) {
+    }
+    else if (token.type == FLOATING) {
         fprintf(out, "       FLT[%f]", token.value.floating);
-    } else if (token.type == STRING) {
+    }
+    else if (token.type == STRING) {
         fprintf(out, "         STR[%s]", token.value.string);
-    } else if (token.type == ID) {
+    }
+    else if (token.type == ID) {
         fprintf(out, "             STR[%s]", token.value.string);
-    } else if (token.type == GLOBAL_ID) {
+    }
+    else if (token.type == GLOBAL_ID) {
         fprintf(out, "      STR[%s]", token.value.string);
+    }
+    else if (token.type == BOOLEAN) {
+        fprintf(out, "        BOOL[%s]", token.value.boolean ? "true" : "false");
     }
 
     fprintf(out, "\n");
@@ -577,5 +593,12 @@ void prototype_parser_function() {
     } while (token.type != EOF_TOKEN);
 }
 
-
+int main()
+{
+    file = stdin;
+    out = fopen("../build/tokens.txt", "w");
+    if (!out) {return 1;}
+    prototype_parser_function();
+    fclose(out);
+}
 
