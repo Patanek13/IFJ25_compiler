@@ -76,8 +76,6 @@ void replace(char ch) {
 
 //------------------------------------- Token creation -------------------------------------------
 
-// TODO test string termination
-
 Token add_token(TokenType type) {
     Token token;
     token.type = type;
@@ -342,7 +340,6 @@ Token scan_normal_string() {
 Token scan_multiline_string() {
     int count = 0;
     
-    // Ignore whitespace
     while (isspace(peek()) && peek() != '\n') {
         advance();
         reset_buffer();
@@ -360,8 +357,11 @@ Token scan_multiline_string() {
             if (count == 3) {
                 i -= 3;
                 buffer[i] = '\0';
+                while (i > 0 && isspace(buffer[i-1])) {
+                    i--;
+                }
+                buffer[i] = '\0';
                 return add_token(STRING);
-                // TODO Ingore whitespace
             }
         }
         
