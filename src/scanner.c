@@ -6,10 +6,11 @@
  *
  */
 
-// TODO FIX FSM ON FIGMA
 // TODO CONNECT TO PARSER
-// TODO CREATE DEBUG OPTION
-// TODO WRITE TEST FOR EDGE CASES
+// TODO ADD OPTION TO TEST SCANNER ONLY
+// TODO WRITE TESTS FOR EDGE CASES
+// TODO DECIDE WHAT THE FUCK TO DO WITH OPERATORS
+// TODO FIX FSM ON FIGMA
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,12 +22,34 @@
 
 //------------------------------------- Global variables -----------------------------------------
 
-FILE *file;                         // Input file from stdin            //REMOVE//REMOVE//REMOVE//
-FILE *out;                          // Output file to build/tokens.txt //REMOVE//REMOVE//REMOVE//
+FILE *file;                         // Input file from stdin
+FILE *out;                          // Output file to build/tokens.txt
 char c;                             // Current character
 char buffer[BUFFER_SIZE];           // Current token buffer
 int i = 0;                          // Buffer index
 bool was_new_line = false;          // If last generated token was NEW_LINE
+
+static KeywordEntry keyword_table[] = {
+    {"class", CLASS},
+    {"if", IF},
+    {"else", ELSE},
+    {"is", IS},
+    {"null", NULL_KEYWORD},
+    {"return", RETURN},
+    {"var", VAR},
+    {"while", WHILE},
+    {"Ifj", IFJ},
+    {"static", STATIC},
+    {"import", IMPORT},
+    {"for", FOR},
+    {"Num", NUM_TYPE},
+    {"String", STR_TYPE},
+    {"Null", NULL_TYPE},
+    {"Bool", BOOL_TYPE},
+    {"true", BOOLEAN},
+    {"false", BOOLEAN},
+    {NULL, 0}
+};
 
 //================================================================================================
 //                                      BASIC FUNCTIONS
@@ -281,8 +304,6 @@ Token scan_minus() {
 
 //------------------------------------- Strings --------------------------------------------------
 
-// TODO test for EOF
-
 void handle_x_sequence() {
     char hex1 = advance();
     char hex2 = advance();
@@ -506,7 +527,6 @@ Token get_token() {
     }
 }
 
-//REMOVE//REMOVE//REMOVE//REMOVE//REMOVE//REMOVE//REMOVE//REMOVE//REMOVE//REMOVE//REMOVE//REMOVE//
 //================================================================================================
 //                                      DEBUG
 //================================================================================================
@@ -585,20 +605,19 @@ void print_token(Token token) {
     fprintf(out, "\n");
 }
 
-void prototype_parser_function() {
+void parser_function(bool debug) {
     Token token;
     do {
         token = get_token();
-        print_token(token);
+        if (debug) {
+            print_token(token);
+        }
     } while (token.type != EOF_TOKEN);
 }
 
 int main()
 {
-    file = stdin;
-    out = fopen("../build/tokens.txt", "w");
-    if (!out) {return 1;}
-    prototype_parser_function();
-    fclose(out);
+    scanner_init(stdin, stdout);
+    parser_function(true);
 }
 

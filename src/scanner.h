@@ -36,6 +36,10 @@
  */
 #define BUFFER_SIZE 1024
 
+//================================================================================================
+//                                      TOKEN
+//================================================================================================
+
 /**
  * @enum TokenType
  * @brief Enum for all token types recognized by the scanner
@@ -122,6 +126,10 @@ typedef struct {
     TokenValue value;   /**< Token value (optional) */
 } Token;
 
+//================================================================================================
+//                                      KEYWORD LOOKUP TABLE
+//================================================================================================
+
 /**
  * @struct KeywordEntry
  * @brief Keyword entry to pair each keyword with token type
@@ -133,32 +141,6 @@ typedef struct {
     char* keyword;
     TokenType type;
 } KeywordEntry;
-
-/**
- * @brief Keyword table to pair each keyword with token type
- * 
- */
-static KeywordEntry keyword_table[] = {
-    {"class", CLASS},
-    {"if", IF},
-    {"else", ELSE},
-    {"is", IS},
-    {"null", NULL_KEYWORD},
-    {"return", RETURN},
-    {"var", VAR},
-    {"while", WHILE},
-    {"Ifj", IFJ},
-    {"static", STATIC},
-    {"import", IMPORT},
-    {"for", FOR},
-    {"Num", NUM_TYPE},
-    {"String", STR_TYPE},
-    {"Null", NULL_TYPE},
-    {"Bool", BOOL_TYPE},
-    {"true", BOOLEAN},
-    {"false", BOOLEAN},
-    {NULL, 0}
-};
 
 //================================================================================================
 //                                      FUNCTION PROTOTYPES
@@ -231,14 +213,6 @@ Token add_token(TokenType type);
  * @return TokenType of correct keyword or ID
  */
 TokenType lookup_keyword(const char* word);
-
-//================================================================================================
-//                                      HELPER FUNCTIONS
-//================================================================================================
-
-
-
-
 
 //================================================================================================
 //                                      SCANNER STATES
@@ -360,50 +334,22 @@ Token scan_multiline_string(void);
  */
 Token scan_string(void);
 
-// === Operator Parsing Functions ===
-/**
- * @brief Scans single-character operators
- * 
- * @param op Character to process
- * @return Corresponding operator token or ERROR
- */
-Token scan_single_char_operator(char op);
+//------------------------------------- Operators --------------------------------------------------
 
 /**
- * @brief Scans comparison operators (may be two characters)
+ * @brief Operator (Single and double) character scanner
  * 
- * @param op First character of operator
- * @return Comparison operator token
- */
-Token scan_comparison_operator(char op);
-
-/**
- * @brief Scans logical operators (&&, ||)
- * 
- * @param op First character of operator
- * @return Logical operator token or ERROR
- */
-Token scan_logical_operator(char op);
-
-/**
- * @brief Main operator scanning dispatcher
- * 
- * @param op Character to process as operator
- * @return Appropriate operator token
+ * @param op Character to match
+ * @return Operator token
  */
 Token scan_operator(char op);
 
-// === Core API Functions ===
+//------------------------------------- Get token --------------------------------------------------
+
 /**
- * @brief Main tokenization function - scans next token from input
+ * @brief Scans next token from input
  * 
- * This is the primary interface function that clients should call to
- * get the next token from the input stream. Handles all token types
- * and error conditions automatically.
- * 
- * @return The next token from the input stream
- * @note Returns EOF_TOKEN when end of file is reached
- * @note Returns ERROR token for lexical errors
+ * @return Next token
  */
 Token get_token(void);
 
@@ -412,8 +358,6 @@ Token get_token(void);
 //================================================================================================
 
 void print_token(Token token);
-void prototype_parser_function(void);
-
 void parser_function(bool debug);
 
 #endif // SCANNER_H
