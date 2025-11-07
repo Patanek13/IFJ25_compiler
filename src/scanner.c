@@ -51,6 +51,7 @@ const char* op_string(TokenType type){
             return "\0";
             break;
     }
+    return "\0";
 }
 
 
@@ -569,11 +570,11 @@ void print_token(Token token) {
         case MINUS:         fprintf(output_file, "MINUS"); break;
         case MULTIPLY:      fprintf(output_file, "MULTIPLY"); break;
         case DIVIDE:        fprintf(output_file, "DIVIDE"); break;
-        case EQUAL:         fprintf(output_file, "EQUAL"); break;
+        case EQUAL:         fprintf(output_file, "="); break;
         case EQUAL_EQUAL:   fprintf(output_file, "EQUAL_EQUAL"); break;
-        case LESS:          fprintf(output_file, "LESS"); break;
+        case LESS:          fprintf(output_file, "<"); break;
         case LESS_EQUAL:    fprintf(output_file, "LESS_EQUAL"); break;
-        case MORE:          fprintf(output_file, "MORE"); break;
+        case MORE:          fprintf(output_file, ">"); break;
         case MORE_EQUAL:    fprintf(output_file, "MORE_EQUAL"); break;
         case NOT:           fprintf(output_file, "NOT"); break;
         case NOT_EQUAL:     fprintf(output_file, "NOT_EQUAL"); break;
@@ -618,19 +619,4 @@ void prototype_parser_function() {
 
   fclose(output_file);
 }
-
-// int main()
-// {
-//     file = stdin;
-
-// //     out = fopen("../build/tokens.txt", "w");
-// //     if (!out) {return 1;}
-
-//     prototype_parser_function();
-//     fclose(input_file);
-//   }
-
-//     fclose(out);
-
-// // }
 
