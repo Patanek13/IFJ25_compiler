@@ -164,18 +164,30 @@ Token single_line_comment() {
 }
 
 Token multi_line_comment() {
+    int depth = 1;
     advance();
-    advance();
-    while (true) {
+
+    while (depth > 0) {
         if (c == EOF) {
             return add_token(ERROR);
         }
-        if (c == '*' && match('/')) {
+
+        if (c == '/' && peek() == '*') {
             advance();
-            break;
+            depth++;
         }
+        else if (c == '*' && peek() == '/') {
+            advance();
+            depth--;
+            if (depth == 0) {
+                advance();
+                break;
+            }
+        }
+
         advance();
     }
+
     ungetc(c, file);
     return get_token();
 }
