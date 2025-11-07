@@ -26,13 +26,29 @@ typedef enum {
     NODE_CALL, // Function call foo(a,b)
     NODE_BINOP, // Binary operation (+, -, *, /...)
     NODE_LITERAL, // Literal value (num, string, bool, null)
+    NODE_IF, // If statement
+    NODE_WHILE, // While loop
+    NODE_PARAM_LIST, // Function parameter list
+    NODE_ARG_LIST, // Function argument list
+    NODE_UNOP,  // Unary operation (e.g., negation)
+    NODE_TERNARY  // Ternary operation (condition ? expr1 : expr2)
 } ASTNodeType;
 
+// ==== AST Data Types =====================
+typedef enum {
+    TYPE_UNKNOWN, // Default type (used for untyped nodes)
+    TYPE_NULL, // Null type
+    TYPE_BOOL, // Result of relational operations
+    TYPE_INT, // Integer type
+    TYPE_FLOAT, // Floating point type
+    TYPE_STRING // String type
+} ASTDataType;
 
 // ==== AST Node Structure =====================
 typedef struct ASTNode {
     ASTNodeType type; // Type of the AST node
     char *value; // Value of the node (for literals, identifiers...)
+    ASTDataType data_type; // Data type of the node
     struct ASTNode **children; // Array of pointers to child nodes
     size_t child_count; // Number of child nodes
     struct ASTNode *parent; // Pointer to parent node
