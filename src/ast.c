@@ -8,12 +8,14 @@
 #include "ast.h"
 #include "strutils.h"
 
-ASTNode *ast_create_node(ASTNodeType type, const char *value) {
+ASTNode *ast_create_node(ASTNodeType type, const char *value, ASTDataType data_type) {
     ASTNode *node = (ASTNode *)malloc(sizeof(ASTNode));
     if (!node) {
         return NULL; // Memory allocation failed
     }
     node->type = type;
+    node->data_type = data_type;
+
     if (value) {
         node->value = str_dup(value);
         if (!node->value) {
@@ -76,6 +78,17 @@ void ast_print_debug(const ASTNode *node, int depth) {
         printf("  ");
     }
 
+    // Print the data type of the node
+    static const char *data_type_strings[] = {
+        "UNKNOWN",
+        "NULL",
+        "BOOL",
+        "INT",
+        "FLOAT",
+        "STRING"
+    };
+
+
     // Type of node
     static const char *node_type_strings[] = {
         "PROGRAM",
@@ -88,14 +101,34 @@ void ast_print_debug(const ASTNode *node, int depth) {
         "ASSIGN",
         "CALL",
         "BINOP",
-        "LITERAL"
+        "LITERAL",
+        "IF",
+        "WHILE",
+        "PARAM_LIST",
+        "ARG_LIST",
+        "UNOP",
+        "TERNARY"
     };
 
-    // Print node information
-    printf("%s", node_type_strings[node->type]);
+    // Print node type and check enums bounds
+    if (node->type < 0 || node->type >= sizeof(node_type_strings) / sizeof(node_type_strings[0])) {
+        printf("UNKNOWN_NODE_TYPE");
+    } else {
+        printf("%s", node_type_strings[node->type]);
+    }
+
+    // Print the value of the node
     if (node->value) {
         printf(" (%s)", node->value);
     }
+
+    // Print the data type of the node and check enums bounds
+    if (node->data_type < 0 || node->data_type >= sizeof(data_type_strings) / sizeof(data_type_strings[0])) {
+        printf(" [UNKNOWN_DATA_TYPE]");
+    } else {
+        printf(" [%s]", data_type_strings[node->data_type]);
+    }
+    
     printf("\n");
 
     // Recursively print child nodes
