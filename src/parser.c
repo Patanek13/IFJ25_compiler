@@ -105,7 +105,6 @@ int ternary(){ /*mozno do buducna vytvorit <before> : <after> ktore by kontorolo
             break;
 
         case GLOBAL_ID:
-        case VAR:
         case STRING:
         case INTEGER:
         case FLOATING:
@@ -195,6 +194,7 @@ int params(){
         case STR_TYPE:
         case NULL_TYPE:
         case BOOL_TYPE:
+        case NULL_KEYWORD:
             if ((!match_token(BRACKET_END)) && (token.type != COMMA)){ return SYNTAX_ERROR; }
             return params();
             break;
@@ -560,7 +560,6 @@ int return_func(){
             break;
 
         case GLOBAL_ID:
-        case VAR:
         case STRING:
         case INTEGER:
         case FLOATING:
@@ -638,16 +637,21 @@ int command(){
             if (return_func() == ERR_OK){ return command(); }
             return SYNTAX_ERROR;
 
-        case GLOBAL_ID:
-        case VAR:
+        case GLOBAL_ID: /* chyba var a global id sa nevolaju rovnako*/
             if (match_token(EQUAL)){ 
                 if (assign() == ERR_OK){ return command(); }
-            } else if (token.type == NEW_LINE){
-                return command();
             } else {
-                fprintf(out, "globalid or var next token wasnt newline or =\n");
+                fprintf(out, "globalid or var next token wasnt =\n");
                 return SYNTAX_ERROR;
             }
+            break;
+
+        case VAR:
+            if ((!match_token(ID)) && (token.type != GLOBAL_ID) && (token.type != STRING) && (token.type != INTEGER) 
+                && (token.type != FLOATING) && (token.type != BOOLEAN)){ return SYNTAX_ERROR; }
+            
+            if (match_token(NEW_LINE)){ return command(); }
+            return SYNTAX_ERROR;
             break;
 
         case IF:
@@ -775,7 +779,7 @@ void precedence_check(){
     Token token1;
     Token token2;
     fprintf(out, "table: \n");
-    for (int i = 0; i < 48; i++){
+    for (int i = 0; i < 43; i++){
         token1 = get_token();
 
         // if (token1.type == EOF_TOKEN){ break; }
@@ -812,7 +816,7 @@ int main (int argc, char** argv){
     (void)argc;
     (void)argv;
 
-    in = fopen("../samples/test.IFJcode25", "r");
+    in = fopen("../samples/ahoj.IFJcode25", "r");
     if (!in){ printf("nejde otvorit\n"); return SYNTAX_ERROR; }
 
     out = fopen("../samples/outfile.txt", "w");
@@ -821,34 +825,38 @@ int main (int argc, char** argv){
     scanner_init(in, out);
 
     int ok;
-    ok = 1;
+    // ok = 1;
 
     token = get_token();
+    
+    
+    // precedence_check();
+    // if (token.type == EQUAL){
+    //     Stack stack;
+    //     if (stack_init(&stack) != ERR_OK){ return SYNTAX_ERROR; }
 
-    if (token.type == EQUAL){
-        Stack stack;
-        if (stack_init(&stack) != ERR_OK){ return SYNTAX_ERROR; }
+    //     stack_push(&stack, END_EXPR);
 
-        stack_push(&stack, END_EXPR);
-
-        int value;
-        token = get_token();
-        value = expression_val(&stack);
-        fprintf(out, "calculated value: %d\n", value);
-    }
-
-    // if (valid() == ERR_OK){
-    //     fprintf(out, "VALID OK\n");
-    //     if (program() == ERR_OK){
-    //         ok = 1;
-    //     } else {
-    //         ok = 0;
-    //     }
-    // } else {
-    //     fprintf(out, "VALID NOT OK\n");
+    //     int value;
+    //     token = get_token();
+    //     value = expression_val(&stack);
+    //     fprintf(out, "calculated value: %d\n", value);
     // }
 
-    // fprintf(out, "Program ended %s\n", (ok == 1) ? "successfully" : "with error");
+
+
+    if (valid() == ERR_OK){
+        fprintf(out, "VALID OK\n");
+        if (program() == ERR_OK){
+            ok = 1;
+        } else {
+            ok = 0;
+        }
+    } else {
+        fprintf(out, "VALID NOT OK\n");
+    }
+
+    fprintf(out, "Program ended %s\n", (ok == 1) ? "successfully" : "with error");
     fclose(in);
     fclose(out);
 
