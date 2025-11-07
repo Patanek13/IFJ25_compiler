@@ -62,7 +62,7 @@ typedef struct ASTNode {
  * @param value Value of the node
  * @return Pointer to the newly created AST node or NULL on failure
  */
-ASTNode *ast_create_node(ASTNodeType type, const char *value);
+ASTNode *ast_create_node(ASTNodeType type, const char *value, ASTDataType data_type);
 
 /*
  * @brief Add a child node to a parent AST node
