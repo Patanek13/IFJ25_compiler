@@ -221,64 +221,126 @@ int params(){
  *
  * @return SYNTAX_ERROR or OK if finished
  */
-int block(){
+ASTNode* block(int* error_code) {
     fprintf(out, "nasli sme token v block: ");
     print_token(token);
     fprintf(out, "\n");
     /* RULE: <BLOCK> -> <{> <NEWLINE> <COMMANDS> <}> <ELSE>*/
-    switch(token.type){
-        case BLOCK_START:
-            if (!match_token(NEW_LINE)){ return SYNTAX_ERROR; }
-            return block();
-            break;
 
-        case BLOCK_END:
-            fprintf(out, "___________\n block OK return \n_____________\n");
-            token = get_token();
-            return ERR_OK;
-            break;
+    // program() zere prvni {
+    // block() chce command dokud neskonci }
 
-        default:
-            if (command() == ERR_OK){ return block(); }
-            break;
-
+    *error_code = ERR_OK;
+    ASTNode* block_node = ast_create_node(NODE_BLOCK, NULL, TYPE_UNKNOWN);
+    if (block_node == NULL) {
+        *error_code = ERR_INTERNAL;
+        return NULL;
     }
-    return SYNTAX_ERROR;
+
+    // poresit optional newline po {
+    if (token.type == NEW_LINE) {
+        token = get_token();
+    }
+
+    // zpracovat prikazy v bloku, dokud neskonci }
+    while (token.type != BLOCK_END) {
+        int cmd_error = ERR_OK;
+        ASTNode* cmd_node = command(&cmd_error);
+
+        if (cmd_error != ERR_OK) {
+            *error_code = cmd_error;
+            ast_free(block_node);
+            return NULL;
+        }
+        // command() vraci NULL pro newline
+        if (cmd_node != NULL) {
+            ast_add_child(block_node, cmd_node);
+        }
+
+        // EOF nastane pred koncem bloku
+        if (token.type == EOF_TOKEN) {
+            *error_code = SYNTAX_ERROR;
+            ast_free(block_node);
+            return NULL;
+        }
+    }
+
+    // konec bloku
+    token = get_token();
+    fprintf(out, "___________\n block OK return \n_____________\n");
+    return block_node;
 }
 
 /**
  * @brief Function to call user made functions
  *
- * @return Function return value (recursive), SYNTAX_ERROR for errors, OK if finished
+ * @return Function return ASTNode* of <func_call> or NULL on error
  */
-int func_call(){
+ASTNode* func_call(int *error_code) {
     fprintf(out, "nasli sme token v func_call: ");
     print_token(token);
     fprintf(out, "\n");
     /* RULE: <FUNC_CALL> -> ID <(>  <PARAMS>  <)>*/
-    switch(token.type){
-        case ID:
-            if (!match_token(BRACKET_START)){ return SYNTAX_ERROR; }
-            return func_call();
-            break;
 
-        case BRACKET_START:
-            if (params() == ERR_OK){ return func_call(); }
-            return SYNTAX_ERROR;
-            break;
-
-        case BRACKET_END:
-            // if (!match_token(NEW_LINE)){ return SYNTAX_ERROR; }
-            // token = get_token();
-            fprintf(out, "___________\n func_call OK return \n_____________\n");
-            return ERR_OK;
-            break;
-
-        default:
-            return SYNTAX_ERROR;
-            break;
+    *error_code = ERR_OK;
+    // pokud neni ID, chyba
+    if (token.type != ID) {
+        *error_code = SYNTAX_ERROR;
+        return NULL;
     }
-    return SYNTAX_ERROR;
+
+    // vytvorit uzel pro volani funkce
+    ASTNode* call_node = ast_create_node(NODE_CALL, NULL, TYPE_UNKNOWN);
+
+    if (call_node == NULL) {
+        *error_code = ERR_INTERNAL;
+        return NULL;
+    }
+
+    // ulozit jmeno funkce jako identifikator
+    ASTNode* id_node = ast_create_node(NODE_ID, token.value.string, TYPE_UNKNOWN);
+
+    if (id_node == NULL) {
+        ast_free(call_node);
+        *error_code = ERR_INTERNAL;
+        return NULL;
+    }
+
+    // pridat id jako child ke call node
+    ast_add_child(call_node, id_node);
+
+    // nacist dalsi token, musi byt (
+    if (!match_token(BRACKET_START)) {
+        ast_free(call_node);
+        *error_code = SYNTAX_ERROR;
+        return NULL;
+    }
+
+    // zpracovat parametry
+    token = get_token();
+
+    int params_error = ERR_OK;
+    ASTNode* args_node = params(&params_error);
+
+    if (params_error != ERR_OK) {
+        ast_free(call_node);
+        *error_code = params_error;
+        return NULL;
+    }
+
+    // pridat args_node jako child ke call_node
+    args_node->type = NODE_ARG_LIST;
+    ast_add_child(call_node, args_node);
+
+    // nacist dalsi token, musi byt )
+    if (token.type != BRACKET_END) {
+        ast_free(call_node);
+        *error_code = SYNTAX_ERROR;
+        return NULL;
+    }
+
+    fprintf(out, "___________\n func_call OK return \n_____________\n");
+    return call_node;
 }
 
 /**
@@ -286,49 +348,88 @@ int func_call(){
  *
  * @return ERR_OK or SYNTAX_ERROR
  */
-int built_in_call(){
+ASTNode* built_in_call(int* error_code) {
     fprintf(out, "nasli sme token v b_i_c: ");
     print_token(token);
     fprintf(out, "\n");
     /* RULE: <BUILT_IN_CALL> -> <IFJ> <.> <KW> <(> <PARAMS> <)> */
-    switch(token.type){
-        case IFJ:
-            if (!match_token(DOT)){ return SYNTAX_ERROR; }
-            return built_in_call();
-            break;
 
-        case DOT:
-            if (!match_token(ID)){ print_token(token); return SYNTAX_ERROR; }
-            return built_in_call();
-            break;
-
-        case ID:
-            if (is_built_in_func()){
-                token = get_token();
-                print_token(token);
-                return built_in_call();
-            }
-            return SYNTAX_ERROR;
-            break;
-
-
-        case BRACKET_START:
-            if (params() == ERR_OK){ return built_in_call(); }
-            return SYNTAX_ERROR;
-            break;
-
-        case BRACKET_END:
-            // if (!match_token(NEW_LINE)){ return SYNTAX_ERROR; }
-            // token = get_token();
-            fprintf(out, "___________\n built_in_call OK return \n_____________\n");
-            return ERR_OK;
-            break;
-
-        default:
-            return SYNTAX_ERROR;
-            break;
+    *error_code = ERR_OK;
+    // pokud neni IFJ, chyba
+    if (token.type != IFJ) {
+        *error_code = SYNTAX_ERROR;
+        return NULL;
     }
-    return SYNTAX_ERROR;
+
+    // nacist dalsi token, musi byt .
+    if (!match_token(DOT)) {
+        *error_code = SYNTAX_ERROR;
+        return NULL;
+    }
+
+    // nacist dalsi token, musi byt id funkce
+    if (!match_token(ID) || !is_built_in_func()) {
+        *error_code = SYNTAX_ERROR;
+        return NULL;
+    }
+
+    // potrebuju ulozit jmeno funkce
+    char* func_name = str_dup(token.value.string);
+    if (func_name == NULL) {
+        *error_code = ERR_INTERNAL;
+        return NULL;
+    }
+
+    // vytvorit uzel pro volani funkce
+    ASTNode* call_node = ast_create_node(NODE_CALL, NULL, TYPE_UNKNOWN);
+    if (call_node == NULL) {
+        free(func_name);
+        *error_code = ERR_INTERNAL;
+        return NULL;
+    }
+
+    // ulozit jmeno funkce jako id
+    ASTNode* id_node = ast_create_node(NODE_ID, func_name, TYPE_UNKNOWN);
+    free(func_name);
+    if (id_node == NULL) {
+        ast_free(call_node);
+        *error_code = ERR_INTERNAL;
+        return NULL;
+    }
+
+    // pridat id jako child ke call_node
+    ast_add_child(call_node, id_node);
+    // nacist dalsi token, musi byt (
+    if (!match_token(BRACKET_START)) {
+        ast_free(call_node);
+        *error_code = SYNTAX_ERROR;
+        return NULL;
+    }
+
+    // zpracovat parametry
+    token = get_token();
+
+    int params_error = ERR_OK;
+    ASTNode* args_node = params(&params_error);
+    if (params_error != ERR_OK) {
+        ast_free(call_node);
+        *error_code = params_error;
+        return NULL;
+    }
+
+    // pridat args_node jako child ke call_node
+    args_node->type = NODE_ARG_LIST;
+    ast_add_child(call_node, args_node);
+
+    // nacist dalsi token, musi byt )
+    if (token.type != BRACKET_END) {
+        ast_free(call_node);
+        *error_code = SYNTAX_ERROR;
+        return NULL;
+    }
+
+    fprintf(out, "___________\n b_i_c OK return \n_____________\n");
+    return call_node;
 }
 
 /**
@@ -337,64 +438,45 @@ int built_in_call(){
  *
  * @return ERR_OK or SYNTAX_ERROR
  */
-int cond_loop(){
+ASTNode* cond_loop(int* error_code) {
     fprintf(out, "nasli sme token v cond_loop cond_state: %s: ", (cond_state)? "while":"if");
     print_token(token);
     fprintf(out, "\n");
-    switch(token.type){
-        case IF:
-            if (!match_token(BRACKET_START)){ return SYNTAX_ERROR; }
-            cond_state = 0;
-            return cond_loop();
-            break;
 
-        case WHILE:
-            if (!match_token(BRACKET_START)){ fprintf(out, "failed while"); return SYNTAX_ERROR; }
-            cond_state = 1;
-            return cond_loop();
-            break;
-
-        case BRACKET_START:
-            if (match_token(BRACKET_END)){
-                return SYNTAX_ERROR;
-            } else { /* neskor bude treba zmenit na expression() == ERR_OK*/
-                if (params() == ERR_OK) { return cond_loop(); }
-            }
-            break;
-
-        case BRACKET_END:
-            if (!match_token(BLOCK_START)){ fprintf(out, "next token: "); print_token(token); return SYNTAX_ERROR; }
-            return cond_loop();
-            break;
-
-        case BLOCK_START:
-            if (!cond_state){
-                if (block() == ERR_OK){
-                    if (token.type == ELSE){ return cond_loop(); }
-                    else if (token.type == NEW_LINE){ fprintf(out, "___________\n if OK return 1\n_____________\n"); return ERR_OK; }
-                }
-            } else {
-                if ((block() == ERR_OK) && (token.type == NEW_LINE)){ fprintf(out, "___________\n while OK return \n_____________\n"); return ERR_OK; }
-            }
-            return SYNTAX_ERROR;
-            break;
-
-        case ELSE:
-            if (match_token(IF)){
-                return cond_loop();
-            } else if (token.type == BLOCK_START){
-                fprintf(out, "starting else recursion\n");
-                if ((block() == ERR_OK) && (token.type == NEW_LINE)){ fprintf(out, "___________\n else OK return \n_____________\n"); return ERR_OK; }
-            }
-            fprintf(out, "SYNTAX ERROR ELSE");
-            return SYNTAX_ERROR;
-            break;
-
-        default:
-            return SYNTAX_ERROR;
-            break;
+    *error_code = ERR_OK;
+    // vytvorit uzel pro podminku nebo cyklus
+    ASTNode *cond_node = NULL;
+    // vytvorit parent uzel pro pridani podminky/cyklu
+    if (token.type == IF) {
+        cond_node = ast_create_node(NODE_IF, NULL, TYPE_UNKNOWN);
+        cond_state = 0;
+    } else if (token.type == WHILE) {
+        cond_node = ast_create_node(NODE_WHILE, NULL, TYPE_UNKNOWN);
+        cond_state = 1;
+    } else {
+        *error_code = SYNTAX_ERROR;
+        return NULL;
     }
-    return SYNTAX_ERROR;
+
+    if (cond_node == NULL) {
+        *error_code = ERR_INTERNAL;
+        return NULL;
+    }
+
+    // nacist dalsi token, musi byt (
+    if (!match_token(BRACKET_START)) {
+        ast_free(cond_node);
+        *error_code = SYNTAX_ERROR;
+        return NULL;
+    }
+
+    // zpracovat vyraz podminky/cyklu
+    token = get_token();
+
+    // TODO: upravit params()
+
+
+    return parent_node;
 }
 
 /**
