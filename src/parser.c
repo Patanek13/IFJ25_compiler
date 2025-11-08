@@ -146,75 +146,157 @@ int ternary(){ /*mozno do buducna vytvorit <before> : <after> ktore by kontorolo
     return SYNTAX_ERROR;
 }
 
-int params(){
+ASTNode* params(int* error_code) {
     fprintf(out, "nasli sme token v params: ");
     print_token(token);
     fprintf(out, "\n");
-    switch(token.type){
-        case BRACKET_START:
-            if (match_token(COMMA)){ return SYNTAX_ERROR; }
-            return params();
-            break;
 
-        case IFJ:
-            if ((built_in_call() == ERR_OK) && (match_token(BRACKET_END))){ return params(); }
-            break;
-
-        case ID:
-            if (match_token(BRACKET_START)){
-                if ((func_call() == ERR_OK) && (match_token(BRACKET_END))){ return params(); }
-
-            } else if (is_param_expr()){
-                token = get_token();
-                return params();
-
-            } else if (token.type == OPERATOR){
-                if (expression() == ERR_OK){ return params(); }
-            }
-            return params();
-            break;
-
-        case STRING:
-        case INTEGER:
-        case FLOATING:
-        case GLOBAL_ID:
-        case BOOLEAN:
-            if ((!match_token(BRACKET_END)) && (!is_param_expr())){
-                if (expression() == ERR_OK){ return params(); }
-            } /* tu je chyba pretoze ","*/
-            else if (is_param_expr()){
-                token = get_token();
-            } else if (token.type == OPERATOR){
-                if (expression() == ERR_OK){ token = get_token(); return params(); }
-            }
-            return params();
-            break;
-
-        case NUM_TYPE:
-        case STR_TYPE:
-        case NULL_TYPE:
-        case BOOL_TYPE:
-        case NULL_KEYWORD:
-            if ((!match_token(BRACKET_END)) && (token.type != COMMA)){ return SYNTAX_ERROR; }
-            return params();
-            break;
-
-        case COMMA:
-            if (match_token(BRACKET_END)){ return SYNTAX_ERROR; }
-            return params();
-            break;
-
-        case BRACKET_END:
-            fprintf(out, "___________\n params OK return\n_____________\n");
-            return ERR_OK;
-            break;
-
-        default:
-            return SYNTAX_ERROR;
-            break;
+    *error_code = ERR_OK;
+    ASTNode* params_node = ast_create_node(NODE_PARAM_LIST, NULL, TYPE_UNKNOWN);
+    if (params_node == NULL) {
+        *error_code = ERR_INTERNAL;
+        return NULL;
     }
-    return SYNTAX_ERROR;
+
+    // parametry nebudou, takze ), vratim prazdny params_node
+    if (token.type == BRACKET_END) {
+        fprintf(out, "___________\n params OK return \n_____________\n");
+        return params_node;
+    }
+
+    // zpracovat parametry ve whilu
+    while (true) {
+        int arg_error = ERR_OK;
+        ASTNode* arg_node = NULL;
+        bool is_arg_parsed = false;
+
+        // zpracuju argumenty
+        switch (token.type) {
+            case ID: {
+                Token id_token = token; // Ulozim si token id
+                token = get_token();
+                if (token.type == BRACKET_START) {
+                    // Je to volani funkce
+                    token = id_token; // Vrátim se k id tokenu pro func_call
+                    arg_node = func_call(&arg_error);
+                    is_arg_parsed = true; // uz je spracovany
+                } else {
+                    // Neni to volani, vytvorim uzel pro ID
+                    arg_node = ast_create_node(NODE_ID, id_token.value.string, TYPE_UNKNOWN);
+                    if (arg_node == NULL) {
+                        ast_free(params_node);
+                        *error_code = ERR_INTERNAL;
+                        return NULL;
+                    }
+                    is_arg_parsed = true;
+                    // token je uz nacteny
+                }
+                break;
+        }
+            case IFJ:
+                arg_node = built_in_call(&arg_error);
+                is_arg_parsed = true; // uz je spracovany
+                break;
+
+            case STRING:
+            arg_node = ast_create_node(NODE_LITERAL, token.value.string, TYPE_STRING);
+            break;
+
+            case INTEGER: {
+                char buffer[50];
+                snprintf(buffer, sizeof(buffer), "%d", token.value.integer);
+                arg_node = ast_create_node(NODE_LITERAL, buffer, TYPE_INT);
+                break;
+            }
+
+            case FLOATING: {
+                char buffer[50];
+                snprintf(buffer, sizeof(buffer), "%f", token.value.floating);
+                arg_node = ast_create_node(NODE_LITERAL, buffer, TYPE_FLOAT);
+                break;
+            }
+
+            case BOOLEAN:
+                char* bool_str = token.value.boolean ? "true" : "false";
+                arg_node = ast_create_node(NODE_LITERAL, bool_str, TYPE_BOOL);
+                break;
+
+            case NULL_KEYWORD:
+                arg_node = ast_create_node(NODE_LITERAL, "null", TYPE_NULL);
+                break;
+
+            // TODO: vyrazy
+
+            default:
+                fprintf(out, "ERROR: Neznamy token v parametrech: ");
+                print_token(token);
+                fprintf(out, "\n");
+                ast_free(params_node);
+                *error_code = SYNTAX_ERROR;
+                return NULL;
+            }
+
+        // zkontrolovat chyby pri tvorbe argumentu
+        if (arg_error != ERR_OK) {
+            *error_code = arg_error;
+            ast_free(arg_node);
+            ast_free(params_node);
+            return NULL;
+        }
+
+        // pridat argument jako child k params_node
+        if (arg_node != NULL) {
+            ast_add_child(params_node, arg_node);
+        }
+
+        // nacist dalsi token, pokud nebyl nacten vnorenou funkci
+        if (!is_arg_parsed) {
+          // pokud token neni ID, nactu novy token
+          // u literalu a vyrazu je token cten az ted
+          if (token.type != ID) {
+            token = get_token();
+          }
+
+        } else {
+          // pokud byla funkce func_call nebo built_in_call
+          // musim nacist novy token za )
+          token = get_token();
+        }
+
+        // pokud je dalsi token carka, nacist dalsi token a pokracovat
+        if (token.type == COMMA) {
+            token = get_token();
+
+            // zustala carka bez dalsiho parametru
+            if (token.type == BRACKET_END) {
+                fprintf(out, "ERROR: Zbyla carka bez dalsiho parametru\n");
+                ast_free(params_node);
+                *error_code = SYNTAX_ERROR;
+                return NULL;
+            }
+            // dalsi parametr
+            continue;
+
+        } else if (token.type == BRACKET_END) {
+            // konec parametru
+            break;
+        } else {
+            // neocekavany token
+            fprintf(out, "ERROR: Neocekavany token v parametrech: ");
+            print_token(token);
+            fprintf(out, "\n");
+            ast_free(params_node);
+            *error_code = SYNTAX_ERROR;
+            return NULL;
+        }
+    }
+
+    // vsechno v poradku
+    fprintf(out, "___________\n params OK return \n_____________\n");
+    *error_code = ERR_OK;
+    return params_node;
 }
+
 
 /**
  * @brief Function <BLOCK> on default calls command function
@@ -476,7 +558,6 @@ ASTNode* cond_loop(int* error_code) {
     // TODO: upravit params()
 
 
-    return parent_node;
 }
 
 /**
@@ -837,6 +918,8 @@ ASTNode* program(int* error_code){
       *error_code = ERR_INTERNAL;
       return NULL;
     }
+
+    token = get_token(); // Move to the next token after '{'
 
     int child_error = ERR_OK;
     ASTNode* block_node = block(&child_error); // Parse the block
