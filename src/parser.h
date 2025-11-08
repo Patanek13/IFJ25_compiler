@@ -17,6 +17,7 @@
 #include "scanner.h"
 #include "error.h"
 #include "ast.h"
+#include "strutils.h"
 
 #define MAX_SIZE 150
 #define STACK_SIZE 30
