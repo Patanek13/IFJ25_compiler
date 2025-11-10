@@ -40,7 +40,7 @@ bool match_token(TokenType type){
 // debug token
 bool check_and_take_token(TokenType type, int *error_code){
     if (token.type != type){
-        fprintf(out, "ERROR: Expected token type %d but found %d\n", type, token.type);
+        fprintf(out, "ERROR: Ocekavam token type %d ale nasel jsem %d\n", type, token.type);
         *error_code = SYNTAX_ERROR;
         return false;
     }
