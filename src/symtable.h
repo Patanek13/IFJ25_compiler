@@ -13,17 +13,12 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include "error.h"
+#include "ast.h"
 
 #define SYMTABLE_DEFAULT_SIZE 27457 // A prime number for better hash distribution
 
 // ==== Data types =====================
-typedef enum {
-    TYPE_UNDEFINED,
-    TYPE_NUM,
-    TYPE_STRING,
-    TYPE_NULL,
-    TYPE_BOOL
-} DataType;
+// Data types from ast.h are reused here
 
 // ==== Type of symbol ====================
 typedef enum {
