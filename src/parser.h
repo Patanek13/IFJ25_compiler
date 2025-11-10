@@ -267,7 +267,7 @@ int expression_val(Stack* stack){ /* neskor doplnit relacne negacne a ternarne o
         case ID: /* ak je to funckia posli tam ID nie )*/
             curr_token = token; /* curr_token = ID */
             if (match_token(BRACKET_START)){ /* found function */
-                if (func_call() == ERR_OK){ /* check if its function call if yes push to precedence table top and ID */
+                if (ERR_OK){ /* check if its function call if yes push to precedence table top and ID */
                     if (stack_rule_switch(precedence_table[token_to_int(stack_token)][token_to_int(curr_token)]) == ERR_OK){ return expression_val(stack); }
                 }
                 return SYNTAX_ERROR;
