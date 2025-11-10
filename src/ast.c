@@ -8,7 +8,7 @@
 #include "ast.h"
 #include "strutils.h"
 
-ASTNode *ast_create_node(ASTNodeType type, const char *value, ASTDataType data_type) {
+ASTNode *ast_create_node(ASTNodeType type, const char *value, DataType data_type) {
     ASTNode *node = (ASTNode *)malloc(sizeof(ASTNode));
     if (!node) {
         return NULL; // Memory allocation failed
@@ -128,7 +128,7 @@ void ast_print_debug(const ASTNode *node, int depth) {
     } else {
         printf(" [%s]", data_type_strings[node->data_type]);
     }
-    
+
     printf("\n");
 
     // Recursively print child nodes

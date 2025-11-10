@@ -6,10 +6,11 @@
  *
  */
 
-// TODO FIX FSM ON FIGMA
 // TODO CONNECT TO PARSER
-// TODO CREATE DEBUG OPTION
-// TODO WRITE TEST FOR EDGE CASES
+// TODO ADD OPTION TO TEST SCANNER ONLY
+// TODO WRITE TESTS FOR EDGE CASES
+// TODO DECIDE WHAT THE FUCK TO DO WITH OPERATORS
+// TODO FIX FSM ON FIGMA
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,44 +22,42 @@
 
 //------------------------------------- Global variables -----------------------------------------
 
-FILE *input_file;                         // Input file from stdin            //REMOVE//REMOVE//REMOVE//
-FILE *output_file;                  // Output file to build/tokens.txt //REMOVE//REMOVE//REMOVE//
+FILE *file;                         // Input file from stdin
+FILE *out;                          // Output file to build/tokens.txt
 char c;                             // Current character
 char buffer[BUFFER_SIZE];           // Current token buffer
 int i = 0;                          // Buffer index
 bool was_new_line = false;          // If last generated token was NEW_LINE
 
+static KeywordEntry keyword_table[] = {
+    {"class", CLASS},
+    {"if", IF},
+    {"else", ELSE},
+    {"is", IS},
+    {"null", NULL_KEYWORD},
+    {"return", RETURN},
+    {"var", VAR},
+    {"while", WHILE},
+    {"Ifj", IFJ},
+    {"static", STATIC},
+    {"import", IMPORT},
+    {"for", FOR},
+    {"Num", NUM_TYPE},
+    {"String", STR_TYPE},
+    {"Null", NULL_TYPE},
+    {"Bool", BOOL_TYPE},
+    {"true", BOOLEAN},
+    {"false", BOOLEAN},
+    {NULL, 0}
+};
+
 //================================================================================================
 //                                      BASIC FUNCTIONS
 //================================================================================================
 
-const char* op_string(TokenType type){
-    switch(type){
-        case PLUS:
-            return "+";
-            break;
-        case MINUS:
-            return "-";
-            break;
-        case MULTIPLY:
-            return "*";
-            break;
-        case DIVIDE:
-            return "/";
-            break;
-        
-        default:
-            return "\0";
-            break;
-    }
-    return "\0";
-}
-
-
-
-void scanner_init(FILE* in, FILE* out){
-    input_file = in;
-    output_file = out;
+void scanner_init(FILE *input, FILE *output) {
+    file = input;
+    out = output;
 }
 
 //------------------------------------- Buffer ---------------------------------------------------
@@ -100,8 +99,6 @@ void replace(char ch) {
 
 //------------------------------------- Token creation -------------------------------------------
 
-// TODO test string termination
-
 Token add_token(TokenType type) {
     Token token;
     token.type = type;
@@ -131,6 +128,15 @@ Token add_token(TokenType type) {
         case FLOATING:
             buffer[i] = '\0';
             token.value.floating = atof(buffer);
+            break;
+
+        case BOOLEAN:
+            buffer[i] = '\0';
+            if (strcmp(buffer, "true") == 0) {
+                token.value.boolean = true;
+            } else {
+                token.value.boolean = false;
+            }
             break;
 
         default:
@@ -167,18 +173,31 @@ Token single_line_comment() {
 }
 
 Token multi_line_comment() {
+    int depth = 1;
     advance();
-    advance();
-    while (true) {
+
+    while (depth > 0) {
         if (c == EOF) {
             return add_token(ERROR);
         }
-        if (c == '*' && match('/')) {
+
+        if (c == '/' && peek() == '*') {
             advance();
-            break;
+            depth++;
         }
+        else if (c == '*' && peek() == '/') {
+            advance();
+            depth--;
+            if (depth == 0) {
+                advance();
+                break;
+            }
+        }
+
         advance();
     }
+
+    ungetc(c, file);
     return get_token();
 }
 
@@ -221,11 +240,11 @@ Token scan_exponent() {
     if (match('+') || match('-')) {
         advance();
     }
-    
+
     if (!isdigit(peek())) {
         return add_token(ERROR);
     }
-    
+
     while (isdigit(peek())) {
         advance();
     }
@@ -253,15 +272,15 @@ Token scan_number() {
     while (isdigit(peek())) {
         advance();
     }
-    
+
     if (match('.')) {
         return scan_floating();
     }
-    
+
     else if (match('e') || match('E')) {
         return scan_exponent();
     }
-    
+
     return add_token(INTEGER);
 }
 
@@ -269,11 +288,11 @@ Token scan_hex() {
     if (!isxdigit(peek())) {
         return add_token(ERROR);
     }
-    
+
     while (isxdigit(peek())) {
         advance();
     }
-    
+
     return add_token(INTEGER);
 }
 
@@ -281,11 +300,11 @@ Token scan_zero() {
     if (match('.')) {
         return scan_floating();
     }
-    
+
     if (match('x') || match('X')) {
         return scan_hex();
     }
-    
+
     return add_token(INTEGER);
 }
 
@@ -305,8 +324,6 @@ Token scan_minus() {
 }
 
 //------------------------------------- Strings --------------------------------------------------
-
-// TODO test for EOF
 
 void handle_x_sequence() {
     char hex1 = advance();
@@ -346,26 +363,25 @@ void handle_escape_sequence() {
     }
 }
 
-Token scan_normal_string() {    
+Token scan_normal_string() {
     while (c != '"' && c != EOF && c != '\n') {
         if (c == '\\') {
             handle_escape_sequence();
         }
         advance();
     }
-    
+
     if (c == '"') {
         replace('\0');
         return add_token(STRING);
     }
-    
+
     return add_token(ERROR);
 }
 
 Token scan_multiline_string() {
     int count = 0;
-    
-    // Ignore whitespace
+
     while (isspace(peek()) && peek() != '\n') {
         advance();
         reset_buffer();
@@ -373,21 +389,24 @@ Token scan_multiline_string() {
 
     while (true) {
         advance();
-        
+
         if (c == EOF) {
             return add_token(ERROR);
         }
-        
+
         if (c == '"') {
             count++;
             if (count == 3) {
                 i -= 3;
                 buffer[i] = '\0';
+                while (i > 0 && isspace(buffer[i-1])) {
+                    i--;
+                }
+                buffer[i] = '\0';
                 return add_token(STRING);
-                // TODO Ingore whitespace
             }
         }
-        
+
         else {
             count = 0;
         }
@@ -397,18 +416,18 @@ Token scan_multiline_string() {
 Token scan_string() {
     reset_buffer();
     advance();
-    
+
     if (c == '"') {
         if (match('"')) {
             reset_buffer();
             return scan_multiline_string(); // MULTI-LINE STRING
         }
-        
+
         reset_buffer();
         return add_token(STRING); // EMPTY STRING
     }
-    
-    return scan_normal_string(); // STRING
+
+    return scan_normal_string(); // NORMAL STRING
 }
 
 //------------------------------------- Operands --------------------------------------
@@ -423,12 +442,12 @@ Token scan_operator(char op) {
             return add_token(match('=') ? MORE_EQUAL : MORE);
         case '!':
             return add_token(match('=') ? NOT_EQUAL : NOT);
-    
+
         case '&':
             return add_token(match('&') ? AND : ERROR);
         case '|':
             return add_token(match('|') ? OR : ERROR);
-    
+
         case '{': return add_token(BLOCK_START);
         case '}': return add_token(BLOCK_END);
         case '(': return add_token(BRACKET_START);
@@ -469,7 +488,7 @@ Token get_token() {
     }
 
 //------------------------------------- Comments -------------------------------------------------
-    
+
     if (c == '/') {
         return scan_slash();
     }
@@ -529,7 +548,6 @@ Token get_token() {
     }
 }
 
-//REMOVE//REMOVE//REMOVE//REMOVE//REMOVE//REMOVE//REMOVE//REMOVE//REMOVE//REMOVE//REMOVE//REMOVE//
 //================================================================================================
 //                                      DEBUG
 //================================================================================================
@@ -588,35 +606,34 @@ void print_token(Token token) {
     }
 
     if (token.type == INTEGER) {
-        fprintf(output_file, "        INT[%d]", token.value.integer);
-    } else if (token.type == FLOATING) {
-        fprintf(output_file, "       FLT[%f]", token.value.floating);
-    } else if (token.type == STRING) {
-        fprintf(output_file, "         STR[%s]", token.value.string);
-    } else if (token.type == ID) {
-        fprintf(output_file, "             STR[%s]", token.value.string);
-    } else if (token.type == GLOBAL_ID) {
-        fprintf(output_file, "      STR[%s]", token.value.string);
-    } else if (token.type == OPERATOR) {
-        fprintf(output_file, "      OP[%s]", token.value.string);
+        fprintf(out, "        INT[%d]", token.value.integer);
+    }
+    else if (token.type == FLOATING) {
+        fprintf(out, "       FLT[%f]", token.value.floating);
+    }
+    else if (token.type == STRING) {
+        fprintf(out, "         STR[%s]", token.value.string);
+    }
+    else if (token.type == ID) {
+        fprintf(out, "             STR[%s]", token.value.string);
+    }
+    else if (token.type == GLOBAL_ID) {
+        fprintf(out, "      STR[%s]", token.value.string);
+    }
+    else if (token.type == BOOLEAN) {
+        fprintf(out, "        BOOL[%s]", token.value.boolean ? "true" : "false");
     }
 
     fprintf(output_file, "\n");
 }
 
-void prototype_parser_function() {
-  Token token;
-  output_file = fopen("../build/tokens.txt", "w");
-  if (!output_file) {
-    fprintf(stderr, "Unable to open output_file");
-    return;
-  }
-
-  do {
-    token = get_token();
-    print_token(token);
-  } while (token.type != EOF_TOKEN);
-
-  fclose(output_file);
+void parser_function(bool debug) {
+    Token token;
+    do {
+        token = get_token();
+        if (debug) {
+            print_token(token);
+        }
+    } while (token.type != EOF_TOKEN);
 }
 
