@@ -19,7 +19,7 @@ typedef enum {
 } FrameType;
 
 typedef struct FrameData {
-  ASTDataType type;
+  DataType type;
   union {
     int i;
     double f;

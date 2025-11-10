@@ -7,8 +7,6 @@
  */
 
 #include "generator.h"
-#include "ast.h"
-#include "symtable.h"
 
 int generate(ASTNode* node, SymTable* symbolTable){
   if (!node) return 0;
