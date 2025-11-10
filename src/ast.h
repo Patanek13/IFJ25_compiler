@@ -42,13 +42,13 @@ typedef enum {
     TYPE_INT, // Integer type
     TYPE_FLOAT, // Floating point type
     TYPE_STRING // String type
-} ASTDataType;
+} DataType;
 
 // ==== AST Node Structure =====================
 typedef struct ASTNode {
     ASTNodeType type; // Type of the AST node
     char *value; // Value of the node (for literals, identifiers...)
-    ASTDataType data_type; // Data type of the node
+    DataType data_type; // Data type of the node
     struct ASTNode **children; // Array of pointers to child nodes
     size_t child_count; // Number of child nodes
     struct ASTNode *parent; // Pointer to parent node
@@ -62,7 +62,7 @@ typedef struct ASTNode {
  * @param value Value of the node
  * @return Pointer to the newly created AST node or NULL on failure
  */
-ASTNode *ast_create_node(ASTNodeType type, const char *value, ASTDataType data_type);
+ASTNode *ast_create_node(ASTNodeType type, const char *value, DataType data_type);
 
 /*
  * @brief Add a child node to a parent AST node
