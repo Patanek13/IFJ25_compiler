@@ -14,7 +14,7 @@
  * - keyword entry struct
  * - keyword table
  * 
- * Function prototypes
+ * Function declarations
  * 
  */
 
@@ -35,6 +35,10 @@
  * 
  */
 #define BUFFER_SIZE 1024
+
+//================================================================================================
+//                                      TOKEN
+//================================================================================================
 
 /**
  * @enum TokenType
@@ -122,6 +126,10 @@ typedef struct {
     TokenValue value;   /**< Token value (optional) */
 } Token;
 
+//================================================================================================
+//                                      KEYWORD LOOKUP TABLE
+//================================================================================================
+
 /**
  * @struct KeywordEntry
  * @brief Keyword entry to pair each keyword with token type
@@ -133,30 +141,6 @@ typedef struct {
     char* keyword;
     TokenType type;
 } KeywordEntry;
-
-/**
- * @brief Keyword table to pair each keyword with token type
- * 
- */
-static KeywordEntry keyword_table[] = {
-    {"class", CLASS},
-    {"if", IF},
-    {"else", ELSE},
-    {"is", IS},
-    {"null", NULL_KEYWORD},
-    {"return", RETURN},
-    {"var", VAR},
-    {"while", WHILE},
-    {"Ifj", IFJ},
-    {"static", STATIC},
-    {"import", IMPORT},
-    {"for", FOR},
-    {"Num", NUM_TYPE},
-    {"String", STR_TYPE},
-    {"Null", NULL_TYPE},
-    {"Bool", BOOL_TYPE},
-    {NULL, 0}
-};
 
 //================================================================================================
 //                                      FUNCTION PROTOTYPES
@@ -231,14 +215,6 @@ Token add_token(TokenType type);
 TokenType lookup_keyword(const char* word);
 
 //================================================================================================
-//                                      HELPER FUNCTIONS
-//================================================================================================
-
-
-
-
-
-//================================================================================================
 //                                      SCANNER STATES
 //================================================================================================
 
@@ -263,7 +239,7 @@ Token single_line_comment(void);
 Token multi_line_comment(void);
 
 /**
- * @brief Decide if '/' is DIVIDE token or start of Comment or Multiline comment
+ * @brief Decide if '/' is DIVIDE token, start of Comment or Multiline comment
  * 
  * Called when 1st char of new token is '/'
  * 
@@ -333,75 +309,47 @@ Token scan_minus(void);
 //------------------------------------- Strings --------------------------------------------------
 
 /**
- * @brief Processes escape sequences in strings
+ * @brief Process escape sequences in strings
  */
 void handle_escape_sequence(void);
 
 /**
- * @brief Scans regular string literals
+ * @brief Scan normal string
  * 
- * @return STRING token or ERROR if unterminated
+ * @return STRING token or ERROR token if unterminated
  */
-Token scan_regular_string(void);
+Token scan_normal_string(void);
 
 /**
- * @brief Scans multi-line string literals (triple quotes)
+ * @brief Scan multi-line string
  * 
- * @return STRING token or ERROR if unterminated
+ * @return STRING token or ERROR token if unterminated
  */
 Token scan_multiline_string(void);
 
 /**
- * @brief Main string scanning dispatcher
+ * @brief Decide if string is normal or multiline
  * 
- * @return Appropriate string token type
+ * @return STRING token
  */
 Token scan_string(void);
 
-// === Operator Parsing Functions ===
-/**
- * @brief Scans single-character operators
- * 
- * @param op Character to process
- * @return Corresponding operator token or ERROR
- */
-Token scan_single_char_operator(char op);
+//------------------------------------- Operators --------------------------------------------------
 
 /**
- * @brief Scans comparison operators (may be two characters)
+ * @brief Decide operator characters
  * 
- * @param op First character of operator
- * @return Comparison operator token
- */
-Token scan_comparison_operator(char op);
-
-/**
- * @brief Scans logical operators (&&, ||)
- * 
- * @param op First character of operator
- * @return Logical operator token or ERROR
- */
-Token scan_logical_operator(char op);
-
-/**
- * @brief Main operator scanning dispatcher
- * 
- * @param op Character to process as operator
- * @return Appropriate operator token
+ * @param op Character to match
+ * @return Operator token
  */
 Token scan_operator(char op);
 
-// === Core API Functions ===
+//------------------------------------- Get token --------------------------------------------------
+
 /**
- * @brief Main tokenization function - scans next token from input
+ * @brief Scan next token from input
  * 
- * This is the primary interface function that clients should call to
- * get the next token from the input stream. Handles all token types
- * and error conditions automatically.
- * 
- * @return The next token from the input stream
- * @note Returns EOF_TOKEN when end of file is reached
- * @note Returns ERROR token for lexical errors
+ * @return Next token
  */
 Token get_token(void);
 
@@ -410,8 +358,6 @@ Token get_token(void);
 //================================================================================================
 
 void print_token(Token token);
-void prototype_parser_function(void);
-
 void parser_function(bool debug);
 
 #endif // SCANNER_H

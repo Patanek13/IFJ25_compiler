@@ -20,7 +20,5 @@ int main(int argc, char** argv) {
 
   parser_function(debug);
 
-  ErrorCode result;
-
   return ERR_OK;
 }
