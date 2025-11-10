@@ -87,7 +87,7 @@ int expression(){ /* pozor pri assign konci az po nacitani ")" chyba, a = a + 5*
 // }
 
 ASTNode* parse_expression(int *error_code) {
-    error_code = ERR_OK;
+    *error_code = ERR_OK;
     fprintf(out, "DEBUG: parse_expression volani\n");
     // precedencni analyza
 
@@ -350,7 +350,7 @@ ASTNode* params(int* error_code) {
         ASTNode* arg_node = parse_expression(error_code);
 
         // zkontrolovat chyby pri tvorbe argumentu
-        if (error_code != ERR_OK) {
+        if (*error_code != ERR_OK) {
             ast_free(params_node);
             ast_free(arg_node);
             return NULL;
