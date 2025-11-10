@@ -418,7 +418,7 @@ Token scan_string() {
         return add_token(STRING); // EMPTY STRING
     }
     
-    return scan_normal_string(); // STRING
+    return scan_normal_string(); // NORMAL STRING
 }
 
 //------------------------------------- Operands --------------------------------------

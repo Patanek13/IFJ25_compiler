@@ -14,7 +14,7 @@
  * - keyword entry struct
  * - keyword table
  * 
- * Function prototypes
+ * Function declarations
  * 
  */
 
@@ -239,7 +239,7 @@ Token single_line_comment(void);
 Token multi_line_comment(void);
 
 /**
- * @brief Decide if '/' is DIVIDE token or start of Comment or Multiline comment
+ * @brief Decide if '/' is DIVIDE token, start of Comment or Multiline comment
  * 
  * Called when 1st char of new token is '/'
  * 
@@ -309,35 +309,35 @@ Token scan_minus(void);
 //------------------------------------- Strings --------------------------------------------------
 
 /**
- * @brief Processes escape sequences in strings
+ * @brief Process escape sequences in strings
  */
 void handle_escape_sequence(void);
 
 /**
- * @brief Scans regular string literals
+ * @brief Scan normal string
  * 
- * @return STRING token or ERROR if unterminated
+ * @return STRING token or ERROR token if unterminated
  */
-Token scan_regular_string(void);
+Token scan_normal_string(void);
 
 /**
- * @brief Scans multi-line string literals (triple quotes)
+ * @brief Scan multi-line string
  * 
- * @return STRING token or ERROR if unterminated
+ * @return STRING token or ERROR token if unterminated
  */
 Token scan_multiline_string(void);
 
 /**
- * @brief Main string scanning dispatcher
+ * @brief Decide if string is normal or multiline
  * 
- * @return Appropriate string token type
+ * @return STRING token
  */
 Token scan_string(void);
 
 //------------------------------------- Operators --------------------------------------------------
 
 /**
- * @brief Operator (Single and double) character scanner
+ * @brief Decide operator characters
  * 
  * @param op Character to match
  * @return Operator token
@@ -347,7 +347,7 @@ Token scan_operator(char op);
 //------------------------------------- Get token --------------------------------------------------
 
 /**
- * @brief Scans next token from input
+ * @brief Scan next token from input
  * 
  * @return Next token
  */
