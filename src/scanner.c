@@ -627,9 +627,3 @@ void parser_function(bool debug) {
     } while (token.type != EOF_TOKEN);
 }
 
-int main()
-{
-    scanner_init(stdin, stdout);
-    parser_function(true);
-}
-
