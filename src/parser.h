@@ -37,9 +37,9 @@ typedef struct{
 }Stack;
 
 /*============================== Parser function declaration ===============================*/
-ASTNode* cond_loop();
+ASTNode* cond_loop(int *error_code);
 ASTNode* command(int* error_code);
-ASTNode* assign();
+ASTNode* assign(int *error_code);
 ASTNode* block(int* error_code);
 ASTNode* built_in_call(int* error_code);
 ASTNode* func_decl(int* error_code);
