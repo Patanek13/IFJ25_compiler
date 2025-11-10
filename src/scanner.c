@@ -6,10 +6,11 @@
  *
  */
 
-// TODO FIX FSM ON FIGMA
 // TODO CONNECT TO PARSER
-// TODO CREATE DEBUG OPTION
-// TODO WRITE TEST FOR EDGE CASES
+// TODO ADD OPTION TO TEST SCANNER ONLY
+// TODO WRITE TESTS FOR EDGE CASES
+// TODO DECIDE WHAT THE FUCK TO DO WITH OPERATORS
+// TODO FIX FSM ON FIGMA
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,16 +22,43 @@
 
 //------------------------------------- Global variables -----------------------------------------
 
-FILE *file;                         // Input file from stdin            //REMOVE//REMOVE//REMOVE//
-FILE *out;                          // Output file to build/tokens.txt //REMOVE//REMOVE//REMOVE//
+FILE *file;                         // Input file from stdin
+FILE *out;                          // Output file to build/tokens.txt
 char c;                             // Current character
 char buffer[BUFFER_SIZE];           // Current token buffer
 int i = 0;                          // Buffer index
 bool was_new_line = false;          // If last generated token was NEW_LINE
 
+static KeywordEntry keyword_table[] = {
+    {"class", CLASS},
+    {"if", IF},
+    {"else", ELSE},
+    {"is", IS},
+    {"null", NULL_KEYWORD},
+    {"return", RETURN},
+    {"var", VAR},
+    {"while", WHILE},
+    {"Ifj", IFJ},
+    {"static", STATIC},
+    {"import", IMPORT},
+    {"for", FOR},
+    {"Num", NUM_TYPE},
+    {"String", STR_TYPE},
+    {"Null", NULL_TYPE},
+    {"Bool", BOOL_TYPE},
+    {"true", BOOLEAN},
+    {"false", BOOLEAN},
+    {NULL, 0}
+};
+
 //================================================================================================
 //                                      BASIC FUNCTIONS
 //================================================================================================
+
+void scanner_init(FILE *input, FILE *output) {
+    file = input;
+    out = output;
+}
 
 //------------------------------------- Buffer ---------------------------------------------------
 
@@ -71,8 +99,6 @@ void replace(char ch) {
 
 //------------------------------------- Token creation -------------------------------------------
 
-// TODO test string termination
-
 Token add_token(TokenType type) {
     Token token;
     token.type = type;
@@ -93,6 +119,15 @@ Token add_token(TokenType type) {
         case FLOATING:
             buffer[i] = '\0';
             token.value.floating = atof(buffer);
+            break;
+
+        case BOOLEAN:
+            buffer[i] = '\0';
+            if (strcmp(buffer, "true") == 0) {
+                token.value.boolean = true;
+            } else {
+                token.value.boolean = false;
+            }
             break;
 
         default:
@@ -129,18 +164,31 @@ Token single_line_comment() {
 }
 
 Token multi_line_comment() {
+    int depth = 1;
     advance();
-    advance();
-    while (true) {
+
+    while (depth > 0) {
         if (c == EOF) {
             return add_token(ERROR);
         }
-        if (c == '*' && match('/')) {
+
+        if (c == '/' && peek() == '*') {
             advance();
-            break;
+            depth++;
         }
+        else if (c == '*' && peek() == '/') {
+            advance();
+            depth--;
+            if (depth == 0) {
+                advance();
+                break;
+            }
+        }
+
         advance();
     }
+
+    ungetc(c, file);
     return get_token();
 }
 
@@ -268,8 +316,6 @@ Token scan_minus() {
 
 //------------------------------------- Strings --------------------------------------------------
 
-// TODO test for EOF
-
 void handle_x_sequence() {
     char hex1 = advance();
     char hex2 = advance();
@@ -327,7 +373,6 @@ Token scan_normal_string() {
 Token scan_multiline_string() {
     int count = 0;
     
-    // Ignore whitespace
     while (isspace(peek()) && peek() != '\n') {
         advance();
         reset_buffer();
@@ -345,8 +390,11 @@ Token scan_multiline_string() {
             if (count == 3) {
                 i -= 3;
                 buffer[i] = '\0';
+                while (i > 0 && isspace(buffer[i-1])) {
+                    i--;
+                }
+                buffer[i] = '\0';
                 return add_token(STRING);
-                // TODO Ingore whitespace
             }
         }
         
@@ -370,7 +418,7 @@ Token scan_string() {
         return add_token(STRING); // EMPTY STRING
     }
     
-    return scan_normal_string(); // STRING
+    return scan_normal_string(); // NORMAL STRING
 }
 
 //------------------------------------- Operands --------------------------------------
@@ -491,7 +539,6 @@ Token get_token() {
     }
 }
 
-//REMOVE//REMOVE//REMOVE//REMOVE//REMOVE//REMOVE//REMOVE//REMOVE//REMOVE//REMOVE//REMOVE//REMOVE//
 //================================================================================================
 //                                      DEBUG
 //================================================================================================
@@ -550,47 +597,39 @@ void print_token(Token token) {
 
     if (token.type == INTEGER) {
         fprintf(out, "        INT[%d]", token.value.integer);
-    } else if (token.type == FLOATING) {
+    }
+    else if (token.type == FLOATING) {
         fprintf(out, "       FLT[%f]", token.value.floating);
-    } else if (token.type == STRING) {
+    }
+    else if (token.type == STRING) {
         fprintf(out, "         STR[%s]", token.value.string);
-    } else if (token.type == ID) {
+    }
+    else if (token.type == ID) {
         fprintf(out, "             STR[%s]", token.value.string);
-    } else if (token.type == GLOBAL_ID) {
+    }
+    else if (token.type == GLOBAL_ID) {
         fprintf(out, "      STR[%s]", token.value.string);
+    }
+    else if (token.type == BOOLEAN) {
+        fprintf(out, "        BOOL[%s]", token.value.boolean ? "true" : "false");
     }
 
     fprintf(out, "\n");
 }
 
-void prototype_parser_function() {
-  Token token;
-  output_file = fopen("../build/tokens.txt", "w");
-  if (!output_file) {
-    fprintf(stderr, "Unable to open output_file");
-    return;
-  }
-
-  do {
-    token = get_token();
-    print_token(token);
-  } while (token.type != EOF_TOKEN);
-
-  fclose(output_file);
+void parser_function(bool debug) {
+    Token token;
+    do {
+        token = get_token();
+        if (debug) {
+            print_token(token);
+        }
+    } while (token.type != EOF_TOKEN);
 }
 
 int main()
 {
-    file = stdin;
-
-    out = fopen("../build/tokens.txt", "w");
-    if (!out) {return 1;}
-
-    prototype_parser_function();
-    fclose(input_file);
-  }
-
-    fclose(out);
-
+    scanner_init(stdin, stdout);
+    parser_function(true);
 }
 
