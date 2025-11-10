@@ -37,6 +37,17 @@ bool match_token(TokenType type){
     return (token.type == type);
 }
 
+// debug token
+bool check_and_take_token(TokenType type, int *error_code){
+    if (token.type != type){
+        fprintf(out, "ERROR: Expected token type %d but found %d\n", type, token.type);
+        *error_code = SYNTAX_ERROR;
+        return false;
+    }
+    token = get_token();
+    return true;
+}
+
 bool is_built_in_func(){
     for (int i = 0; i < 11; i++){
         if (strcmp(token.value.string, built_in_string[i]) == 0){ return true; }
@@ -75,75 +86,245 @@ int expression(){ /* pozor pri assign konci az po nacitani ")" chyba, a = a + 5*
 //     }
 // }
 
-int ternary(){ /*mozno do buducna vytvorit <before> : <after> ktore by kontorolovali jednotlive expressions*/
-    fprintf(out, "nasli sme token v ternary: ");
+ASTNode* parse_expression(int *error_code) {
+    error_code = ERR_OK;
+    fprintf(out, "DEBUG: parse_expression volani\n");
+    // precedencni analyza
+
+    ASTNode* node = NULL;
+    fprintf(out, "DEBUG: parse_expression() s tokenem: \n");
     print_token(token);
     fprintf(out, "\n");
-    switch(token.type){
-        case BRACKET_START:
-            if (!match_token(BRACKET_END)){ return ternary(); }
-            return SYNTAX_ERROR;
-            break;
 
-        case BRACKET_END:
-            if (!match_token(BRACKET_START)){ return ternary(); }
-            return SYNTAX_ERROR;
-            break;
+    // Unarni operator na zacatku
+    if (token.type == OPERATOR && strcmp(token.value.string, "-") == 0) {
+      node = ast_create_node(NODE_UNOP, token.value.string, TYPE_UNKNOWN);
+      if (node == NULL) {
+          *error_code = ERR_INTERNAL;
+          return NULL;
+      }
 
-
-        case ID: /* neskor doplnit ... ? ID? y : n : n */
-            if (match_token(BRACKET_START)){
-                if ((func_call() == ERR_OK) && (match_token(COLON) || (token.type == OPERATOR) || (token.type == NEW_LINE) || (token.type == BRACKET_END))){
-                    return ternary();
-                }
-            } else if (token.type == OPERATOR){
-                if ((expression() == ERR_OK) && (match_token(COLON) || (token.type == NEW_LINE))){
-                    return ternary();
-                }
-            } else if (token.type == NEW_LINE){ return ternary(); }
-            return SYNTAX_ERROR;
-            break;
-
-        case GLOBAL_ID:
-        case STRING:
-        case INTEGER:
-        case FLOATING:
-            if (match_token(OPERATOR)){
-                if ((expression() == ERR_OK) && (match_token(COLON) || (token.type == NEW_LINE))){ return ternary(); }
-            } else if ((token.type == COLON) || (token.type == NEW_LINE)){ return ternary(); }
-
-            return SYNTAX_ERROR;
-            break;
-
-        case BOOLEAN:
-            if (match_token(COLON) || (token.type == NEW_LINE)){ return ternary(); }
-            return SYNTAX_ERROR;
-            break;
-
-        case OPERATOR:
-            if (expression() == ERR_OK){
-                token = get_token();
-                return ternary();
-            }
-
-            return SYNTAX_ERROR;
-            break;
-
-        case COLON:
-        case QUESTION:
+      // Nacteni dalsiho tokenu
+      token = get_token();
+      ASTNode* operand = parse_expression(error_code);
+      if (*error_code != ERR_OK) {
+          ast_free(node);
+          return NULL;
+      }
+      ast_add_child(node, operand);
+    } else {
+      // zpracujem termy
+      switch (token.type) {
+        case ID: {
+            Token id_token = token; // Ulozim si token id
             token = get_token();
-            return ternary();
-
-        case NEW_LINE:
-            fprintf(out, "___________\n ternary OK return\n_____________\n");
-            return ERR_OK;
+            if (token.type == BRACKET_START) {
+                // Je to volani funkce
+                token = id_token; // Vratim se k id tokenu pro func_call
+                node = func_call(error_code);
+                if (*error_code != ERR_OK) {
+                    return NULL;
+                }
+            } else {
+                // Neni to volani, vytvorim uzel pro ID
+                node = ast_create_node(NODE_ID, id_token.value.string, TYPE_UNKNOWN);
+                if (node == NULL) {
+                    *error_code = ERR_INTERNAL;
+                    return NULL;
+                }
+                // token je uz nacteny
+            }
             break;
-
+        }
+        case IFJ:
+            node = built_in_call(error_code);
+            if (*error_code != ERR_OK) {
+                return NULL;
+            }
+            token = get_token();
+            break;
+        case GLOBAL_ID:
+            node = ast_create_node(NODE_ID, token.value.string, TYPE_UNKNOWN);
+            if (node == NULL) {
+                *error_code = ERR_INTERNAL;
+                return NULL;
+            }
+            token = get_token();
+            break;
+        case STRING:
+            node = ast_create_node(NODE_LITERAL, token.value.string, TYPE_STRING);
+            if (node == NULL) {
+                *error_code = ERR_INTERNAL;
+                return NULL;
+            }
+            token = get_token();
+            break;
+        case INTEGER: {
+            char buffer[50];
+            snprintf(buffer, sizeof(buffer), "%d", token.value.integer);
+            node = ast_create_node(NODE_LITERAL, buffer, TYPE_INT);
+            if (node == NULL) {
+                *error_code = ERR_INTERNAL;
+                return NULL;
+            }
+            token = get_token();
+            break;
+        }
+        case FLOATING: {
+            char buffer[50];
+            snprintf(buffer, sizeof(buffer), "%f", token.value.floating);
+            node = ast_create_node(NODE_LITERAL, buffer, TYPE_FLOAT);
+            if (node == NULL) {
+                *error_code = ERR_INTERNAL;
+                return NULL;
+            }
+            token = get_token();
+            break;
+        }
+        case BOOLEAN: {
+            char* bool_str = token.value.boolean ? "true" : "false";
+            node = ast_create_node(NODE_LITERAL, bool_str, TYPE_BOOL);
+            if (node == NULL) {
+                *error_code = ERR_INTERNAL;
+                return NULL;
+            }
+            token = get_token();
+            break;
+        }
+        case NULL_KEYWORD:
+            node = ast_create_node(NODE_LITERAL, "null", TYPE_NULL);
+            if (node == NULL) {
+                *error_code = ERR_INTERNAL;
+                return NULL;
+            }
+            token = get_token();
+            break;
         default:
-            return SYNTAX_ERROR;
+            fprintf(out, "ERROR: Neznamy token v parse_expression: ");
+            *error_code = SYNTAX_ERROR;
+            return NULL;
             break;
+      }
     }
-    return SYNTAX_ERROR;
+
+    // poresit ternarni operator
+    if (token.type == QUESTION) {
+        // vytvorit ternarni uzel
+        ASTNode* ternary_node = ast_create_node(NODE_TERNARY, NULL, TYPE_UNKNOWN);
+        if (ternary_node == NULL) {
+            ast_free(node);
+            *error_code = ERR_INTERNAL;
+            return NULL;
+        }
+
+        // pridat podminku jako prvni child
+        ast_add_child(ternary_node, node);
+
+        // zpracovat vyraz mezi ? a :
+        token = get_token();
+        int expr_error = ERR_OK;
+        ASTNode* true_expr = parse_expression(&expr_error);
+        if (expr_error != ERR_OK) {
+            ast_free(ternary_node);
+            *error_code = expr_error;
+            return NULL;
+        }
+        ast_add_child(ternary_node, true_expr);
+
+        // ocekavat dvojtecku
+        if (token.type != COLON) {
+            ast_free(ternary_node);
+            *error_code = SYNTAX_ERROR;
+            return NULL;
+        }
+
+        // zpracovat vyraz za :
+        token = get_token();
+        ASTNode* false_expr = parse_expression(&expr_error);
+        if (expr_error != ERR_OK) {
+            ast_free(ternary_node);
+            *error_code = expr_error;
+            return NULL;
+        }
+        ast_add_child(ternary_node, false_expr);
+      }
+
+    fprintf(out, "___________\n parse_expression OK return \n_____________\n");
+    return node;
+}
+
+// parsujeme seznam paramteru pri deklaraci funkce
+// <PARAM_LIST> --> ID (,ID)*
+ASTNode* param_list(int* error_code) {
+  fprintf(out, "nasli sme token v param_list: ");
+  print_token(token);
+  fprintf(out, "\n");
+  *error_code = ERR_OK;
+
+  ASTNode* param_list_node = ast_create_node(NODE_PARAM_LIST, NULL, TYPE_UNKNOWN);
+  if (param_list_node == NULL) {
+      *error_code = ERR_INTERNAL;
+      return NULL;
+  }
+
+  if (token.type == BRACKET_END) {
+      // prazdny seznam parametru
+      fprintf(out, "___________\n param_list OK return \n_____________\n");
+      return param_list_node;
+  }
+
+  // zpracovat parametry ve while
+  while (true) {
+      // musi byt ID
+      if (token.type != ID) {
+          fprintf(out, "ERROR: Ocekavane ID v seznamu parametru, nasli sme: ");
+          print_token(token);
+          fprintf(out, "\n");
+          ast_free(param_list_node);
+          *error_code = SYNTAX_ERROR;
+          return NULL;
+      }
+
+      // vytvorit uzel pro ID
+      ASTNode* id_node = ast_create_node(NODE_ID, token.value.string, TYPE_UNKNOWN);
+      if (id_node == NULL) {
+          ast_free(param_list_node);
+          *error_code = ERR_INTERNAL;
+          return NULL;
+      }
+
+      // pridat id jako child k param_list_node
+      ast_add_child(param_list_node, id_node);
+
+      // nacist dalsi token
+      token = get_token();
+
+      if (token.type == COMMA) {
+          // dalsi parametr
+          token = get_token();
+
+          // zustala carka bez dalsiho parametru
+          if (token.type == BRACKET_END) {
+              fprintf(out, "ERROR: Zbyla carka bez dalsiho parametru\n");
+              ast_free(param_list_node);
+              *error_code = SYNTAX_ERROR;
+              return NULL;
+          }
+
+      } else if (token.type == BRACKET_END) {
+          // konec seznamu parametru
+          break;
+      } else {
+          // neocekavany token
+          fprintf(out, "ERROR: Neocekavany token v seznamu parametru: ");
+          print_token(token);
+          fprintf(out, "\n");
+          ast_free(param_list_node);
+          *error_code = SYNTAX_ERROR;
+          return NULL;
+      }
+  }
+  return param_list_node;
 }
 
 ASTNode* params(int* error_code) {
@@ -152,7 +333,7 @@ ASTNode* params(int* error_code) {
     fprintf(out, "\n");
 
     *error_code = ERR_OK;
-    ASTNode* params_node = ast_create_node(NODE_PARAM_LIST, NULL, TYPE_UNKNOWN);
+    ASTNode* params_node = ast_create_node(NODE_ARG_LIST, NULL, TYPE_UNKNOWN);
     if (params_node == NULL) {
         *error_code = ERR_INTERNAL;
         return NULL;
@@ -166,81 +347,12 @@ ASTNode* params(int* error_code) {
 
     // zpracovat parametry ve whilu
     while (true) {
-        int arg_error = ERR_OK;
-        ASTNode* arg_node = NULL;
-        bool is_arg_parsed = false;
-
-        // zpracuju argumenty
-        switch (token.type) {
-            case ID: {
-                Token id_token = token; // Ulozim si token id
-                token = get_token();
-                if (token.type == BRACKET_START) {
-                    // Je to volani funkce
-                    token = id_token; // Vrátim se k id tokenu pro func_call
-                    arg_node = func_call(&arg_error);
-                    is_arg_parsed = true; // uz je spracovany
-                } else {
-                    // Neni to volani, vytvorim uzel pro ID
-                    arg_node = ast_create_node(NODE_ID, id_token.value.string, TYPE_UNKNOWN);
-                    if (arg_node == NULL) {
-                        ast_free(params_node);
-                        *error_code = ERR_INTERNAL;
-                        return NULL;
-                    }
-                    is_arg_parsed = true;
-                    // token je uz nacteny
-                }
-                break;
-        }
-            case IFJ:
-                arg_node = built_in_call(&arg_error);
-                is_arg_parsed = true; // uz je spracovany
-                break;
-
-            case STRING:
-            arg_node = ast_create_node(NODE_LITERAL, token.value.string, TYPE_STRING);
-            break;
-
-            case INTEGER: {
-                char buffer[50];
-                snprintf(buffer, sizeof(buffer), "%d", token.value.integer);
-                arg_node = ast_create_node(NODE_LITERAL, buffer, TYPE_INT);
-                break;
-            }
-
-            case FLOATING: {
-                char buffer[50];
-                snprintf(buffer, sizeof(buffer), "%f", token.value.floating);
-                arg_node = ast_create_node(NODE_LITERAL, buffer, TYPE_FLOAT);
-                break;
-            }
-
-            case BOOLEAN:
-                char* bool_str = token.value.boolean ? "true" : "false";
-                arg_node = ast_create_node(NODE_LITERAL, bool_str, TYPE_BOOL);
-                break;
-
-            case NULL_KEYWORD:
-                arg_node = ast_create_node(NODE_LITERAL, "null", TYPE_NULL);
-                break;
-
-            // TODO: vyrazy
-
-            default:
-                fprintf(out, "ERROR: Neznamy token v parametrech: ");
-                print_token(token);
-                fprintf(out, "\n");
-                ast_free(params_node);
-                *error_code = SYNTAX_ERROR;
-                return NULL;
-            }
+        ASTNode* arg_node = parse_expression(error_code);
 
         // zkontrolovat chyby pri tvorbe argumentu
-        if (arg_error != ERR_OK) {
-            *error_code = arg_error;
-            ast_free(arg_node);
+        if (error_code != ERR_OK) {
             ast_free(params_node);
+            ast_free(arg_node);
             return NULL;
         }
 
@@ -249,21 +361,7 @@ ASTNode* params(int* error_code) {
             ast_add_child(params_node, arg_node);
         }
 
-        // nacist dalsi token, pokud nebyl nacten vnorenou funkci
-        if (!is_arg_parsed) {
-          // pokud token neni ID, nactu novy token
-          // u literalu a vyrazu je token cten az ted
-          if (token.type != ID) {
-            token = get_token();
-          }
-
-        } else {
-          // pokud byla funkce func_call nebo built_in_call
-          // musim nacist novy token za )
-          token = get_token();
-        }
-
-        // pokud je dalsi token carka, nacist dalsi token a pokracovat
+        // nacist dalsi token, pokud je carka
         if (token.type == COMMA) {
             token = get_token();
 
@@ -276,19 +374,18 @@ ASTNode* params(int* error_code) {
             }
             // dalsi parametr
             continue;
-
-        } else if (token.type == BRACKET_END) {
-            // konec parametru
+          } else if (token.type == BRACKET_END) {
+            // konec seznamu parametru
             break;
-        } else {
+          } else {
             // neocekavany token
-            fprintf(out, "ERROR: Neocekavany token v parametrech: ");
+            fprintf(out, "ERROR: Neocekavany token v seznamu parametru: ");
             print_token(token);
             fprintf(out, "\n");
             ast_free(params_node);
             *error_code = SYNTAX_ERROR;
             return NULL;
-        }
+          }
     }
 
     // vsechno v poradku
@@ -320,9 +417,21 @@ ASTNode* block(int* error_code) {
     }
 
     // poresit optional newline po {
-    if (token.type == NEW_LINE) {
-        token = get_token();
+    if (token.type != NEW_LINE) {
+        // nemuze byt prazdny blok {}
+        if (token.type == BLOCK_END) {
+            fprintf(out, "ERROR: Prazdny blok neni povoleny\n");
+            ast_free(block_node);
+            *error_code = SYNTAX_ERROR;
+            return NULL;
+        }
+        fprintf(out, "Neni NEW_LINE po BLOCK_START\n");
+        *error_code = SYNTAX_ERROR;
+        ast_free(block_node);
+        return NULL;
     }
+    // nacist dalsi token po newline
+    token = get_token();
 
     // zpracovat prikazy v bloku, dokud neskonci }
     while (token.type != BLOCK_END) {
@@ -411,7 +520,6 @@ ASTNode* func_call(int *error_code) {
     }
 
     // pridat args_node jako child ke call_node
-    args_node->type = NODE_ARG_LIST;
     ast_add_child(call_node, args_node);
 
     // nacist dalsi token, musi byt )
@@ -500,7 +608,6 @@ ASTNode* built_in_call(int* error_code) {
     }
 
     // pridat args_node jako child ke call_node
-    args_node->type = NODE_ARG_LIST;
     ast_add_child(call_node, args_node);
 
     // nacist dalsi token, musi byt )
@@ -526,15 +633,15 @@ ASTNode* cond_loop(int* error_code) {
     fprintf(out, "\n");
 
     *error_code = ERR_OK;
+    // kontrola jestli je to if nebo while
+    bool is_if = false;
     // vytvorit uzel pro podminku nebo cyklus
     ASTNode *cond_node = NULL;
     // vytvorit parent uzel pro pridani podminky/cyklu
     if (token.type == IF) {
         cond_node = ast_create_node(NODE_IF, NULL, TYPE_UNKNOWN);
-        cond_state = 0;
     } else if (token.type == WHILE) {
         cond_node = ast_create_node(NODE_WHILE, NULL, TYPE_UNKNOWN);
-        cond_state = 1;
     } else {
         *error_code = SYNTAX_ERROR;
         return NULL;
@@ -546,18 +653,93 @@ ASTNode* cond_loop(int* error_code) {
     }
 
     // nacist dalsi token, musi byt (
-    if (!match_token(BRACKET_START)) {
+    token = get_token();
+    if (!check_and_take_token(BRACKET_START, error_code)) {
         ast_free(cond_node);
         *error_code = SYNTAX_ERROR;
         return NULL;
     }
 
-    // zpracovat vyraz podminky/cyklu
-    token = get_token();
+    // zpracovat vyraz podminky
+    ASTNode* expr_node = parse_expression(error_code);
+    if (*error_code != ERR_OK) {
+        ast_free(cond_node);
+        return NULL;
+    }
+    ast_add_child(cond_node, expr_node);
 
-    // TODO: upravit params()
+    // dalsi token musi byt )
+    if (!check_and_take_token(BRACKET_END, error_code)) {
+        ast_free(cond_node);
+        *error_code = SYNTAX_ERROR;
+        return NULL;
+    }
 
+    // dalsi token, musi byt {
+    if (!check_and_take_token(BLOCK_START, error_code)) {
+        ast_free(cond_node);
+        *error_code = SYNTAX_ERROR;
+        return NULL;
+    }
 
+    // zpracovat blok prikazu
+    ASTNode* block_node = block(error_code);
+    if (*error_code != ERR_OK) {
+        ast_free(cond_node);
+        return NULL;
+    }
+    ast_add_child(cond_node, block_node);
+
+    if (is_if) {
+        if (token.type == ELSE) {
+            token = get_token();
+
+            if (token.type == IF) {
+                // else if
+                ASTNode* else_if_node = cond_loop(error_code); // rekurzivni zavolam
+                if (*error_code != ERR_OK) {
+                    ast_free(cond_node);
+                    return NULL;
+                }
+                ast_add_child(cond_node, else_if_node);
+            } else if (token.type == BLOCK_START) {
+                // klasika else
+                token = get_token(); // nacist {
+                ASTNode* else_block_node = block(error_code);
+                if (*error_code != ERR_OK) {
+                    ast_free(cond_node);
+                    return NULL;
+                }
+                ast_add_child(cond_node, else_block_node);
+            } else {
+                // chyba
+                fprintf(out, "ERROR: Expected IF or BLOCK after ELSE\n");
+                ast_free(cond_node);
+                *error_code = SYNTAX_ERROR;
+                return NULL;
+            }
+        } else {
+            // else neni, vsechno ok
+            // pridat prazdny else do AST
+            ASTNode* empty_else_node = ast_create_node(NODE_BLOCK, NULL, TYPE_UNKNOWN);
+            if (empty_else_node == NULL) {
+                ast_free(cond_node);
+                *error_code = ERR_INTERNAL;
+                return NULL;
+            }
+            ast_add_child(cond_node, empty_else_node);
+        }
+    }
+
+    // cekam newline po celym if/while
+    if (!check_and_take_token(NEW_LINE, error_code)) {
+        ast_free(cond_node);
+        *error_code = SYNTAX_ERROR;
+        return NULL;
+    }
+
+    fprintf(out, "___________\n cond_loop OK return \n_____________\n");
+    return cond_node;
 }
 
 /**
@@ -565,82 +747,60 @@ ASTNode* cond_loop(int* error_code) {
  *
  * @return ERR_OK or SYNTAX_ERROR
  */
-int assign(){ /* TODO poriadne otestovat nove riadky kde mozu a nemozu byt */
+ASTNode* assign(int *error_code) { /* TODO poriadne otestovat nove riadky kde mozu a nemozu byt */
     fprintf(out, "nasli sme token v assign: ");
     print_token(token);
     fprintf(out, "\n");
     /* RULE: <ASSIGN> -> <ID> <=> <LITERAL> (or) <EXPRESSION> */
-    switch(token.type){
-        case EQUAL:
-            token = get_token();
-            return assign();
-            break;
 
-        case ID:
-            if (match_token(BRACKET_START)){
-                if (func_call() == ERR_OK){
-                    token = get_token();
-                    return assign();
-                }
-            } else if ((token.type == NEW_LINE) || (token.type == OPERATOR) || (token.type == QUESTION)){
-                return assign();
-            }
-            return SYNTAX_ERROR;
-            break;
-
-        case STRING:
-        case INTEGER:
-        case FLOATING:
-        case GLOBAL_ID:
-            if (match_token(NEW_LINE)) { /* declaration tuto pozor na x<NLx> = x<NLx> *<NL*> 5<NL+>*/
-                fprintf(out, "___________\n assign OK return \n_____________\n");
-                return assign();
-            } else if (token.type == OPERATOR){
-                return assign();
-            }
-            return SYNTAX_ERROR;
-            break;
-
-        case BOOLEAN:
-            if (match_token(NEW_LINE) || (token.type == QUESTION)){ return assign(); }
-            return SYNTAX_ERROR;
-            break;
-
-        case IFJ:
-            if (built_in_call() == ERR_OK){
-                fprintf(out, "old token:");
-                print_token(token);
-                token = get_token();
-                fprintf(out, "new token:");
-                print_token(token);
-                return assign();
-            }
-            return SYNTAX_ERROR;
-            break;
-
-        case OPERATOR:
-            if (expression() == ERR_OK){
-                token = get_token();
-                return assign();
-            }
-            return SYNTAX_ERROR;
-            break;
-
-        case QUESTION:
-            if (ternary() == ERR_OK){ fprintf(out, "___________\n assign OK return\n_____________\n"); return ERR_OK; }
-            return SYNTAX_ERROR;
-            break;
-
-        case NEW_LINE:
-            fprintf(out, "___________\n assign OK return\n_____________\n");
-            return ERR_OK;
-            break;
-
-        default:
-            return SYNTAX_ERROR;
-            break;
+    *error_code = ERR_OK;
+    ASTNode* assign_node = ast_create_node(NODE_ASSIGN, NULL, TYPE_UNKNOWN);
+    if (assign_node == NULL) {
+        *error_code = ERR_INTERNAL;
+        return NULL;
     }
-    return SYNTAX_ERROR;
+
+    // musi byt ID nebo GLOBAL_ID
+    if ((token.type != ID) && (token.type != GLOBAL_ID)) {
+        ast_free(assign_node);
+        *error_code = SYNTAX_ERROR;
+        return NULL;
+}
+
+    // vytvorit uzel pro ID
+    ASTNode* id_node = ast_create_node(NODE_ID, token.value.string, TYPE_UNKNOWN);
+    if (id_node == NULL) {
+        ast_free(assign_node);
+        *error_code = ERR_INTERNAL;
+        return NULL;
+    }
+    // pridat id jako child k assign_node
+    ast_add_child(assign_node, id_node);
+
+    // nacist dalsi token, musi byt =
+    token = get_token();
+    if (!check_and_take_token(EQUAL, error_code)) {
+        ast_free(assign_node);
+        return NULL;
+    }
+
+    // nacist dalsi token, musi byt literal nebo expression
+    ASTNode* expr_node = parse_expression(error_code);
+    if (*error_code != ERR_OK) {
+        ast_free(assign_node);
+        return NULL;
+    }
+
+    // pridat expr_node jako child k assign_node
+    ast_add_child(assign_node, expr_node);
+
+    if (!check_and_take_token(NEW_LINE, error_code)) {
+        ast_free(assign_node);
+        return NULL;
+    }
+
+    fprintf(out, "___________\n assign OK return \n_____________\n");
+    return assign_node;
 }
 
 /**
@@ -648,201 +808,383 @@ int assign(){ /* TODO poriadne otestovat nove riadky kde mozu a nemozu byt */
  *
  * @return ERR_OK or SYNTAX_ERROR
  */
-int func_decl(){
+ASTNode* func_decl(int *error_code) {
     fprintf(out, "nasli sme token v func_decl: ");
     print_token(token);
     fprintf(out, "\n");
     /* RULE:  <FUNC_DECL> -> <STATIC> <ID> <=?> <BRACKETS> <BLOCK> */
-    switch(token.type){
-        case STATIC:
-            if (!match_token(ID)){ return SYNTAX_ERROR; }
-            return func_decl();
-            break;
 
-        case ID:
-            if (match_token(BRACKET_START)){ /* user made */
-                return func_decl();
-            } else if (token.type == EQUAL){ /* setter */
-                return func_decl();
-            } else if (token.type == BLOCK_START){ /* getter */
-                return func_decl();
-            } else {
-                return SYNTAX_ERROR;
-            }
-            break;
-
-        case EQUAL:
-            if (!match_token(BRACKET_START)){ return SYNTAX_ERROR; }
-            return func_decl();
-            break;
-
-        case BRACKET_START:
-            if (match_token(BRACKET_END)){
-                return func_decl();
-            } else if (params() == ERR_OK){
-                return func_decl();
-            } else {
-                return SYNTAX_ERROR;
-            }
-            break;
-
-        case BRACKET_END:
-            if (!match_token(BLOCK_START)){ return SYNTAX_ERROR; }
-            return func_decl();
-            break;
-
-        case BLOCK_START:
-            if (block() == ERR_OK){ fprintf(out, "___________\n func_decl OK return \n_____________\n"); return ERR_OK; }
-            break;
-
-        default:
-            return SYNTAX_ERROR;
-            break;
+    *error_code = ERR_OK;
+    // token je STATIC
+    token = get_token();
+    // musi byt ID
+    if (token.type != ID) {
+        *error_code = SYNTAX_ERROR;
+        return NULL;
     }
-    return SYNTAX_ERROR;
+    // potrebuju ulozit nazov funkce
+    char *func_name = str_dup(token.value.string);
+    if (func_name == NULL) {
+        *error_code = ERR_INTERNAL;
+        return NULL;
+    }
+
+    // dalsi token musi byt (
+    token = get_token();
+    ASTNode* func_node = NULL;
+
+    if (token.type == BRACKET_START) {
+        // vytvorit uzel pro deklaraci funkce
+        func_node = ast_create_node(NODE_FUNCTION, func_name, TYPE_UNKNOWN);
+        if (func_node == NULL) {
+            free(func_name);
+            *error_code = ERR_INTERNAL;
+            return NULL;
+        }
+
+        // zpracovat seznam parametru
+        token = get_token();
+        ASTNode* params_node = param_list(error_code);
+        if (*error_code != ERR_OK) {
+            free(func_name);
+            ast_free(func_node);
+            return NULL;
+        }
+        // pridat params_node jako child k func_node
+        ast_add_child(func_node, params_node);
+
+        // dalsi token musi byt )
+        if (!check_and_take_token(BRACKET_END, error_code)) {
+            free(func_name);
+            ast_free(func_node);
+            return NULL;
+        }
+
+    } else if (token.type == EQUAL) {
+        // vytvorit uzel pro deklaraci setter funkce
+        func_node = ast_create_node(NODE_SETTER, func_name, TYPE_UNKNOWN);
+        if (func_node == NULL) {
+            free(func_name);
+            *error_code = ERR_INTERNAL;
+            return NULL;
+        }
+
+        token = get_token(); // musi byt =
+        if (!check_and_take_token(BRACKET_START, error_code)) {
+            free(func_name);
+            ast_free(func_node);
+            return NULL;
+        }
+
+        // setter musi mit jeden parameter
+        ASTNode* params_node = ast_create_node(NODE_PARAM_LIST, NULL, TYPE_UNKNOWN);
+        if (params_node == NULL) {
+            free(func_name);
+            ast_free(func_node);
+            *error_code = ERR_INTERNAL;
+            return NULL;
+        }
+        // musi byt ID
+        if (token.type != ID) {
+            free(func_name);
+            ast_free(func_node);
+            ast_free(params_node);
+            *error_code = SYNTAX_ERROR;
+            return NULL;
+        }
+        // vytvorit uzel pro ID
+        ASTNode* id_node = ast_create_node(NODE_ID, token.value.string, TYPE_UNKNOWN);
+        if (id_node == NULL) {
+            free(func_name);
+            ast_free(func_node);
+            ast_free(params_node);
+            *error_code = ERR_INTERNAL;
+            return NULL;
+        }
+        // pridat id jako child k params_node
+        ast_add_child(params_node, id_node);
+        // pridat params_node jako child k func_node
+        ast_add_child(func_node, params_node);
+
+        token= get_token(); // nacist dalsi token
+        if (!check_and_take_token(BRACKET_END, error_code)) {
+            free(func_name);
+            ast_free(func_node);
+            return NULL;
+        }
+      } else if (token.type == BLOCK_START) {
+        // vytvorit uzel pro deklaraci getter funkce
+        func_node = ast_create_node(NODE_GETTER, func_name, TYPE_UNKNOWN);
+        if (func_node == NULL) {
+            free(func_name);
+            *error_code = ERR_INTERNAL;
+            return NULL;
+        }
+
+        // getter nema parametry, pridat prazdny param_list
+        ASTNode* params_node = ast_create_node(NODE_PARAM_LIST, NULL, TYPE_UNKNOWN);
+        if (params_node == NULL) {
+            free(func_name);
+            ast_free(func_node);
+            *error_code = ERR_INTERNAL;
+            return NULL;
+        }
+        ast_add_child(func_node, params_node);
+        // nic vic cist, pokracujem na block
+    } else {
+        free(func_name);
+        *error_code = SYNTAX_ERROR;
+        return NULL;
+    }
+    // zpracovat blok prikazu
+    free(func_name);
+    if (!check_and_take_token(BLOCK_START, error_code)) {
+        ast_free(func_node);
+        return NULL;
+    }
+
+    ASTNode* block_node = block(error_code);
+    if (*error_code != ERR_OK) {
+        ast_free(func_node);
+        return NULL;
+    }
+    ast_add_child(func_node, block_node);
+
+    // cekam newline po celem func_decl
+    if (!check_and_take_token(NEW_LINE, error_code)) {
+        ast_free(func_node);
+        return NULL;
+    }
+
+    fprintf(out, "___________\n func_decl OK return \n_____________\n");
+    return func_node;
 }
 
-int return_func(){
+ASTNode* return_func(int *error_code) {
     fprintf(out, "nasli sme token v return_func: ");
     print_token(token);
     fprintf(out, "\n");
-    switch(token.type){
-        case ID:
-            if (match_token(BRACKET_START)){
-                if ((func_call() == ERR_OK) && (((match_token(NEW_LINE)) || (token.type == QUESTION)) || (token.type == OPERATOR))){ return return_func(); }
-            }
-            if (token.type == OPERATOR){ /* expression returns end token either bracket newline or ? */
-                if ((expression() == ERR_OK) && (match_token(NEW_LINE) || (token.type == QUESTION))){ return return_func(); }
-            }
-            if (token.type == QUESTION){
-                if ((ternary() == ERR_OK) && ((match_token(NEW_LINE)) || (token.type == OPERATOR))){ return return_func(); }
-            }
-            if (token.type == NEW_LINE){ return return_func(); }
 
-            return SYNTAX_ERROR;
-            break;
+    *error_code = ERR_OK;
+    // token je RETURN
 
-        case GLOBAL_ID:
-        case STRING:
-        case INTEGER:
-        case FLOATING:
-            if (match_token(OPERATOR)){
-                if (expression() == ERR_OK){ token = get_token(); return return_func(); }
-            }
-            if (token.type == NEW_LINE){ return return_func(); }
-            return SYNTAX_ERROR;
-            break;
-
-        case BOOLEAN:
-            if (match_token(NEW_LINE)){ return return_func(); }
-            if (token.type == QUESTION){
-                if (ternary() == ERR_OK){ return return_func(); }
-            }
-            return SYNTAX_ERROR;
-            break;
-
-        case IFJ:
-            if (built_in_call() == ERR_OK){
-                token = get_token();
-                return return_func();
-            }
-            return SYNTAX_ERROR;
-            break;
-
-        case NULL_KEYWORD:
-            if (match_token(NEW_LINE)){ return return_func(); }
-            return SYNTAX_ERROR;
-            break;
-
-        case OPERATOR:
-            if (expression() == ERR_OK){ token = get_token(); return return_func(); }
-            return SYNTAX_ERROR;
-            break;
-
-        case NEW_LINE:
-            fprintf(out, "___________\n return_func OK return\n_____________\n");
-            return ERR_OK;
-            break;
-
-        default:
-            return SYNTAX_ERROR;
-            break;
+    ASTNode* return_node = ast_create_node(NODE_RETURN, NULL, TYPE_UNKNOWN);
+    if (return_node == NULL) {
+        *error_code = ERR_INTERNAL;
+        return NULL;
     }
+
+    // zkontrolovat return bez vyrazu
+    if (token.type == NEW_LINE) {
+        // pro semantiku return null
+        ASTNode* null_node = ast_create_node(NODE_LITERAL, "null", TYPE_NULL);
+        if (null_node == NULL) {
+            ast_free(return_node);
+            *error_code = ERR_INTERNAL;
+            return NULL;
+        }
+        ast_add_child(return_node, null_node);
+        fprintf(out, "___________\n return_func OK return \n_____________\n");
+        token= get_token(); // nacist dalsi token
+        return return_node;
+    }
+
+    // zpracovat vyraz za return
+    ASTNode* expr_node = parse_expression(error_code);
+    if (*error_code != ERR_OK) {
+        ast_free(return_node);
+        return NULL;
+    }
+    ast_add_child(return_node, expr_node);
+    // cekam newline po return
+    if (!check_and_take_token(NEW_LINE, error_code)) {
+        ast_free(return_node);
+        return NULL;
+    }
+
+    fprintf(out, "___________\n return_func OK return \n_____________\n");
+    return return_node;
 }
 
 
-int command(){
+ASTNode* command(int *error_code) {
     fprintf(out, "nasli sme token v command: ");
     print_token(token);
     fprintf(out, "\n");
-   switch(token.type){
-        case ID:
-            if (match_token(BRACKET_START)){
-                if ((func_call() == ERR_OK) && (match_token(NEW_LINE))){ return command(); }
-            } else if (token.type == EQUAL){
-                if (assign() == ERR_OK){ return command(); }
-            } else {
-                fprintf(out, "ERROR command id else\n");
-                return SYNTAX_ERROR;
-            }
-            return SYNTAX_ERROR;
-            break;
+    /* RULE: <COMMAND> -> <FUNC_CALL> <NEW_LINE>
+                      | <ASSIGN> <NEW_LINE>
+                      | <BUILT_IN_CALL> <NEW_LINE>
+                      | <RETURN> <NEW_LINE>
+                      | <VAR> <ID> <NEW_LINE>
+                      | <COND_LOOP>
+                      | <FUNC_DECL>
+                      | <NEW_LINE>
+                      | <BLOCK_END>
+    */
+
+    *error_code = ERR_OK;
+    ASTNode* command_node = NULL;
+
+    switch(token.type){
+        case ID: {
+          Token id_token = token; // Ulozim si token id
+          token = get_token(); // Nactu dalsi token
+
+          if (token.type == BRACKET_START) {
+              // Je to volani funkce
+              token = id_token; // Vratim se k id tokenu pro func_call
+              command_node = func_call(error_code);
+              if (*error_code != ERR_OK) {
+                  return NULL;
+              }
+
+              // func_call necha token )
+              // cekam NEW_LINE
+              if (!check_and_take_token(BRACKET_END, error_code)) {
+                  ast_free(command_node);
+                  return NULL;
+              }
+
+              if (!check_and_take_token(NEW_LINE, error_code)) {
+                  ast_free(command_node);
+                  return NULL;
+              }
+
+          } else if (token.type == EQUAL) {
+              // Neni to volani, takze prirazeni
+              token = id_token; // Vratim se k id tokenu pro assign
+              command_node = assign(error_code);
+              if (*error_code != ERR_OK) {
+                  return NULL;
+              }
+            // assign necha token za vyrazem
+          } else {
+              fprintf(out, "ERROR: Neocekavany token po ID: ");
+              print_token(token);
+              fprintf(out, "\n");
+              *error_code = SYNTAX_ERROR;
+              return NULL;
+          }
+          break;
+        }
+
 
         case IFJ:
-            if ((built_in_call() == ERR_OK) && (match_token(NEW_LINE))){
-                return command();
+            command_node = built_in_call(error_code);
+            if (*error_code != ERR_OK){ return NULL; }
+            // built_in_call necha token )
+            if (!check_and_take_token(BRACKET_END, error_code)) {
+                ast_free(command_node);
+                return NULL;
             }
-            return SYNTAX_ERROR;
+            // cekam NEW_LINE
+            if (!check_and_take_token(NEW_LINE, error_code)) {
+                ast_free(command_node);
+                return NULL;
+            }
             break;
 
         case RETURN:
-            if (match_token(NEW_LINE)){ return command(); }
-            if (return_func() == ERR_OK){ return command(); }
-            return SYNTAX_ERROR;
+            token = get_token(); // vezmu dalsi token
+            command_node = return_func(error_code);
+            if (*error_code != ERR_OK){ return NULL; }
+            // uz vzal newline
+            break;
 
         case GLOBAL_ID: /* chyba var a global id sa nevolaju rovnako*/
-            if (match_token(EQUAL)){
-                if (assign() == ERR_OK){ return command(); }
-            } else {
-                fprintf(out, "globalid or var next token wasnt =\n");
-                return SYNTAX_ERROR;
+            // tu je prirazeni
+            command_node = assign(error_code);
+            if (*error_code != ERR_OK){ return NULL; }
+            // vzal newline
+            break;
+
+        case VAR: {
+            // deklarace promenne
+            token = get_token(); // nacist dalsi token, musi byt ID
+            if (token.type != ID) {
+                *error_code = SYNTAX_ERROR;
+                return NULL;
+            }
+
+            // ulozit jmeno promenne
+            char* var_name = str_dup(token.value.string);
+            if (var_name == NULL) {
+                *error_code = ERR_INTERNAL;
+                return NULL;
+            }
+
+            // vytvorit uzel pro deklaraci promenne
+            command_node = ast_create_node(NODE_ASSIGN, NULL, TYPE_UNKNOWN);
+            if (command_node == NULL) {
+                *error_code = ERR_INTERNAL;
+                free(var_name);
+                return NULL;
+            }
+
+            // vytvorit uzel pro ID
+            ASTNode* id_node = ast_create_node(NODE_ID, var_name, TYPE_UNKNOWN);
+            free(var_name);
+            if (id_node == NULL) {
+                ast_free(command_node);
+                *error_code = ERR_INTERNAL;
+                return NULL;
+            }
+            // pridat id jako child k assign_node
+            ast_add_child(command_node, id_node);
+
+            // promenna inicializovana na null
+            ASTNode* null_node = ast_create_node(NODE_LITERAL, "null", TYPE_NULL);
+            if (null_node == NULL) {
+                ast_free(command_node);
+                *error_code = ERR_INTERNAL;
+                return NULL;
+            }
+            // pridat null jako child k assign_node
+            ast_add_child(command_node, null_node);
+            // cekam NEW_LINE
+            token = get_token();
+            if (!check_and_take_token(NEW_LINE, error_code)) {
+                ast_free(command_node);
+                return NULL;
             }
             break;
-
-        case VAR:
-            if ((!match_token(ID)) && (token.type != GLOBAL_ID) && (token.type != STRING) && (token.type != INTEGER)
-                && (token.type != FLOATING) && (token.type != BOOLEAN)){ return SYNTAX_ERROR; }
-
-            if (match_token(NEW_LINE)){ return command(); }
-            return SYNTAX_ERROR;
-            break;
+        }
 
         case IF:
         case WHILE:
-            if (cond_loop() == ERR_OK){ return command(); }
-            return SYNTAX_ERROR;
+            command_node = cond_loop(error_code);
+            if (*error_code != ERR_OK){ return NULL; }
+            // cond_loop uz vzal newline
             break;
 
         case STATIC:
-            if (func_decl() == ERR_OK){ return command(); }
-            return SYNTAX_ERROR;
+            command_node = func_decl(error_code);
+            if (*error_code != ERR_OK){ return NULL; }
+            // func_decl uz vzal newline
             break;
 
         case NEW_LINE:
             token = get_token();
-            return command();
+            return NULL; // vratim NULL a nepridam do AST
             break;
 
         case BLOCK_END:
             fprintf(out, "___________\n command OK return \n_____________\n");
-            return ERR_OK; /* no other commands end block*/
+            return NULL; // vratim NULL a nepridam do AST
             break;
 
         default:
-            return SYNTAX_ERROR;
+            *error_code = SYNTAX_ERROR;
+            return NULL;
             break;
    }
-   return SYNTAX_ERROR;
+
+   if (*error_code != ERR_OK) {
+        ast_free(command_node);
+        return NULL;
+   }
+
+  return command_node;
 }
 
 int valid(){
@@ -872,7 +1214,11 @@ int valid(){
             break;
 
         case IFJ:
-            if (match_token(NEW_LINE)){ return ERR_OK; }
+            if (match_token(NEW_LINE)){
+                // musim mit novy token, protoze match_token() posunul na NEW_LINE
+                token = get_token();
+                return ERR_OK;
+            }
             return SYNTAX_ERROR;
             break;
 
@@ -995,7 +1341,7 @@ int main (int argc, char** argv){
     (void)argc;
     (void)argv;
 
-    in = fopen("../samples/ahoj.IFJcode25", "r");
+    in = fopen("../samples/test.wren", "r");
     if (!in){ printf("nejde otvorit\n"); return ERR_INTERNAL; }
 
     out = fopen("../samples/outfile.txt", "w");
