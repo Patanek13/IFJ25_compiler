@@ -22,8 +22,8 @@
 
 //------------------------------------- Global variables -----------------------------------------
 
-FILE *file;                         // Input file from stdin
-FILE *out;                          // Output file to build/tokens.txt
+FILE *input_file;                         // Input file from stdin
+FILE *output_file;                          // Output file to build/tokens.txt
 char c;                             // Current character
 char buffer[BUFFER_SIZE];           // Current token buffer
 int i = 0;                          // Buffer index
@@ -55,9 +55,21 @@ static KeywordEntry keyword_table[] = {
 //                                      BASIC FUNCTIONS
 //================================================================================================
 
+// Return textual representation for single-character operators used when
+// creating OPERATOR tokens.
+// static const char *op_string(TokenType type) {
+//     switch (type) {
+//         case PLUS: return "+";
+//         case MINUS: return "-";
+//         case MULTIPLY: return "*";
+//         case DIVIDE: return "/";
+//         default: return "";
+//     }
+// }
+
 void scanner_init(FILE *input, FILE *output) {
-    file = input;
-    out = output;
+    input_file = input;
+    output_file = output;
 }
 
 //------------------------------------- Buffer ---------------------------------------------------
@@ -197,7 +209,7 @@ Token multi_line_comment() {
         advance();
     }
 
-    ungetc(c, file);
+    ungetc(c, input_file);
     return get_token();
 }
 
@@ -606,22 +618,22 @@ void print_token(Token token) {
     }
 
     if (token.type == INTEGER) {
-        fprintf(out, "        INT[%d]", token.value.integer);
+        fprintf(output_file, "        INT[%d]", token.value.integer);
     }
     else if (token.type == FLOATING) {
-        fprintf(out, "       FLT[%f]", token.value.floating);
+        fprintf(output_file, "       FLT[%f]", token.value.floating);
     }
     else if (token.type == STRING) {
-        fprintf(out, "         STR[%s]", token.value.string);
+        fprintf(output_file, "         STR[%s]", token.value.string);
     }
     else if (token.type == ID) {
-        fprintf(out, "             STR[%s]", token.value.string);
+        fprintf(output_file, "             STR[%s]", token.value.string);
     }
     else if (token.type == GLOBAL_ID) {
-        fprintf(out, "      STR[%s]", token.value.string);
+        fprintf(output_file, "      STR[%s]", token.value.string);
     }
     else if (token.type == BOOLEAN) {
-        fprintf(out, "        BOOL[%s]", token.value.boolean ? "true" : "false");
+        fprintf(output_file, "        BOOL[%s]", token.value.boolean ? "true" : "false");
     }
 
     fprintf(output_file, "\n");
