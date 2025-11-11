@@ -182,7 +182,7 @@ SymbolData create_function_symbol(DataType return_type, size_t param_count) {
     }
 
     for (size_t idx = 0; idx < param_count; idx++) {
-      data.info.function.param_types[idx] = TYPE_UNDEFINED; // Initialize parameter types
+      data.info.function.param_types[idx] = TYPE_UNKNOWN; // Initialize parameter types
     }
 
   } else {
