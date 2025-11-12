@@ -56,8 +56,6 @@ int stack_push(Stack* stack, Token token);
 void stack_destroy(Stack* stack);
 // Pomocná fce: najde nejvrchnější terminál (přeskočí < a E)
 int stack_top_terminal(Stack* stack, Token* token_ptr);
-// Pomocná fce: vloží token PŘED nejvrchnější terminál
-int stack_push_before_top_terminal(Stack* stack, Token token);
 
 /*============================== Stack for AST nodes ===============================*/
 typedef struct {
