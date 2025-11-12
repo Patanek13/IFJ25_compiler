@@ -14,7 +14,7 @@
  * - keyword entry struct
  * - keyword table
  * 
- * Function declarations
+ * Function prototypes
  * 
  */
 
@@ -81,6 +81,7 @@ typedef enum {
     BOOLEAN,            /**< Boolean literal - true or false */
 
     OPERATOR,           /*  + - / * */
+    E,                  /* pseudo id variab le used in expression */
 
     CLASS,              /**< class */
     IF,                 /**< if */
@@ -98,6 +99,9 @@ typedef enum {
     STR_TYPE,           /**< String */
     NULL_TYPE,          /**< Null */
     BOOL_TYPE,          /**< Bool */
+
+    RELATION_TOKEN,     /**< Token used in precedence table contains all relation operators */
+    END_EXPR,           /**< End_token used in precedence table contains ")" "newline" "?" */
 
     EOF_TOKEN,          /**< End of file */
     ERROR               /**< Lexical error */
@@ -241,7 +245,7 @@ Token single_line_comment(void);
 Token multi_line_comment(void);
 
 /**
- * @brief Decide if '/' is DIVIDE token, start of Comment or Multiline comment
+ * @brief Decide if '/' is DIVIDE token or start of Comment or Multiline comment
  * 
  * Called when 1st char of new token is '/'
  * 
@@ -311,35 +315,35 @@ Token scan_minus(void);
 //------------------------------------- Strings --------------------------------------------------
 
 /**
- * @brief Process escape sequences in strings
+ * @brief Processes escape sequences in strings
  */
 void handle_escape_sequence(void);
 
 /**
- * @brief Scan normal string
+ * @brief Scans regular string literals
  * 
- * @return STRING token or ERROR token if unterminated
+ * @return STRING token or ERROR if unterminated
  */
-Token scan_normal_string(void);
+Token scan_regular_string(void);
 
 /**
- * @brief Scan multi-line string
+ * @brief Scans multi-line string literals (triple quotes)
  * 
- * @return STRING token or ERROR token if unterminated
+ * @return STRING token or ERROR if unterminated
  */
 Token scan_multiline_string(void);
 
 /**
- * @brief Decide if string is normal or multiline
+ * @brief Main string scanning dispatcher
  * 
- * @return STRING token
+ * @return Appropriate string token type
  */
 Token scan_string(void);
 
 //------------------------------------- Operators --------------------------------------------------
 
 /**
- * @brief Decide operator characters
+ * @brief Operator (Single and double) character scanner
  * 
  * @param op Character to match
  * @return Operator token
@@ -349,7 +353,7 @@ Token scan_operator(char op);
 //------------------------------------- Get token --------------------------------------------------
 
 /**
- * @brief Scan next token from input
+ * @brief Scans next token from input
  * 
  * @return Next token
  */

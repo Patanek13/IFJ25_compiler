@@ -22,8 +22,8 @@
 
 //------------------------------------- Global variables -----------------------------------------
 
-FILE *input_file;                         // Input file from stdin
-FILE *output_file;                          // Output file to build/tokens.txt
+FILE *input_file;                         // Input file from stdin            //REMOVE//REMOVE//REMOVE//
+FILE *output_file;                  // Output file to build/tokens.txt //REMOVE//REMOVE//REMOVE//
 char c;                             // Current character
 char buffer[BUFFER_SIZE];           // Current token buffer
 int i = 0;                          // Buffer index
@@ -55,21 +55,33 @@ static KeywordEntry keyword_table[] = {
 //                                      BASIC FUNCTIONS
 //================================================================================================
 
-// Return textual representation for single-character operators used when
-// creating OPERATOR tokens.
-// static const char *op_string(TokenType type) {
-//     switch (type) {
-//         case PLUS: return "+";
-//         case MINUS: return "-";
-//         case MULTIPLY: return "*";
-//         case DIVIDE: return "/";
-//         default: return "";
-//     }
-// }
+const char* op_string(TokenType type){
+    switch(type){
+        case PLUS:
+            return "+";
+            break;
+        case MINUS:
+            return "-";
+            break;
+        case MULTIPLY:
+            return "*";
+            break;
+        case DIVIDE:
+            return "/";
+            break;
+        
+        default:
+            return "\0";
+            break;
+    }
+    return "\0";
+}
 
-void scanner_init(FILE *input, FILE *output) {
-    input_file = input;
-    output_file = output;
+
+
+void scanner_init(FILE* in, FILE* out){
+    input_file = in;
+    output_file = out;
 }
 
 //------------------------------------- Buffer ---------------------------------------------------
@@ -185,30 +197,18 @@ Token single_line_comment() {
 }
 
 Token multi_line_comment() {
-    int depth = 1;
     advance();
-
-    while (depth > 0) {
+    advance();
+    while (true) {
         if (c == EOF) {
             return add_token(ERROR);
         }
-
-        if (c == '/' && peek() == '*') {
+        if (c == '*' && match('/')) {
             advance();
-            depth++;
+            break;
         }
-        else if (c == '*' && peek() == '/') {
-            advance();
-            depth--;
-            if (depth == 0) {
-                advance();
-                break;
-            }
-        }
-
         advance();
     }
-
     ungetc(c, input_file);
     return get_token();
 }
@@ -252,11 +252,11 @@ Token scan_exponent() {
     if (match('+') || match('-')) {
         advance();
     }
-
+    
     if (!isdigit(peek())) {
         return add_token(ERROR);
     }
-
+    
     while (isdigit(peek())) {
         advance();
     }
@@ -284,15 +284,15 @@ Token scan_number() {
     while (isdigit(peek())) {
         advance();
     }
-
+    
     if (match('.')) {
         return scan_floating();
     }
-
+    
     else if (match('e') || match('E')) {
         return scan_exponent();
     }
-
+    
     return add_token(INTEGER);
 }
 
@@ -300,11 +300,11 @@ Token scan_hex() {
     if (!isxdigit(peek())) {
         return add_token(ERROR);
     }
-
+    
     while (isxdigit(peek())) {
         advance();
     }
-
+    
     return add_token(INTEGER);
 }
 
@@ -312,11 +312,11 @@ Token scan_zero() {
     if (match('.')) {
         return scan_floating();
     }
-
+    
     if (match('x') || match('X')) {
         return scan_hex();
     }
-
+    
     return add_token(INTEGER);
 }
 
@@ -375,25 +375,25 @@ void handle_escape_sequence() {
     }
 }
 
-Token scan_normal_string() {
+Token scan_normal_string() {    
     while (c != '"' && c != EOF && c != '\n') {
         if (c == '\\') {
             handle_escape_sequence();
         }
         advance();
     }
-
+    
     if (c == '"') {
         replace('\0');
         return add_token(STRING);
     }
-
+    
     return add_token(ERROR);
 }
 
 Token scan_multiline_string() {
     int count = 0;
-
+    
     while (isspace(peek()) && peek() != '\n') {
         advance();
         reset_buffer();
@@ -401,11 +401,11 @@ Token scan_multiline_string() {
 
     while (true) {
         advance();
-
+        
         if (c == EOF) {
             return add_token(ERROR);
         }
-
+        
         if (c == '"') {
             count++;
             if (count == 3) {
@@ -418,7 +418,7 @@ Token scan_multiline_string() {
                 return add_token(STRING);
             }
         }
-
+        
         else {
             count = 0;
         }
@@ -428,18 +428,18 @@ Token scan_multiline_string() {
 Token scan_string() {
     reset_buffer();
     advance();
-
+    
     if (c == '"') {
         if (match('"')) {
             reset_buffer();
             return scan_multiline_string(); // MULTI-LINE STRING
         }
-
+        
         reset_buffer();
         return add_token(STRING); // EMPTY STRING
     }
-
-    return scan_normal_string(); // NORMAL STRING
+    
+    return scan_normal_string(); // STRING
 }
 
 //------------------------------------- Operands --------------------------------------
@@ -454,12 +454,12 @@ Token scan_operator(char op) {
             return add_token(match('=') ? MORE_EQUAL : MORE);
         case '!':
             return add_token(match('=') ? NOT_EQUAL : NOT);
-
+    
         case '&':
             return add_token(match('&') ? AND : ERROR);
         case '|':
             return add_token(match('|') ? OR : ERROR);
-
+    
         case '{': return add_token(BLOCK_START);
         case '}': return add_token(BLOCK_END);
         case '(': return add_token(BRACKET_START);
@@ -500,7 +500,7 @@ Token get_token() {
     }
 
 //------------------------------------- Comments -------------------------------------------------
-
+    
     if (c == '/') {
         return scan_slash();
     }
@@ -584,7 +584,7 @@ void print_token(Token token) {
         case STR_TYPE:      fprintf(output_file, "STR_TYPE"); break;
         case NULL_TYPE:     fprintf(output_file, "NULL_TYPE"); break;
         case BOOL_TYPE:     fprintf(output_file, "BOOL_TYPE"); break;
-        case INTEGER:       fprintf(output_file, "INTEGER"); break;
+        case INTEGER:       fprintf(output_file, ""); break;
         case FLOATING:      fprintf(output_file, "FLOATING"); break;
         case STRING:        fprintf(output_file, "STRING"); break;
         case BOOLEAN:       fprintf(output_file, "BOOLEAN"); break;
@@ -613,30 +613,29 @@ void print_token(Token token) {
         case NEW_LINE:      fprintf(output_file, "NEW_LINE"); break;
         case EOF_TOKEN:     fprintf(output_file, "EOF"); break;
         case ERROR:         fprintf(output_file, "ERROR"); break;
-        case OPERATOR:      fprintf(output_file, "OPERATOR"); break;
+        case OPERATOR:      fprintf(output_file, ""); break;
+        case E:             fprintf(output_file, "E"); break;
         default:            fprintf(output_file, "UNKNOWN"); break;
     }
 
     if (token.type == INTEGER) {
-        fprintf(output_file, "        INT[%d]", token.value.integer);
-    }
-    else if (token.type == FLOATING) {
+        fprintf(output_file, "%d", token.value.integer);
+    } else if (token.type == FLOATING) {
         fprintf(output_file, "       FLT[%f]", token.value.floating);
-    }
-    else if (token.type == STRING) {
+    } else if (token.type == STRING) {
         fprintf(output_file, "         STR[%s]", token.value.string);
-    }
-    else if (token.type == ID) {
-        fprintf(output_file, "             STR[%s]", token.value.string);
-    }
-    else if (token.type == GLOBAL_ID) {
+    } else if (token.type == ID) {
+        fprintf(output_file, "", token.value.string);
+    } else if (token.type == GLOBAL_ID) {
         fprintf(output_file, "      STR[%s]", token.value.string);
+    } else if (token.type == OPERATOR) {
+        fprintf(output_file, "%s", token.value.string);
     }
     else if (token.type == BOOLEAN) {
         fprintf(output_file, "        BOOL[%s]", token.value.boolean ? "true" : "false");
     }
 
-    fprintf(output_file, "\n");
+    // fprintf(output_file, "\n");
 }
 
 void parser_function(bool debug) {
