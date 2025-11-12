@@ -71,187 +71,831 @@ bool is_param_expr(){
     return false;
 }
 
-int expression(){ /* pozor pri assign konci az po nacitani ")" chyba, a = a + 5*/
-    while(token.type != BRACKET_END){
-        token = get_token();
+// Pomocna funkce pro debug vypisy
+static const char* token_type_to_string(TokenType type) {
+    switch(type) {
+        case BLOCK_START: return "BLOCK_START";
+        case BLOCK_END: return "BLOCK_END";
+        case BRACKET_START: return "BRACKET_START";
+        case BRACKET_END: return "BRACKET_END";
+        case PLUS: return "PLUS";
+        case MINUS: return "MINUS";
+        case MULTIPLY: return "MULTIPLY";
+        case DIVIDE: return "DIVIDE";
+        case DOT: return "DOT";
+        case COMMA: return "COMMA";
+        case COLON: return "COLON";
+        case QUESTION: return "QUESTION";
+        case NEW_LINE: return "NEW_LINE";
+        case EQUAL: return "EQUAL";
+        case EQUAL_EQUAL: return "EQUAL_EQUAL";
+        case LESS: return "LESS";
+        case LESS_EQUAL: return "LESS_EQUAL";
+        case MORE: return "MORE";
+        case MORE_EQUAL: return "MORE_EQUAL";
+        case NOT: return "NOT";
+        case NOT_EQUAL: return "NOT_EQUAL";
+        case AND: return "AND";
+        case OR: return "OR";
+        case ID: return "ID";
+        case GLOBAL_ID: return "GLOBAL_ID";
+        case INTEGER: return "INTEGER";
+        case FLOATING: return "FLOATING";
+        case STRING: return "STRING";
+        case BOOLEAN: return "BOOLEAN";
+        case OPERATOR: return "OPERATOR";
+        case PSEUDO_E: return "E (PSEUDO)";
+        case CLASS: return "CLASS";
+        case IF: return "IF";
+        case ELSE: return "ELSE";
+        case IS: return "IS";
+        case NULL_KEYWORD: return "NULL_KEYWORD";
+        case RETURN: return "RETURN";
+        case VAR: return "VAR";
+        case WHILE: return "WHILE";
+        case IFJ: return "IFJ";
+        case STATIC: return "STATIC";
+        case IMPORT: return "IMPORT";
+        case FOR: return "FOR";
+        case NUM_TYPE: return "NUM_TYPE";
+        case STR_TYPE: return "STR_TYPE";
+        case NULL_TYPE: return "NULL_TYPE";
+        case BOOL_TYPE: return "BOOL_TYPE";
+        case RELATION_TOKEN: return "RELATION_TOKEN";
+        case END_EXPR: return "END_EXPR ($)";
+        case EOF_TOKEN: return "EOF_TOKEN";
+        case ERROR: return "ERROR";
+        // Tyto z 'parser.h'
+        case PREC_ERR: return "PREC_ERR";
+        case PREC_SHIFT: return "PREC_SHIFT";
+        case PREC_REDUCE: return "PREC_REDUCE";
+        case PREC_EQUAL: return "PREC_EQUAL";
+        case PREC_PUSH: return "PREC_PUSH";
+        default: return "UNKNOWN_TOKEN";
     }
-    // token = get_token();
-    fprintf(out, "___________\n expression OK return \n_____________\n");
+}
+
+int ast_stack_init(ASTStack* stack) {
+    if (stack == NULL) return SYNTAX_ERROR;
+    stack->array = (ASTNode**)malloc(STACK_SIZE * sizeof(ASTNode*));
+    if (stack->array == NULL) return SYNTAX_ERROR;
+    stack->topIndex = -1;
     return ERR_OK;
 }
 
-// int ternary_arg_check(){
-//     switch(token.type){
+bool ast_stack_is_empty(const ASTStack* stack) {
+    return stack->topIndex == -1;
+}
 
-//     }
-// }
+int ast_stack_pop(ASTStack* stack, ASTNode** node) {
+    if (!ast_stack_is_empty(stack)) {
+        *node = stack->array[stack->topIndex--];
+        return ERR_OK;
+    }
+    return SYNTAX_ERROR;
+}
 
-ASTNode* parse_expression(int *error_code) {
-    *error_code = ERR_OK;
-    fprintf(out, "DEBUG: parse_expression volani\n");
-    // precedencni analyza
+ASTNode* ast_stack_top(ASTStack* stack) {
+    if (!ast_stack_is_empty(stack)) {
+        return stack->array[stack->topIndex];
+    }
+    return NULL;
+}
 
-    ASTNode* node = NULL;
-    fprintf(out, "DEBUG: parse_expression() s tokenem: \n");
-    print_token(token);
-    fprintf(out, "\n");
+int ast_stack_push(ASTStack* stack, ASTNode* node) {
+    if (stack->topIndex >= STACK_SIZE - 1) return SYNTAX_ERROR;
+    stack->array[++stack->topIndex] = node;
+    return ERR_OK;
+}
 
-    // Unarni operator na zacatku
-    if (token.type == OPERATOR && strcmp(token.value.string, "-") == 0) {
-      node = ast_create_node(NODE_UNOP, token.value.string, TYPE_UNKNOWN);
-      if (node == NULL) {
-          *error_code = ERR_INTERNAL;
-          return NULL;
-      }
+void ast_stack_destroy(ASTStack* stack) {
+    // Pozor: Tato funkce NEMAZA samotne AST uzly,
+    // ty jsou soucasti stromu, ktery mazeme az na konci.
+    free(stack->array);
+    stack->array = NULL;
+    stack->topIndex = -1;
+}
 
-      // Nacteni dalsiho tokenu
-      token = get_token();
-      ASTNode* operand = parse_expression(error_code);
-      if (*error_code != ERR_OK) {
-          ast_free(node);
-          return NULL;
-      }
-      ast_add_child(node, operand);
-    } else {
-      // zpracujem termy
-      switch (token.type) {
-        case ID: {
-            Token id_token = token; // Ulozim si token id
-            token = get_token();
-            if (token.type == BRACKET_START) {
-                // Je to volani funkce
-                token = id_token; // Vratim se k id tokenu pro func_call
-                node = func_call(error_code);
-                if (*error_code != ERR_OK) {
-                    return NULL;
-                }
-            } else {
-                // Neni to volani, vytvorim uzel pro ID
-                node = ast_create_node(NODE_ID, id_token.value.string, TYPE_UNKNOWN);
-                if (node == NULL) {
-                    *error_code = ERR_INTERNAL;
-                    return NULL;
-                }
-                // token je uz nacteny
-            }
-            break;
+// ===================================================================
+// Stack implementation for tokens
+// ===================================================================
+
+int stack_init(Stack* stack) {
+    if (stack == NULL) return SYNTAX_ERROR;
+    stack->array = (Token*)malloc(STACK_SIZE * sizeof(Token));
+    if (stack->array == NULL) return SYNTAX_ERROR;
+    stack->topIndex = -1;
+    return ERR_OK;
+}
+
+bool stack_is_empty(const Stack* stack) {
+    return stack->topIndex == -1;
+}
+
+int stack_pop(Stack* stack, Token* token_ptr) {
+    if (!stack_is_empty(stack)) {
+        if (token_ptr) *token_ptr = stack->array[stack->topIndex];
+        stack->topIndex--;
+        return ERR_OK;
+    }
+    return SYNTAX_ERROR;
+}
+
+int stack_top(Stack* stack, Token* token_ptr) {
+    if (!stack_is_empty(stack)) {
+        *token_ptr = stack->array[stack->topIndex];
+        return ERR_OK;
+    }
+    return SYNTAX_ERROR;
+}
+
+int stack_push(Stack* stack, Token token) {
+    if (stack->topIndex >= STACK_SIZE - 1) return SYNTAX_ERROR;
+    stack->array[++stack->topIndex] = token;
+    return ERR_OK;
+}
+
+void stack_destroy(Stack* stack) {
+    free(stack->array);
+    stack->array = NULL;
+    stack->topIndex = -1;
+}
+
+// Najde nejvrchnejsi *terminal* na zasobniku (preskoci znacky)
+int stack_top_terminal(Stack* stack, Token* token_ptr) {
+    if (stack_is_empty(stack)) return SYNTAX_ERROR;
+    for (int i = stack->topIndex; i >= 0; i--) {
+        TokenType type = stack->array[i].type;
+        // Tohle jsou neterminaly nebo znacky, ty preskocime
+        if (type == PSEUDO_E || type == LESS) {
+            continue;
         }
-        case IFJ:
-            node = built_in_call(error_code);
-            if (*error_code != ERR_OK) {
-                return NULL;
-            }
-            token = get_token();
-            break;
-        case GLOBAL_ID:
-            node = ast_create_node(NODE_ID, token.value.string, TYPE_UNKNOWN);
-            if (node == NULL) {
-                *error_code = ERR_INTERNAL;
-                return NULL;
-            }
-            token = get_token();
-            break;
-        case STRING:
-            node = ast_create_node(NODE_LITERAL, token.value.string, TYPE_STRING);
-            if (node == NULL) {
-                *error_code = ERR_INTERNAL;
-                return NULL;
-            }
-            token = get_token();
-            break;
-        case INTEGER: {
-            char buffer[50];
-            snprintf(buffer, sizeof(buffer), "%d", token.value.integer);
-            node = ast_create_node(NODE_LITERAL, buffer, TYPE_INT);
-            if (node == NULL) {
-                *error_code = ERR_INTERNAL;
-                return NULL;
-            }
-            token = get_token();
-            break;
+        // Nasli jsme prvni terminal
+        *token_ptr = stack->array[i];
+        return ERR_OK;
+    }
+    return SYNTAX_ERROR; // Nenasel se zadny terminal
+}
+
+// Vlozi token *pod* nejvrchnejsi terminal
+int stack_push_before_top_terminal(Stack* stack, Token token) {
+    if (stack->topIndex >= STACK_SIZE - 2) return SYNTAX_ERROR; // Potrebujeme misto
+
+    int top_term_idx = -1;
+    for (int i = stack->topIndex; i >= 0; i--) {
+        TokenType type = stack->array[i].type;
+        if (type == PSEUDO_E || type == LESS) {
+            continue;
         }
-        case FLOATING: {
-            char buffer[50];
-            snprintf(buffer, sizeof(buffer), "%f", token.value.floating);
-            node = ast_create_node(NODE_LITERAL, buffer, TYPE_FLOAT);
-            if (node == NULL) {
-                *error_code = ERR_INTERNAL;
-                return NULL;
-            }
-            token = get_token();
-            break;
-        }
-        case BOOLEAN: {
-            char* bool_str = token.value.boolean ? "true" : "false";
-            node = ast_create_node(NODE_LITERAL, bool_str, TYPE_BOOL);
-            if (node == NULL) {
-                *error_code = ERR_INTERNAL;
-                return NULL;
-            }
-            token = get_token();
-            break;
-        }
-        case NULL_KEYWORD:
-            node = ast_create_node(NODE_LITERAL, "null", TYPE_NULL);
-            if (node == NULL) {
-                *error_code = ERR_INTERNAL;
-                return NULL;
-            }
-            token = get_token();
-            break;
-        default:
-            fprintf(out, "ERROR: Neznamy token v parse_expression: ");
-            *error_code = SYNTAX_ERROR;
-            return NULL;
-            break;
-      }
+        top_term_idx = i;
+        break;
     }
 
-    // poresit ternarni operator
-    if (token.type == QUESTION) {
-        // vytvorit ternarni uzel
-        ASTNode* ternary_node = ast_create_node(NODE_TERNARY, NULL, TYPE_UNKNOWN);
-        if (ternary_node == NULL) {
-            ast_free(node);
-            *error_code = ERR_INTERNAL;
-            return NULL;
+    if (top_term_idx == -1) { // Zasobnik je prazdny nebo jen znacky
+        return stack_push(stack, token);
+    }
+
+    // Posun vsechny prvky od top_term_idx nahoru
+    for (int i = stack->topIndex; i >= top_term_idx; i--) {
+        stack->array[i + 1] = stack->array[i];
+    }
+
+    // Vloz novy token na uvolnene misto
+    stack->array[top_term_idx] = token;
+    stack->topIndex++;
+    return ERR_OK;
+}
+
+
+// ===================================================================
+// Implementace nove token_to_int
+// ===================================================================
+
+int token_to_int(Token in_token) {
+    // Unarni minus ma vyssi prioritu nez binarni
+    // Tuto logiku zde ted nezvladneme, musime ji resit predem.
+    // Pro jednoduchost: unarni minus zatim neni podporovano,
+    // ale v `ex0` je (0-2). To se zpracuje jako binarni operace.
+
+    switch (in_token.type) {
+        case OPERATOR:
+            if (strcmp(in_token.value.string, "*") == 0 || strcmp(in_token.value.string, "/") == 0)
+                return IDX_MUL;
+            if (strcmp(in_token.value.string, "+") == 0 || strcmp(in_token.value.string, "-") == 0)
+                return IDX_ADD;
+            break;
+
+        case LESS:
+        case MORE:
+        case LESS_EQUAL:
+        case MORE_EQUAL:
+            return IDX_CMP;
+
+        case IS:
+            return IDX_IS;
+
+        case EQUAL_EQUAL:
+        case NOT_EQUAL:
+            return IDX_EQ;
+
+        case BRACKET_START:
+            return IDX_LBR;
+
+        // case BRACKET_END:
+        //     return IDX_RBR;
+
+        case QUESTION:
+            return IDX_QMARK;
+
+        case COLON:
+            return IDX_COLON;
+
+        case ID:
+        case GLOBAL_ID:
+        case STRING:
+        case INTEGER:
+        case FLOATING:
+        case BOOLEAN: // pro rozsireni
+        case NULL_KEYWORD:
+        case IFJ: // Volani Ifj.write() je jako operand
+        case NUM_TYPE:
+        case STR_TYPE:
+        case NULL_TYPE:
+        case BOOL_TYPE:
+            return IDX_OPERAND;
+
+        // Vse, co ma ukoncit vyraz (NEW_LINE, { , atd.)
+        case NEW_LINE:
+        case BLOCK_START:
+        case COMMA:
+        case EOF_TOKEN:
+        case END_EXPR:
+        case BRACKET_END:
+            return IDX_END;
+
+        default:
+            return -1; // Chyba
+    }
+    return -1;
+}
+
+// ===================================================================
+// Helpers for expression parsing
+// ===================================================================
+
+// Pretvori *jednoduchy* token na AST uzel (pro operandy)
+// Logika pro ID/IFJ se resi v hlavnim loopu parse_expression
+static ASTNode* create_ast_node_from_token(Token t, int* error_code) {
+    ASTNode* node = NULL;
+    *error_code = ERR_OK;
+
+    switch (t.type) {
+        // ID je ted reseno v hlavni smycce, protoze musime
+        // rozlisit 'x' od 'x('
+        case GLOBAL_ID:
+            node = ast_create_node(NODE_ID, t.value.string, TYPE_UNKNOWN);
+            break;
+
+        case STRING:
+            node = ast_create_node(NODE_LITERAL, t.value.string, TYPE_STRING);
+            break;
+
+        case INTEGER: {
+            char buffer[50];
+            snprintf(buffer, sizeof(buffer), "%d", t.value.integer);
+            node = ast_create_node(NODE_LITERAL, buffer, TYPE_INT);
+            break;
         }
 
-        // pridat podminku jako prvni child
-        ast_add_child(ternary_node, node);
-
-        // zpracovat vyraz mezi ? a :
-        token = get_token();
-        int expr_error = ERR_OK;
-        ASTNode* true_expr = parse_expression(&expr_error);
-        if (expr_error != ERR_OK) {
-            ast_free(ternary_node);
-            *error_code = expr_error;
-            return NULL;
+        case FLOATING: {
+            char buffer[50];
+            snprintf(buffer, sizeof(buffer), "%f", t.value.floating);
+            node = ast_create_node(NODE_LITERAL, buffer, TYPE_FLOAT);
+            break;
         }
-        ast_add_child(ternary_node, true_expr);
 
-        // ocekavat dvojtecku
-        if (token.type != COLON) {
-            ast_free(ternary_node);
+        case NULL_KEYWORD:
+            node = ast_create_node(NODE_LITERAL, "null", TYPE_NULL);
+            break;
+        case BOOLEAN: {
+            char* bool_str = t.value.boolean ? "true" : "false";
+            node = ast_create_node(NODE_LITERAL, bool_str, TYPE_BOOL);
+            break;
+        }
+        case NUM_TYPE:
+            node = ast_create_node(NODE_ID, "Num", TYPE_UNKNOWN);
+            break;
+        case STR_TYPE:
+            node = ast_create_node(NODE_ID, "String", TYPE_UNKNOWN);
+            break;
+        case NULL_TYPE:
+            node = ast_create_node(NODE_ID, "Null", TYPE_UNKNOWN);
+            break;
+        case BOOL_TYPE:
+            node = ast_create_node(NODE_ID, "Bool", TYPE_UNKNOWN);
+            break;
+
+        default:
+            fprintf(out, "ERROR: Neocekavany typ v create_ast_node_from_token: %d\n", t.type);
             *error_code = SYNTAX_ERROR;
             return NULL;
-        }
+    }
 
-        // zpracovat vyraz za :
-        token = get_token();
-        ASTNode* false_expr = parse_expression(&expr_error);
-        if (expr_error != ERR_OK) {
-            ast_free(ternary_node);
-            *error_code = expr_error;
-            return NULL;
-        }
-        ast_add_child(ternary_node, false_expr);
-      }
+    if (node == NULL) {
+        *error_code = ERR_INTERNAL;
+    }
 
-    fprintf(out, "___________\n parse_expression OK return \n_____________\n");
+    // Musime spotrebovat token, ktery jsme zpracovali
+    token = get_token();
     return node;
 }
+
+
+// Hlavni funkce pro redukci
+static int do_reduction(Stack* tokenStack, ASTStack* astStack, int* error_code) {
+    fprintf(out, "DEBUG: Redukuji...\n");
+
+    // 1. Najdi handle (pravou stranu pravidla) na tokenStack
+    Token handle[10]; // Handle nemuze byt delsi
+    int handle_len = 0;
+    // Token stop_marker;
+    // stop_marker.type = LESS; // Hledame znacku '<'
+
+    Token t;
+    while(true) {
+        if(stack_pop(tokenStack, &t) != ERR_OK) {
+            *error_code = SYNTAX_ERROR;
+            return SYNTAX_ERROR;
+        }
+        if (t.type == LESS) {
+            break; // Nasli jsme zacatek handle
+        }
+        handle[handle_len++] = t;
+        if (handle_len > 9) {
+             *error_code = SYNTAX_ERROR; // Prilis dlouhy handle
+             return SYNTAX_ERROR;
+        }
+    }
+
+    // Handle je nacteny v opacnem poradi
+    // napr. pro E * E je v handle: [E_pseudo, *, E_pseudo]
+
+    // 2. Analyzuj handle a postav AST
+    ASTNode* new_node = NULL;
+
+    if (handle_len == 1 && token_to_int(handle[0]) == IDX_OPERAND) {
+        // Pravidlo: E -> i (nebo literal, atd.)
+        // Na astStack je uzel pro 'i'. Ten tam jen zustane.
+        // Na tokenStack vlozime E
+        new_node = NULL; // Nic noveho se nevytvari, uzel uz je na astStack
+
+    } else if (handle_len == 3 && handle[1].type == BRACKET_START && handle[0].type == BRACKET_END) {
+        // Pravidlo: E -> (E)
+        // Na astStack je uzel pro vnitrni 'E'. Ten tam jen zustane.
+        new_node = NULL; // Nic noveho se nevytvari
+
+    } else if (handle_len == 3 && handle[1].type != PSEUDO_E) {
+        // Pravidlo: E -> E op E
+        Token op_token = handle[1];
+
+        ASTNode *right, *left;
+        if (ast_stack_pop(astStack, &right) != ERR_OK) {
+             *error_code = SYNTAX_ERROR; return SYNTAX_ERROR;
+        }
+        if (ast_stack_pop(astStack, &left) != ERR_OK) {
+             *error_code = SYNTAX_ERROR; return SYNTAX_ERROR;
+        }
+
+        // Vytvorime novy uzel
+        char* op_str = NULL;
+        if (op_token.type == OPERATOR) op_str = op_token.value.string;
+        else if (op_token.type == IS) op_str = "is";
+        else if (op_token.type == EQUAL_EQUAL) op_str = "==";
+        else if (op_token.type == NOT_EQUAL) op_str = "!=";
+        else if (op_token.type == LESS) op_str = "<";
+        else if (op_token.type == MORE) op_str = ">";
+        else if (op_token.type == LESS_EQUAL) op_str = "<=";
+        else if (op_token.type == MORE_EQUAL) op_str = ">=";
+        else { *error_code = SYNTAX_ERROR; return SYNTAX_ERROR; } // Neznamy op
+
+        new_node = ast_create_node(NODE_BINOP, op_str, TYPE_UNKNOWN);
+        if (new_node == NULL) {
+            *error_code = ERR_INTERNAL;
+            ast_free(left); ast_free(right);
+            return ERR_INTERNAL;
+        }
+        ast_add_child(new_node, left);
+        ast_add_child(new_node, right);
+
+        } else if (handle_len == 2 && handle[0].type == PSEUDO_E && handle[1].type != PSEUDO_E) {
+        // Pravidlo: E -> E op E (kde prvni E je pred <)
+        // Handle (reversed) je [E, op]
+        Token op_token = handle[1];
+
+        ASTNode *right, *left;
+        if (ast_stack_pop(astStack, &right) != ERR_OK) { // Pop E (Num)
+             *error_code = SYNTAX_ERROR; return SYNTAX_ERROR;
+        }
+        if (ast_stack_pop(astStack, &left) != ERR_OK) { // Pop E (arg)
+             *error_code = SYNTAX_ERROR; return SYNTAX_ERROR;
+        }
+
+        // Vytvorime novy uzel
+        char* op_str = NULL;
+        if (op_token.type == OPERATOR) op_str = op_token.value.string;
+        else if (op_token.type == IS) op_str = "is";
+        else if (op_token.type == EQUAL_EQUAL) op_str = "==";
+        else if (op_token.type == NOT_EQUAL) op_str = "!=";
+        else if (op_token.type == LESS) op_str = "<";
+        else if (op_token.type == MORE) op_str = ">";
+        else if (op_token.type == LESS_EQUAL) op_str = "<=";
+        else if (op_token.type == MORE_EQUAL) op_str = ">=";
+        else { *error_code = SYNTAX_ERROR; return SYNTAX_ERROR; } // Neznamy op
+
+        new_node = ast_create_node(NODE_BINOP, op_str, TYPE_UNKNOWN);
+        if (new_node == NULL) {
+            *error_code = ERR_INTERNAL;
+            ast_free(left); ast_free(right);
+            return ERR_INTERNAL;
+        }
+        ast_add_child(new_node, left);
+        ast_add_child(new_node, right);
+
+    } else if (handle_len == 5 && handle[3].type == QUESTION && handle[1].type == COLON) {
+        // Pravidlo: E -> E ? E : E
+        ASTNode *false_expr, *true_expr, *condition;
+        if (ast_stack_pop(astStack, &false_expr) != ERR_OK) { *error_code = SYNTAX_ERROR; return SYNTAX_ERROR; }
+        if (ast_stack_pop(astStack, &true_expr) != ERR_OK) { *error_code = SYNTAX_ERROR; return SYNTAX_ERROR; }
+        if (ast_stack_pop(astStack, &condition) != ERR_OK) { *error_code = SYNTAX_ERROR; return SYNTAX_ERROR; }
+
+        new_node = ast_create_node(NODE_TERNARY, NULL, TYPE_UNKNOWN);
+        if (new_node == NULL) { *error_code = ERR_INTERNAL; return ERR_INTERNAL; }
+        ast_add_child(new_node, condition);
+        ast_add_child(new_node, true_expr);
+        ast_add_child(new_node, false_expr);
+
+    } else {
+        fprintf(out, "ERROR: Neznamy handle pri redukci (delka %d)\n", handle_len);
+        *error_code = SYNTAX_ERROR;
+        return SYNTAX_ERROR;
+    }
+
+    // 3. Vloz novy uzel na astStack (pokud nejaky vznikl)
+    if (new_node != NULL) {
+        if (ast_stack_push(astStack, new_node) != ERR_OK) {
+             *error_code = ERR_INTERNAL; return ERR_INTERNAL;
+        }
+    }
+
+    // 4. Vloz E (pseudo-token) na tokenStack
+    Token pseudo_E;
+    pseudo_E.type = PSEUDO_E; // 'E'
+    if (stack_push(tokenStack, pseudo_E) != ERR_OK) {
+        *error_code = ERR_INTERNAL; return ERR_INTERNAL;
+    }
+
+    fprintf(out, "DEBUG: Redukce uspesna.\n");
+    return ERR_OK;
+}
+
+
+// ===================================================================
+// Main expression parser function
+// ===================================================================
+
+ASTNode* parse_expression(int *error_code) {
+    fprintf(out, "DEBUG: parse_expression (Tabulkova metoda) volani\n");
+    *error_code = ERR_OK;
+
+    Stack tokenStack;
+    ASTStack astStack;
+    ASTNode* final_node = NULL;
+
+    if (stack_init(&tokenStack) != ERR_OK) {
+        *error_code = ERR_INTERNAL; return NULL;
+    }
+    if (ast_stack_init(&astStack) != ERR_OK) {
+        stack_destroy(&tokenStack);
+        *error_code = ERR_INTERNAL; return NULL;
+    }
+
+    // 1. Vloz $ na tokenStack
+    Token end_marker;
+    end_marker.type = END_EXPR; // Pouziju END_EXPR jako $
+    if(stack_push(&tokenStack, end_marker) != ERR_OK) {
+        *error_code = ERR_INTERNAL; goto cleanup;
+    }
+
+    bool success = false;
+    do {
+        // 'a' = nejvrchnejsi terminal na zasobniku
+        Token top_terminal;
+        if(stack_top_terminal(&tokenStack, &top_terminal) != ERR_OK) {
+            *error_code = SYNTAX_ERROR; goto cleanup;
+        }
+        int top_idx = token_to_int(top_terminal);
+
+        // 'b' = aktualni token na vstupu
+        Token current_token = token;
+        int current_idx = token_to_int(current_token);
+
+        fprintf(out, "DEBUG: Top terminal: %s, Current token: %s\n", token_type_to_string(top_terminal.type), token_type_to_string(current_token.type));
+
+        if (top_idx == -1 || current_idx == -1) {
+             fprintf(out, "ERROR: Neznamy token v precedencni analyze. Top: %s, Curr: %s\n", token_type_to_string(top_terminal.type), token_type_to_string(current_token.type));
+             *error_code = SYNTAX_ERROR;
+             goto cleanup;
+        }
+
+        TokenType rule = precedence_table[top_idx][current_idx];
+
+        switch (rule) {
+            case S: // Shift '<'
+                fprintf(out, "DEBUG: Pravidlo SHIFT <\n");
+                {
+                    Token less_marker;
+                    less_marker.type = LESS; // 'LESS'
+                    if(stack_push(&tokenStack, less_marker) != ERR_OK) {
+                        *error_code = ERR_INTERNAL; goto cleanup;
+                    }
+                }
+                // FALLTHROUGH - pokracuj jako PUSH
+
+            case P: // Push (pro ternarni operator)
+            case E: // Equal '=' (pro zavorky)
+                if(rule == E) fprintf(out, "DEBUG: Pravidlo EQUAL =\n");
+                else if(rule == P) fprintf(out, "DEBUG: Pravidlo PUSH P\n");
+
+                // Push 'b' (current_token) na tokenStack
+                if(stack_push(&tokenStack, current_token) != ERR_OK) {
+                    *error_code = ERR_INTERNAL; goto cleanup;
+                }
+
+                // --- Zpracovani AST ---
+                if (current_idx == IDX_OPERAND) {
+                    ASTNode* node = NULL;
+
+                    if (current_token.type == ID) {
+                        // Workaround: Podivame se na *dalsi* token
+                        Token next_token = get_token(); // Spotrebujeme ID
+
+                        if (next_token.type == BRACKET_START) {
+                            // Je to volani funkce!
+                            fprintf(out, "DEBUG: Zpracovavam func_call uvnitr vyrazu\n");
+                            token = current_token; // Vratime scanner zpet na ID
+                            node = func_call(error_code); // func_call spotrebuje ID, (...), )
+                            if (*error_code != ERR_OK) goto cleanup;
+                            token = get_token(); // Nacteme token *po* ')'
+                        } else {
+                            // Byl to jen ID (promenna)
+                            node = ast_create_node(NODE_ID, current_token.value.string, TYPE_UNKNOWN);
+                            if (node == NULL) { *error_code = ERR_INTERNAL; goto cleanup; }
+                            token = next_token; // Dalsi token uz mame nacteny
+                        }
+
+                    } else if (current_token.type == IFJ) {
+                        // Je to volani vestavene funkce
+                        fprintf(out, "DEBUG: Zpracovavam IFJ call uvnitr vyrazu\n");
+                        node = built_in_call(error_code); // built_in_call spotrebuje IFJ, ., ID, (...), )
+                        if (*error_code != ERR_OK) goto cleanup;
+                        token = get_token(); // Nacteme token *po* ')'
+
+                    } else {
+                        // Je to jiny operand (literal, apod.)
+                        node = create_ast_node_from_token(current_token, error_code);
+                        if (*error_code != ERR_OK) goto cleanup;
+                        // create_ast_node_from_token si uz sam nacetl dalsi token
+                    }
+
+                    // Push hotovy uzel (nebo podstrom) na AST zasobnik
+                    if(ast_stack_push(&astStack, node) != ERR_OK) {
+                         *error_code = ERR_INTERNAL; goto cleanup;
+                    }
+
+                } else {
+                     token = get_token(); // Precti dalsi token (pokud to nebyl operand)
+                }
+                break; // Konec case S/P/E
+
+            case R: // Reduce '>'
+                fprintf(out, "DEBUG: Pravidlo REDUCE >\n");
+                if (do_reduction(&tokenStack, &astStack, error_code) != ERR_OK) {
+                    goto cleanup;
+                }
+                // Po redukci necteme novy token!
+                break;
+
+            case X: // Error
+            default:
+                fprintf(out, "ERROR: Chyba v precedencni tabulce. [%d][%d]\n", top_idx, current_idx);
+                *error_code = SYNTAX_ERROR;
+                goto cleanup;
+        }
+
+        if (*error_code != ERR_OK) goto cleanup;
+
+        // Zkontroluj konec
+        stack_top_terminal(&tokenStack, &top_terminal);
+        if (top_terminal.type == END_EXPR && token_to_int(token) == IDX_END) {
+            success = true;
+            break;
+        }
+
+    } while (true);
+
+
+cleanup:
+    stack_destroy(&tokenStack);
+
+    if (success) {
+        // Na vrcholu astStack by mel byt jediny uzel - koren celeho vyrazu
+        if (ast_stack_pop(&astStack, &final_node) == ERR_OK && ast_stack_is_empty(&astStack)) {
+            // Hotovo, vracime final_node
+            fprintf(out, "___________\n parse_expression OK return \n_____________\n");
+        } else {
+            fprintf(out, "ERROR: astStack neni prazdny na konci analyze.\n");
+            *error_code = SYNTAX_ERROR;
+            final_node = NULL; // Pro jistotu
+        }
+    } else {
+         fprintf(out, "ERROR: Precedencni analyza selhala.\n");
+         // Uvolni vsechny uzly, ktere zbyly na zasobniku
+         ASTNode* temp_node;
+         while(ast_stack_pop(&astStack, &temp_node) == ERR_OK) {
+            ast_free(temp_node); // Meli bychom je uvolnit
+         }
+    }
+
+    ast_stack_destroy(&astStack);
+    return final_node;
+}
+
+// ASTNode* parse_expression(int *error_code) {
+//     *error_code = ERR_OK;
+//     fprintf(out, "DEBUG: parse_expression volani\n");
+//     // precedencni analyza
+
+//     ASTNode* node = NULL;
+//     fprintf(out, "DEBUG: parse_expression() s tokenem: \n");
+//     print_token(token);
+//     fprintf(out, "\n");
+
+//     // Unarni operator na zacatku
+//     if (token.type == OPERATOR && strcmp(token.value.string, "-") == 0) {
+//       node = ast_create_node(NODE_UNOP, token.value.string, TYPE_UNKNOWN);
+//       if (node == NULL) {
+//           *error_code = ERR_INTERNAL;
+//           return NULL;
+//       }
+
+//       // Nacteni dalsiho tokenu
+//       token = get_token();
+//       ASTNode* operand = parse_expression(error_code);
+//       if (*error_code != ERR_OK) {
+//           ast_free(node);
+//           return NULL;
+//       }
+//       ast_add_child(node, operand);
+//     } else {
+//       // zpracujem termy
+//       switch (token.type) {
+//         case ID: {
+//             Token id_token = token; // Ulozim si token id
+//             token = get_token();
+//             if (token.type == BRACKET_START) {
+//                 // Je to volani funkce
+//                 token = id_token; // Vratim se k id tokenu pro func_call
+//                 node = func_call(error_code);
+//                 if (*error_code != ERR_OK) {
+//                     return NULL;
+//                 }
+//             } else {
+//                 // Neni to volani, vytvorim uzel pro ID
+//                 node = ast_create_node(NODE_ID, id_token.value.string, TYPE_UNKNOWN);
+//                 if (node == NULL) {
+//                     *error_code = ERR_INTERNAL;
+//                     return NULL;
+//                 }
+//                 // token je uz nacteny
+//             }
+//             break;
+//         }
+//         case IFJ:
+//             node = built_in_call(error_code);
+//             if (*error_code != ERR_OK) {
+//                 return NULL;
+//             }
+//             token = get_token();
+//             break;
+//         case GLOBAL_ID:
+//             node = ast_create_node(NODE_ID, token.value.string, TYPE_UNKNOWN);
+//             if (node == NULL) {
+//                 *error_code = ERR_INTERNAL;
+//                 return NULL;
+//             }
+//             token = get_token();
+//             break;
+//         case STRING:
+//             node = ast_create_node(NODE_LITERAL, token.value.string, TYPE_STRING);
+//             if (node == NULL) {
+//                 *error_code = ERR_INTERNAL;
+//                 return NULL;
+//             }
+//             token = get_token();
+//             break;
+//         case INTEGER: {
+//             char buffer[50];
+//             snprintf(buffer, sizeof(buffer), "%d", token.value.integer);
+//             node = ast_create_node(NODE_LITERAL, buffer, TYPE_INT);
+//             if (node == NULL) {
+//                 *error_code = ERR_INTERNAL;
+//                 return NULL;
+//             }
+//             token = get_token();
+//             break;
+//         }
+//         case FLOATING: {
+//             char buffer[50];
+//             snprintf(buffer, sizeof(buffer), "%f", token.value.floating);
+//             node = ast_create_node(NODE_LITERAL, buffer, TYPE_FLOAT);
+//             if (node == NULL) {
+//                 *error_code = ERR_INTERNAL;
+//                 return NULL;
+//             }
+//             token = get_token();
+//             break;
+//         }
+//         case BOOLEAN: {
+//             char* bool_str = token.value.boolean ? "true" : "false";
+//             node = ast_create_node(NODE_LITERAL, bool_str, TYPE_BOOL);
+//             if (node == NULL) {
+//                 *error_code = ERR_INTERNAL;
+//                 return NULL;
+//             }
+//             token = get_token();
+//             break;
+//         }
+//         case NULL_KEYWORD:
+//             node = ast_create_node(NODE_LITERAL, "null", TYPE_NULL);
+//             if (node == NULL) {
+//                 *error_code = ERR_INTERNAL;
+//                 return NULL;
+//             }
+//             token = get_token();
+//             break;
+//         default:
+//             fprintf(out, "ERROR: Neznamy token v parse_expression: ");
+//             *error_code = SYNTAX_ERROR;
+//             return NULL;
+//             break;
+//       }
+//     }
+
+//     // poresit ternarni operator
+//     if (token.type == QUESTION) {
+//         // vytvorit ternarni uzel
+//         ASTNode* ternary_node = ast_create_node(NODE_TERNARY, NULL, TYPE_UNKNOWN);
+//         if (ternary_node == NULL) {
+//             ast_free(node);
+//             *error_code = ERR_INTERNAL;
+//             return NULL;
+//         }
+
+//         // pridat podminku jako prvni child
+//         ast_add_child(ternary_node, node);
+
+//         // zpracovat vyraz mezi ? a :
+//         token = get_token();
+//         int expr_error = ERR_OK;
+//         ASTNode* true_expr = parse_expression(&expr_error);
+//         if (expr_error != ERR_OK) {
+//             ast_free(ternary_node);
+//             *error_code = expr_error;
+//             return NULL;
+//         }
+//         ast_add_child(ternary_node, true_expr);
+
+//         // ocekavat dvojtecku
+//         if (token.type != COLON) {
+//             ast_free(ternary_node);
+//             *error_code = SYNTAX_ERROR;
+//             return NULL;
+//         }
+
+//         // zpracovat vyraz za :
+//         token = get_token();
+//         ASTNode* false_expr = parse_expression(&expr_error);
+//         if (expr_error != ERR_OK) {
+//             ast_free(ternary_node);
+//             *error_code = expr_error;
+//             return NULL;
+//         }
+//         ast_add_child(ternary_node, false_expr);
+//       }
+
+//     fprintf(out, "___________\n parse_expression OK return \n_____________\n");
+//     return node;
+// }
 
 // parsujeme seznam paramteru pri deklaraci funkce
 // <PARAM_LIST> --> ID (,ID)*
@@ -1289,51 +1933,52 @@ ASTNode* program(int* error_code){
 }
 
 // ===========================================DEBUG PRECEDENCE=====================================================
-void tok_print(TokenType tok){
-    switch(tok){
-        case LESS:            fprintf(out, "<  |  "); break;
-        case MORE:            fprintf(out, ">  |  "); break;
-        case EQUAL:            fprintf(out, "= |  "); break;
-        case ERROR:            fprintf(out, "ERR  |   "); break;
+// void tok_print(TokenType tok){
+//     switch(tok){
+//         case LESS:            fprintf(out, "<  |  "); break;
+//         case MORE:            fprintf(out, ">  |  "); break;
+//         case EQUAL:            fprintf(out, "= |  "); break;
+//         case ERROR:            fprintf(out, "ERR  |   "); break;
 
-        default:
-            break;
-    }
-}
-void precedence_check(){
-    Token token1;
-    Token token2;
-    fprintf(out, "table: \n");
-    for (int i = 0; i < 43; i++){
-        token1 = get_token();
+//         default:
+//             break;
+//     }
+// }
 
-        // if (token1.type == EOF_TOKEN){ break; }
+// void precedence_check(){
+//     Token token1;
+//     Token token2;
+//     fprintf(out, "table: \n");
+//     for (int i = 0; i < 43; i++){
+//         token1 = get_token();
 
-        if (token1.type == NEW_LINE){ fprintf(out, "\n"); continue; }
+//         // if (token1.type == EOF_TOKEN){ break; }
 
-        token2 = get_token();
+//         if (token1.type == NEW_LINE){ fprintf(out, "\n"); continue; }
 
-        fprintf(out, "%s,", token1.value.string);
+//         token2 = get_token();
 
-        if (token2.type == INTEGER){
-            fprintf(out, "%d |  ", token2.value.integer);
-        }
-        else if (token2.type == FLOATING){
-            fprintf(out, "%f |  ", token2.value.floating);
-        }
-        else if (token2.type == BRACKET_START){
-            fprintf(out, "( |  ");
-        }
-        else if (token2.type == BRACKET_END){
-            fprintf(out, ") |  ");
-        }
-        else {
-            fprintf(out, "%s |  ", token2.value.string);
-        }
+//         fprintf(out, "%s,", token1.value.string);
 
-        tok_print(precedence_table[token_to_int(token1)][token_to_int(token2)]);
-    }
-}
+//         if (token2.type == INTEGER){
+//             fprintf(out, "%d |  ", token2.value.integer);
+//         }
+//         else if (token2.type == FLOATING){
+//             fprintf(out, "%f |  ", token2.value.floating);
+//         }
+//         else if (token2.type == BRACKET_START){
+//             fprintf(out, "( |  ");
+//         }
+//         else if (token2.type == BRACKET_END){
+//             fprintf(out, ") |  ");
+//         }
+//         else {
+//             fprintf(out, "%s |  ", token2.value.string);
+//         }
+
+//         tok_print(precedence_table[token_to_int(token1)][token_to_int(token2)]);
+//     }
+// }
 // ===============================================================================================================
 
 
@@ -1341,7 +1986,7 @@ int main (int argc, char** argv){
     (void)argc;
     (void)argv;
 
-    in = fopen("../samples/test.wren", "r");
+    in = fopen("../samples/ex0-vsechny-konstrukce.wren", "r");
     if (!in){ printf("nejde otvorit\n"); return ERR_INTERNAL; }
 
     out = fopen("../samples/outfile.txt", "w");
