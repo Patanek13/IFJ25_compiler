@@ -631,16 +631,39 @@ ASTNode* parse_expression(int *error_code) {
                     ASTNode* node = NULL;
 
                     if (current_token.type == ID) {
-                        // Workaround: Podivame se na *dalsi* token
-                        Token next_token = get_token(); // Spotrebujeme ID
+                        // Klicova zmena: Nahlizime dopredu pomoci get_token()
+                        Token next_token = get_token(); // Spotrebujeme ID, nacteme dalsi
 
                         if (next_token.type == BRACKET_START) {
                             // Je to volani funkce!
-                            fprintf(out, "DEBUG: Zpracovavam func_call uvnitr vyrazu\n");
-                            token = current_token; // Vratime scanner zpet na ID
-                            node = func_call(error_code); // func_call spotrebuje ID, (...), )
-                            if (*error_code != ERR_OK) goto cleanup;
-                            token = get_token(); // Nacteme token *po* ')'
+                            fprintf(out, "DEBUG: Zpracovavam func_call (inline) uvnitr vyrazu\n");
+
+                            // Musime zde zduplikovat logiku z func_call,
+                            // protoze nemuzeme bezpecne "vratit" token.
+
+                            node = ast_create_node(NODE_CALL, NULL, TYPE_UNKNOWN);
+                            if(!node) { *error_code = ERR_INTERNAL; goto cleanup; }
+
+                            // 1. Pridame ID (jmeno funkce)
+                            ASTNode* id_node = ast_create_node(NODE_ID, current_token.value.string, TYPE_UNKNOWN);
+                            if(!id_node) { *error_code = ERR_INTERNAL; ast_free(node); goto cleanup; }
+                            ast_add_child(node, id_node);
+
+                            // 2. Zpracujeme parametry
+                            // next_token je '(', takze ho spotrebujeme a nacteme dalsi
+                            token = get_token();
+                            ASTNode* args_node = params(error_code); // params zacina tokenem PO '('
+                            if (*error_code != ERR_OK) { ast_free(node); goto cleanup; }
+                            ast_add_child(node, args_node);
+
+                            // 3. Zkontrolujeme ')'
+                            // 'params' nam nechal ')' v 'token'
+                            if (!check_and_take_token(BRACKET_END, error_code)) {
+                                ast_free(node);
+                                goto cleanup;
+                            }
+                            // 'check_and_take_token' spotreboval ')' a nacetl dalsi token do globalni 'token'
+
                         } else {
                             // Byl to jen ID (promenna)
                             node = ast_create_node(NODE_ID, current_token.value.string, TYPE_UNKNOWN);
@@ -649,7 +672,7 @@ ASTNode* parse_expression(int *error_code) {
                         }
 
                     } else if (current_token.type == IFJ) {
-                        // Je to volani vestavene funkce
+                        // Je to volani vestavene funkce (toto uz fungovalo)
                         fprintf(out, "DEBUG: Zpracovavam IFJ call uvnitr vyrazu\n");
                         node = built_in_call(error_code); // built_in_call spotrebuje IFJ, ., ID, (...), )
                         if (*error_code != ERR_OK) goto cleanup;
