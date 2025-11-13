@@ -7,6 +7,7 @@
  */
 
 #include "generator.h"
+#include <stdio.h>
 
 int generate(ASTNode* node, SymTable* symbolTable){
   if (!node) return 0;
@@ -37,7 +38,9 @@ int generate(ASTNode* node, SymTable* symbolTable){
 }
 
 int generate_code(ASTNode* root, SymTable** symTableArray) {
-  //TODO: fixed prologue
+  //fixed prologue
+  printf(".IFJcode25\n");
 
-  generate(root, symTableArray);
+  
+  generate(root, *symTableArray);
 }
