@@ -121,7 +121,6 @@ static const char* token_type_to_string(TokenType type) {
         case STR_TYPE: return "STR_TYPE";
         case NULL_TYPE: return "NULL_TYPE";
         case BOOL_TYPE: return "BOOL_TYPE";
-        case RELATION_TOKEN: return "RELATION_TOKEN";
         case END_EXPR: return "END_EXPR ($)";
         case EOF_TOKEN: return "EOF_TOKEN";
         case ERROR: return "ERROR";
@@ -1117,6 +1116,7 @@ ASTNode* cond_loop(int* error_code) {
     // vytvorit parent uzel pro pridani podminky/cyklu
     if (token.type == IF) {
         cond_node = ast_create_node(NODE_IF, NULL, TYPE_UNKNOWN);
+        is_if = true;
     } else if (token.type == WHILE) {
         cond_node = ast_create_node(NODE_WHILE, NULL, TYPE_UNKNOWN);
     } else {
@@ -1256,10 +1256,6 @@ ASTNode* assign(int *error_code) { /* TODO poriadne otestovat nove riadky kde mo
 
     // nacist dalsi token, musi byt =
     token = get_token();
-    if (!check_and_take_token(EQUAL, error_code)) {
-        ast_free(assign_node);
-        return NULL;
-    }
 
     // nacist dalsi token, musi byt literal nebo expression
     ASTNode* expr_node = parse_expression(error_code);
@@ -1568,12 +1564,26 @@ ASTNode* command(int *error_code) {
             // uz vzal newline
             break;
 
-        case GLOBAL_ID: /* chyba var a global id sa nevolaju rovnako*/
-            // tu je prirazeni
-            command_node = assign(error_code);
-            if (*error_code != ERR_OK){ return NULL; }
-            // vzal newline
+        case GLOBAL_ID: {
+          Token id_token = token; // Ulozime GLOBAL_ID
+            token = get_token(); // Nacteme dalsi token (musi byt EQUAL)
+
+            if (token.type == EQUAL) {
+                // Je to prirazeni
+                token = id_token; // Vratime token zpet na GLOBAL_ID
+                command_node = assign(error_code);
+                if (*error_code != ERR_OK){ return NULL; }
+                // assign uz se postaral o newline
+            } else {
+                fprintf(out, "ERROR: Neocekavany token po GLOBAL_ID: ");
+                print_token(token);
+                fprintf(out, "\n");
+                *error_code = SYNTAX_ERROR;
+                return NULL;
+            }
             break;
+        }
+
 
         case VAR: {
             // deklarace promenne
