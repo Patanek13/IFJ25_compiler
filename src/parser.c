@@ -1683,6 +1683,25 @@ ASTNode* command(int *error_code) {
             return NULL; // vratim NULL a nepridam do AST
             break;
 
+        case BLOCK_START:
+            // Samostatny blok jako prikaz
+            // 1. Spotrebujeme '{'
+            token = get_token();
+
+            // 2. Zavolame 'block', ten ocekava NEW_LINE jako dalsi token
+            command_node = block(error_code);
+            if (*error_code != ERR_OK) {
+                return NULL;
+            }
+
+            // 3. 'block' nam nechal token *po* '}'
+            // Ocekavame, ze to bude NEW_LINE, stejne jako po jinem prikazu
+            if (!check_and_take_token(NEW_LINE, error_code)) {
+                ast_free(command_node);
+                return NULL;
+            }
+            break;
+
         default:
             *error_code = SYNTAX_ERROR;
             return NULL;
@@ -1892,7 +1911,7 @@ int main (int argc, char** argv){
         if (parse_error == ERR_OK){
             ok = 1;
             fprintf(out, "\n<AST representation>\n");
-            ast_print_debug(ast_root, 0);
+            ast_fprint_debug(ast_root, out);
         } else {
             ok = 0;
             fprintf(out, "PARSE ERROR\n");
