@@ -6,7 +6,6 @@
  *
  */
 
-// TODO CONNECT TO PARSER
 // TODO ADD OPTION TO TEST SCANNER ONLY
 // TODO WRITE TESTS FOR EDGE CASES
 // TODO DECIDE WHAT THE FUCK TO DO WITH OPERATORS
@@ -22,8 +21,8 @@
 
 //------------------------------------- Global variables -----------------------------------------
 
-FILE *file;                         // Input file from stdin
-FILE *out;                          // Output file to build/tokens.txt
+FILE *file;                         // Input file (stdin)
+FILE *out;                          // Output file (stdout)
 char c;                             // Current character
 char buffer[BUFFER_SIZE];           // Current token buffer
 int i = 0;                          // Buffer index
@@ -299,21 +298,6 @@ Token scan_zero() {
     return add_token(INTEGER);
 }
 
-Token scan_minus() {
-    if (match('0')) {
-        return scan_zero();
-    }
-
-    else if (isdigit(peek())) {
-        advance();
-        return scan_number();
-    }
-
-    else {
-        return add_token(MINUS);
-    }
-}
-
 //------------------------------------- Strings --------------------------------------------------
 
 void handle_x_sequence() {
@@ -448,6 +432,7 @@ Token scan_operator(char op) {
         case '+': return add_token(PLUS);
         case '-': return add_token(MINUS);
         case '*': return add_token(MULTIPLY);
+        case '/': return add_token(DIVIDE);
         case ':': return add_token(COLON);
         case '?': return add_token(QUESTION);
         default:  return add_token(ERROR);
@@ -520,10 +505,6 @@ Token get_token() {
         } else {
             return scan_number();
         }
-    }
-
-    else if (c == '-') {
-        return scan_minus();
     }
 
 //------------------------------------- Strings --------------------------------------------------
@@ -626,4 +607,3 @@ void parser_function(bool debug) {
         }
     } while (token.type != EOF_TOKEN);
 }
-
