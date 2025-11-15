@@ -53,12 +53,25 @@ bool match_token(TokenType type){
 
 // debug token
 bool check_and_take_token(TokenType type, int *error_code){
+    // Check for lexical errors
+    if (token.type == ERROR) {
+        *error_code = LEXICAL_ERROR;
+        return false;
+    }
+
     if (token.type != type){
         fprintf(out, "ERROR: Ocekavam token type %d ale nasel jsem %d\n", type, token.type);
         *error_code = SYNTAX_ERROR;
         return false;
     }
+
     token = get_token();
+    // Check for lexical errors after consuming token
+    if (token.type == ERROR) {
+        *error_code = LEXICAL_ERROR;
+        return false;
+    }
+
     return true;
 }
 
@@ -256,6 +269,9 @@ void print_token_stack(Stack* stack) {
 int token_to_int(Token in_token) {
     fprintf(out, ">> token_to_int: Zpracovávám token %s\n", token_type_to_string(in_token.type));
     switch (in_token.type) {
+        case ERROR:
+            return -2; // Error: invalid token
+
         case NOT:
             return IDX_NOT; // 0
 
@@ -290,7 +306,7 @@ int token_to_int(Token in_token) {
             return IDX_LBR; // 8
 
         case BRACKET_END:
-            return IDX_RBR; // 9 (VRACENO ZPET)
+            return IDX_RBR; // 9
 
         case QUESTION:
             return IDX_QMARK; // 10
@@ -335,6 +351,12 @@ int token_to_int(Token in_token) {
 static ASTNode* create_ast_node_from_token(Token t, int* error_code) {
     ASTNode* node = NULL;
     *error_code = ERR_OK;
+
+    // Check error token
+    if (t.type == ERROR) {
+        *error_code = LEXICAL_ERROR;
+        return NULL;
+    }
 
     switch (t.type) {
         // ID je ted reseno v hlavni smycce, protoze musime
@@ -394,6 +416,12 @@ static ASTNode* create_ast_node_from_token(Token t, int* error_code) {
 
     // Musime spotrebovat token, ktery jsme zpracovali
     token = get_token();
+    // Check for lexical errors after consuming token
+    if (token.type == ERROR) {
+        *error_code = LEXICAL_ERROR;
+        ast_free(node);
+        return NULL;
+    }
     return node;
 }
 
@@ -587,6 +615,12 @@ ASTNode* parse_expression(int *error_code) {
     fprintf(out, "DEBUG: parse_expression (Tabulkova metoda) volani\n");
     *error_code = ERR_OK;
 
+    // Check for lexical errors before starting
+    if (token.type == ERROR) {
+        *error_code = LEXICAL_ERROR;
+        return NULL;
+    }
+
     Stack tokenStack;
     ASTStack astStack;
     ASTNode* final_node = NULL;
@@ -649,7 +683,13 @@ ASTNode* parse_expression(int *error_code) {
 
         fprintf(out, "DEBUG: Top terminal: %s, Current token: %s\n", token_type_to_string(top_terminal.type), token_type_to_string(current_token.type));
 
-        if (top_idx == -1 || current_idx == -1) {
+        // Handle lex errors from token_to_int
+        if (current_idx == -2) {
+            *error_code = LEXICAL_ERROR;
+            goto cleanup;
+        }
+
+        if (top_idx == -1 || current_idx == -1) { // Syntax error
              fprintf(out, "ERROR: Neznamy token v precedencni analyze. Top: %s, Curr: %s\n", token_type_to_string(top_terminal.type), token_type_to_string(current_token.type));
              *error_code = SYNTAX_ERROR;
              goto cleanup;
@@ -696,6 +736,12 @@ ASTNode* parse_expression(int *error_code) {
                         // Mame ID, musime zjistit, jestli je to volani funkce nebo promenna
                         Token next_token = get_token(); // Spotrebujeme ID, nacteme dalsi
 
+                        // Check for lexical errors after consuming token
+                        if (next_token.type == ERROR) {
+                            *error_code = LEXICAL_ERROR;
+                            goto cleanup;
+                        }
+
                         if (next_token.type == BRACKET_START) {
                             // Je to volani funkce!
                             fprintf(out, "DEBUG: Zpracovavam func_call (inline) uvnitr vyrazu\n");
@@ -716,6 +762,13 @@ ASTNode* parse_expression(int *error_code) {
                             // 2. Zpracujeme parametry
                             // next_token je '(', takze ho spotrebujeme a nacteme dalsi
                             token = get_token();
+                            // Check for lexical errors after consuming token
+                            if (token.type == ERROR) {
+                                *error_code = LEXICAL_ERROR;
+                                ast_free(node);
+                                goto cleanup;
+                            }
+
                             ASTNode* args_node = params(error_code); // params zacina tokenem PO '('
                             if (*error_code != ERR_OK) { ast_free(node);
                               goto cleanup;
@@ -740,13 +793,19 @@ ASTNode* parse_expression(int *error_code) {
                         }
 
                     } else if (current_token.type == IFJ) {
-                        // Je to volani vestavene funkce (toto uz fungovalo)
+                        // Je to volani vestavene funkce IFJ
                         fprintf(out, "DEBUG: Zpracovavam IFJ call uvnitr vyrazu\n");
                         node = built_in_call(error_code); // built_in_call spotrebuje IFJ, ., ID, (...), )
                         if (*error_code != ERR_OK) {
                           goto cleanup;
                         }
                         token = get_token(); // Nacteme token *po* ')'
+                        // Check for lexical errors after consuming token
+                        if (token.type == ERROR) {
+                            *error_code = LEXICAL_ERROR;
+                            ast_free(node);
+                            goto cleanup;
+                        }
 
                     } else {
                         // Je to jiny operand (literal, apod.)
@@ -765,6 +824,11 @@ ASTNode* parse_expression(int *error_code) {
 
                 } else {
                      token = get_token(); // Precti dalsi token (pokud to nebyl operand)
+                     // Check for lexical errors after consuming token
+                      if (token.type == ERROR) {
+                          *error_code = LEXICAL_ERROR;
+                          goto cleanup;
+                      }
                 }
                 break; // Konec case S/P/E
 
@@ -800,7 +864,7 @@ ASTNode* parse_expression(int *error_code) {
 
     } while (true);
 
-// vycisteni stacku
+// Stack cleanup and return final AST node
 cleanup:
     stack_destroy(&tokenStack);
 
@@ -835,6 +899,12 @@ ASTNode* param_list(int* error_code) {
   print_token(token);
   fprintf(out, "\n");
   *error_code = ERR_OK;
+
+  // Check for lexical errors before starting
+  if (token.type == ERROR) {
+      *error_code = LEXICAL_ERROR;
+      return NULL;
+  }
 
   ASTNode* param_list_node = ast_create_node(NODE_PARAM_LIST, NULL, TYPE_UNKNOWN);
   if (param_list_node == NULL) {
@@ -873,10 +943,22 @@ ASTNode* param_list(int* error_code) {
 
       // nacist dalsi token
       token = get_token();
+      // Check for lexical errors after consuming token
+      if (token.type == ERROR) {
+          *error_code = LEXICAL_ERROR;
+          ast_free(param_list_node);
+          return NULL;
+      }
 
       if (token.type == COMMA) {
           // dalsi parametr
           token = get_token();
+          // Check for lexical errors after consuming token
+          if (token.type == ERROR) {
+              *error_code = LEXICAL_ERROR;
+              ast_free(param_list_node);
+              return NULL;
+          }
 
           // zustala carka bez dalsiho parametru
           if (token.type == BRACKET_END) {
@@ -908,6 +990,12 @@ ASTNode* params(int* error_code) {
     fprintf(out, "\n");
 
     *error_code = ERR_OK;
+    // Check for lexical errors before starting
+    if (token.type == ERROR) {
+        *error_code = LEXICAL_ERROR;
+        return NULL;
+    }
+
     ASTNode* params_node = ast_create_node(NODE_ARG_LIST, NULL, TYPE_UNKNOWN);
     if (params_node == NULL) {
         *error_code = ERR_INTERNAL;
@@ -939,6 +1027,12 @@ ASTNode* params(int* error_code) {
         // nacist dalsi token, pokud je carka
         if (token.type == COMMA) {
             token = get_token();
+            // Check for lexical errors after consuming token
+            if (token.type == ERROR) {
+                *error_code = LEXICAL_ERROR;
+                ast_free(params_node);
+                return NULL;
+            }
 
             // zustala carka bez dalsiho parametru
             if (token.type == BRACKET_END) {
@@ -963,7 +1057,7 @@ ASTNode* params(int* error_code) {
           }
     }
 
-    // vsechno v poradku
+    // vsechno v pohode
     fprintf(out, "___________\n params OK return \n_____________\n");
     *error_code = ERR_OK;
     return params_node;
@@ -978,6 +1072,12 @@ ASTNode* block(int* error_code) {
 
     // program() zere prvni {
     // block() chce command dokud neskonci }
+
+    // Check for lexical errors before starting
+    if (token.type == ERROR) {
+        *error_code = LEXICAL_ERROR;
+        return NULL;
+    }
 
     *error_code = ERR_OK;
     ASTNode* block_node = ast_create_node(NODE_BLOCK, NULL, TYPE_UNKNOWN);
@@ -1003,6 +1103,12 @@ ASTNode* block(int* error_code) {
     }
     // nacist dalsi token po newline
     token = get_token();
+    // Check for lexical errors after consuming token
+    if (token.type == ERROR) {
+        *error_code = LEXICAL_ERROR;
+        ast_free(block_node);
+        return NULL;
+    }
 
     // zpracovat prikazy v bloku, dokud neskonci }
     while (token.type != BLOCK_END) {
@@ -1025,10 +1131,23 @@ ASTNode* block(int* error_code) {
             ast_free(block_node);
             return NULL;
         }
+        // Check for lexical errors after consuming token
+        if (token.type == ERROR) {
+            *error_code = LEXICAL_ERROR;
+            ast_free(block_node);
+            return NULL;
+        }
     }
 
     // konec bloku
     token = get_token();
+    // Check for lexical errors after consuming token
+    if (token.type == ERROR) {
+        *error_code = LEXICAL_ERROR;
+        ast_free(block_node);
+        return NULL;
+    }
+
     fprintf(out, "___________\n block OK return \n_____________\n");
     return block_node;
 }
@@ -1041,6 +1160,12 @@ ASTNode* func_call(int *error_code) {
     /* RULE: <FUNC_CALL> -> ID <(>  <PARAMS>  <)>*/
 
     *error_code = ERR_OK;
+    // Check for lexical errors before starting
+    if (token.type == ERROR) {
+        *error_code = LEXICAL_ERROR;
+        return NULL;
+    }
+
     // pokud neni ID, chyba
     if (token.type != ID) {
         *error_code = SYNTAX_ERROR;
@@ -1069,13 +1194,24 @@ ASTNode* func_call(int *error_code) {
 
     // nacist dalsi token, musi byt (
     if (!match_token(BRACKET_START)) {
+        // Check if match_token failed due to lexical error
+        if (token.type == ERROR){
+            *error_code = LEXICAL_ERROR;
+        } else {
+            *error_code = SYNTAX_ERROR;
+        }
         ast_free(call_node);
-        *error_code = SYNTAX_ERROR;
         return NULL;
     }
 
     // zpracovat parametry
     token = get_token();
+    // Check for lexical errors after consuming token
+    if (token.type == ERROR) {
+        *error_code = LEXICAL_ERROR;
+        ast_free(call_node);
+        return NULL;
+    }
 
     int params_error = ERR_OK;
     ASTNode* args_node = params(&params_error);
@@ -1107,6 +1243,12 @@ ASTNode* built_in_call(int* error_code) {
     /* RULE: <BUILT_IN_CALL> -> <IFJ> <.> <KW> <(> <PARAMS> <)> */
 
     *error_code = ERR_OK;
+    // Check for lexical errors before starting
+    if (token.type == ERROR) {
+        *error_code = LEXICAL_ERROR;
+        return NULL;
+    }
+
     // pokud neni IFJ, chyba
     if (token.type != IFJ) {
         *error_code = SYNTAX_ERROR;
@@ -1115,13 +1257,23 @@ ASTNode* built_in_call(int* error_code) {
 
     // nacist dalsi token, musi byt .
     if (!match_token(DOT)) {
-        *error_code = SYNTAX_ERROR;
+        // Check if match_token failed due to lexical error
+        if (token.type == ERROR){
+            *error_code = LEXICAL_ERROR;
+        } else {
+            *error_code = SYNTAX_ERROR;
+        }
         return NULL;
     }
 
     // nacist dalsi token, musi byt id funkce
     if (!match_token(ID) || !is_built_in_func()) {
-        *error_code = SYNTAX_ERROR;
+        // Check if match_token failed due to lexical error
+        if (token.type == ERROR){
+            *error_code = LEXICAL_ERROR;
+        } else {
+            *error_code = SYNTAX_ERROR;
+        }
         return NULL;
     }
 
@@ -1157,13 +1309,24 @@ ASTNode* built_in_call(int* error_code) {
     ast_add_child(call_node, id_node);
     // nacist dalsi token, musi byt (
     if (!match_token(BRACKET_START)) {
+        // Check if match_token failed due to lexical error
+        if (token.type == ERROR){
+            *error_code = LEXICAL_ERROR;
+        } else {
+            *error_code = SYNTAX_ERROR;
+        }
         ast_free(call_node);
-        *error_code = SYNTAX_ERROR;
         return NULL;
     }
 
     // zpracovat parametry
     token = get_token();
+    // Check for lexical errors after consuming token
+    if (token.type == ERROR) {
+        *error_code = LEXICAL_ERROR;
+        ast_free(call_node);
+        return NULL;
+    }
 
     int params_error = ERR_OK;
     ASTNode* args_node = params(&params_error);
@@ -1193,6 +1356,12 @@ ASTNode* cond_loop(int* error_code) {
     fprintf(out, "\n");
 
     *error_code = ERR_OK;
+    // Check for lexical errors before starting
+    if (token.type == ERROR) {
+        *error_code = LEXICAL_ERROR;
+        return NULL;
+    }
+
     // kontrola jestli je to if nebo while
     bool is_if = false;
     // vytvorit uzel pro podminku nebo cyklus
@@ -1217,7 +1386,6 @@ ASTNode* cond_loop(int* error_code) {
     token = get_token();
     if (!check_and_take_token(BRACKET_START, error_code)) {
         ast_free(cond_node);
-        *error_code = SYNTAX_ERROR;
         return NULL;
     }
 
@@ -1232,14 +1400,12 @@ ASTNode* cond_loop(int* error_code) {
     // dalsi token musi byt )
     if (!check_and_take_token(BRACKET_END, error_code)) {
         ast_free(cond_node);
-        *error_code = SYNTAX_ERROR;
         return NULL;
     }
 
     // dalsi token, musi byt {
     if (!check_and_take_token(BLOCK_START, error_code)) {
         ast_free(cond_node);
-        *error_code = SYNTAX_ERROR;
         return NULL;
     }
 
@@ -1254,6 +1420,12 @@ ASTNode* cond_loop(int* error_code) {
     if (is_if) {
         if (token.type == ELSE) {
             token = get_token();
+            // check for lexical errors after consuming token
+            if (token.type == ERROR) {
+                *error_code = LEXICAL_ERROR;
+                ast_free(cond_node);
+                return NULL;
+            }
 
             if (token.type == IF) {
                 // else if
@@ -1266,6 +1438,13 @@ ASTNode* cond_loop(int* error_code) {
             } else if (token.type == BLOCK_START) {
                 // klasika else
                 token = get_token(); // nacist {
+                // check for lexical errors after consuming token
+                if (token.type == ERROR) {
+                    *error_code = LEXICAL_ERROR;
+                    ast_free(cond_node);
+                    return NULL;
+                }
+
                 ASTNode* else_block_node = block(error_code);
                 if (*error_code != ERR_OK) {
                     ast_free(cond_node);
@@ -1295,7 +1474,6 @@ ASTNode* cond_loop(int* error_code) {
     // cekam newline po celym if/while
     if (!check_and_take_token(NEW_LINE, error_code)) {
         ast_free(cond_node);
-        *error_code = SYNTAX_ERROR;
         return NULL;
     }
 
@@ -1311,6 +1489,13 @@ ASTNode* assign(int *error_code) { /* TODO poriadne otestovat nove riadky kde mo
     /* RULE: <ASSIGN> -> <ID> <=> <LITERAL> (or) <EXPRESSION> */
 
     *error_code = ERR_OK;
+    // Check for lexical errors before starting
+    if (token.type == ERROR) {
+        *error_code = LEXICAL_ERROR;
+        return NULL;
+    }
+
+    // vytvorit uzel pro prirazeni
     ASTNode* assign_node = ast_create_node(NODE_ASSIGN, NULL, TYPE_UNKNOWN);
     if (assign_node == NULL) {
         *error_code = ERR_INTERNAL;
@@ -1336,6 +1521,12 @@ ASTNode* assign(int *error_code) { /* TODO poriadne otestovat nove riadky kde mo
 
     // nacist dalsi token, musi byt =
     token = get_token();
+    // Check for lexical errors after consuming token
+    if (token.type == ERROR) {
+        ast_free(assign_node);
+        *error_code = LEXICAL_ERROR;
+        return NULL;
+    }
 
     // nacist dalsi token, musi byt literal nebo expression
     ASTNode* expr_node = parse_expression(error_code);
@@ -1364,8 +1555,20 @@ ASTNode* func_decl(int *error_code) {
     /* RULE:  <FUNC_DECL> -> <STATIC> <ID> <=?> <BRACKETS> <BLOCK> */
 
     *error_code = ERR_OK;
+    // Check for lexical errors before starting
+    if (token.type == ERROR) {
+        *error_code = LEXICAL_ERROR;
+        return NULL;
+    }
+
     // token je STATIC
     token = get_token();
+    // Check for lexical errors after consuming token
+    if (token.type == ERROR) {
+        *error_code = LEXICAL_ERROR;
+        return NULL;
+    }
+
     // musi byt ID
     if (token.type != ID) {
         *error_code = SYNTAX_ERROR;
@@ -1380,10 +1583,17 @@ ASTNode* func_decl(int *error_code) {
 
     // dalsi token musi byt (
     token = get_token();
+    // Check for lexical errors after consuming token
+    if (token.type == ERROR) {
+        free(func_name);
+        *error_code = LEXICAL_ERROR;
+        return NULL;
+    }
+
     ASTNode* func_node = NULL;
 
     if (token.type == BRACKET_START) {
-        // vytvorit uzel pro deklaraci funkce
+        // vytvorit uzel pro deklaraci funkce, setter nebo getter
         func_node = ast_create_node(NODE_FUNCTION, func_name, TYPE_UNKNOWN);
         if (func_node == NULL) {
             free(func_name);
@@ -1393,6 +1603,14 @@ ASTNode* func_decl(int *error_code) {
 
         // zpracovat seznam parametru
         token = get_token();
+        // Check for lexical errors after consuming token
+        if (token.type == ERROR) {
+            free(func_name);
+            *error_code = LEXICAL_ERROR;
+            ast_free(func_node);
+            return NULL;
+        }
+
         ASTNode* params_node = param_list(error_code);
         if (*error_code != ERR_OK) {
             free(func_name);
@@ -1419,6 +1637,14 @@ ASTNode* func_decl(int *error_code) {
         }
 
         token = get_token(); // musi byt =
+        // Check for lexical errors after consuming token
+        if (token.type == ERROR) {
+            free(func_name);
+            ast_free(func_node);
+            *error_code = LEXICAL_ERROR;
+            return NULL;
+        }
+
         if (!check_and_take_token(BRACKET_START, error_code)) {
             free(func_name);
             ast_free(func_node);
@@ -1456,6 +1682,14 @@ ASTNode* func_decl(int *error_code) {
         ast_add_child(func_node, params_node);
 
         token= get_token(); // nacist dalsi token
+        // Check for lexical errors after consuming token
+        if (token.type == ERROR) {
+            free(func_name);
+            ast_free(func_node);
+            *error_code = LEXICAL_ERROR;
+            return NULL;
+        }
+
         if (!check_and_take_token(BRACKET_END, error_code)) {
             free(func_name);
             ast_free(func_node);
@@ -1517,6 +1751,12 @@ ASTNode* return_func(int *error_code) {
     *error_code = ERR_OK;
     // token je RETURN
 
+    // Check for lexical errors before starting
+    if (token.type == ERROR) {
+        *error_code = LEXICAL_ERROR;
+        return NULL;
+    }
+
     ASTNode* return_node = ast_create_node(NODE_RETURN, NULL, TYPE_UNKNOWN);
     if (return_node == NULL) {
         *error_code = ERR_INTERNAL;
@@ -1535,6 +1775,12 @@ ASTNode* return_func(int *error_code) {
         ast_add_child(return_node, null_node);
         fprintf(out, "___________\n return_func OK return \n_____________\n");
         token= get_token(); // nacist dalsi token
+        // Check for lexical errors after consuming token
+        if (token.type == ERROR) {
+            ast_free(return_node);
+            *error_code = LEXICAL_ERROR;
+            return NULL;
+        }
         return return_node;
     }
 
@@ -1572,12 +1818,23 @@ ASTNode* command(int *error_code) {
     */
 
     *error_code = ERR_OK;
+    // Check for lexical errors before starting
+    if (token.type == ERROR) {
+        *error_code = LEXICAL_ERROR;
+        return NULL;
+    }
+
     ASTNode* command_node = NULL;
 
     switch(token.type){
         case ID: {
           Token id_token = token; // Ulozim si token id
           token = get_token(); // Nactu dalsi token
+          // Check for lexical errors after consuming token
+          if (token.type == ERROR) {
+              *error_code = LEXICAL_ERROR;
+              return NULL;
+          }
 
           if (token.type == BRACKET_START) {
               // Je to volani funkce
@@ -1635,6 +1892,12 @@ ASTNode* command(int *error_code) {
 
         case RETURN:
             token = get_token(); // vezmu dalsi token
+            // Check for lexical errors after consuming token
+            if (token.type == ERROR) {
+                *error_code = LEXICAL_ERROR;
+                return NULL;
+            }
+
             command_node = return_func(error_code);
             if (*error_code != ERR_OK){ return NULL; }
             // uz vzal newline
@@ -1643,6 +1906,11 @@ ASTNode* command(int *error_code) {
         case GLOBAL_ID: {
           Token id_token = token; // Ulozime GLOBAL_ID
             token = get_token(); // Nacteme dalsi token (musi byt EQUAL)
+            // Check for lexical errors after consuming token
+            if (token.type == ERROR) {
+                *error_code = LEXICAL_ERROR;
+                return NULL;
+            }
 
             if (token.type == EQUAL) {
                 // Je to prirazeni
@@ -1664,6 +1932,12 @@ ASTNode* command(int *error_code) {
         case VAR: {
             // deklarace promenne
             token = get_token(); // nacist dalsi token, musi byt ID
+            // Check for lexical errors after consuming token
+            if (token.type == ERROR) {
+                *error_code = LEXICAL_ERROR;
+                return NULL;
+            }
+
             if (token.type != ID) {
                 *error_code = SYNTAX_ERROR;
                 return NULL;
@@ -1728,6 +2002,11 @@ ASTNode* command(int *error_code) {
 
         case NEW_LINE:
             token = get_token();
+            // Check for lexical errors after consuming token
+            if (token.type == ERROR) {
+                *error_code = LEXICAL_ERROR;
+                return NULL;
+            }
             return NULL; // vratim NULL a nepridam do AST
             break;
 
@@ -1740,6 +2019,11 @@ ASTNode* command(int *error_code) {
             // Samostatny blok jako prikaz
             // 1. Spotrebujeme '{'
             token = get_token();
+            // Check for lexical errors after consuming token
+            if (token.type == ERROR) {
+                *error_code = LEXICAL_ERROR;
+                return NULL;
+            }
 
             // 2. Zavolame 'block', ten ocekava NEW_LINE jako dalsi token
             command_node = block(error_code);
@@ -1775,15 +2059,32 @@ int valid(){
     print_token(token);
     fprintf(out, "\n");
 
+    // Check for lexical errors after consuming token
+    if (token.type == ERROR) {
+        return LEXICAL_ERROR;
+    }
+
     switch(token.type){
         case IMPORT:
-            if ((!match_token(STRING)) && (token.type != NEW_LINE)){ return SYNTAX_ERROR; }
+            if (!match_token(STRING)) {
+                if (token.type == ERROR) {
+                    return LEXICAL_ERROR;
+                }
+                if (token.type != NEW_LINE) {
+                    return SYNTAX_ERROR;
+                }
+            }
             return valid();
             break;
 
         case STRING:
             if (strcmp(token.value.string, "ifj25") == 0){
-                if (!match_token(FOR)){ return SYNTAX_ERROR; }
+                if (!match_token(FOR)) {
+                    if (token.type == ERROR) {
+                        return LEXICAL_ERROR;
+                    }
+                    return SYNTAX_ERROR;
+                }
                 return valid();
             } else {
                 return SYNTAX_ERROR;
@@ -1791,7 +2092,12 @@ int valid(){
             break;
 
         case FOR:
-            if (!match_token(IFJ) && (token.type != NEW_LINE)){ return SYNTAX_ERROR; }
+            if (!match_token(IFJ) && (token.type != NEW_LINE)) {
+                if (token.type == ERROR) {
+                    return LEXICAL_ERROR;
+                }
+                return SYNTAX_ERROR;
+            }
             return valid();
             break;
 
@@ -1799,18 +2105,25 @@ int valid(){
             if (match_token(NEW_LINE)){
                 // musim mit novy token, protoze match_token() posunul na NEW_LINE
                 token = get_token();
+                // Check for lexical errors after consuming token
+                if (token.type == ERROR) {
+                    return LEXICAL_ERROR;
+                }
                 return ERR_OK;
+            }
+            if (token.type == ERROR) {
+                return LEXICAL_ERROR;
             }
             return SYNTAX_ERROR;
             break;
 
         case NEW_LINE:
             token = get_token();
-            return valid();
+            return valid(); // recursion checks error codes
             break;
 
         default:
-            return SYNTAX_ERROR;
+            return SYNTAX_ERROR; // invalid start token
             break;
     }
     return SYNTAX_ERROR;
@@ -1821,6 +2134,12 @@ ASTNode* program(int* error_code){
     print_token(token);
     fprintf(out, "\n");
 
+    // Check for lexical errors before starting
+    if (token.type == ERROR) {
+        *error_code = LEXICAL_ERROR;
+        return NULL;
+    }
+
     if (token.type != CLASS) {
       fprintf(out, "ERROR: Musi byt 'class'\n");
       *error_code = SYNTAX_ERROR;
@@ -1829,13 +2148,21 @@ ASTNode* program(int* error_code){
 
     if (!match_token(ID) || strcmp(token.value.string, "Program") != 0) {
       fprintf(out, "ERROR: Musi byt 'Program'\n");
-      *error_code = SYNTAX_ERROR;
+      if (token.type == ERROR) {
+          *error_code = LEXICAL_ERROR;
+      } else {
+          *error_code = SYNTAX_ERROR;
+      }
       return NULL;
     }
 
     if (!match_token(BLOCK_START)) {
       fprintf(out, "ERROR: Musi byt '{'\n");
-      *error_code = SYNTAX_ERROR;
+      if (token.type == ERROR) {
+          *error_code = LEXICAL_ERROR;
+      } else {
+          *error_code = SYNTAX_ERROR;
+      }
       return NULL;
     }
 
@@ -1848,6 +2175,12 @@ ASTNode* program(int* error_code){
     }
 
     token = get_token(); // Move to the next token after '{'
+    // Check for lexical errors after consuming token
+    if (token.type == ERROR) {
+        ast_free(program_node);
+        *error_code = LEXICAL_ERROR;
+        return NULL;
+    }
 
     int child_error = ERR_OK;
     ASTNode* block_node = block(&child_error); // Parse the block
@@ -1865,6 +2198,12 @@ ASTNode* program(int* error_code){
     // spotrebovat vsechny NEW_LINE po programu
     while (token.type == NEW_LINE) {
       token = get_token();
+      // Check for lexical errors after consuming token
+      if (token.type == ERROR) {
+          ast_free(program_node);
+          *error_code = LEXICAL_ERROR;
+          return NULL;
+      }
     }
 
     if (token.type != EOF_TOKEN) {
@@ -1876,6 +2215,48 @@ ASTNode* program(int* error_code){
 
     *error_code = ERR_OK;
     return program_node;
+}
+
+ASTNode* run_parser(FILE* input, FILE* output, int* parse_error) {
+    // Initialize global file pointers
+    in = input;
+    out = output;
+
+    // Initialize the scanner
+    scanner_init(in, out);
+    // Get the first token
+    token = get_token();
+
+    ASTNode* ast_root = NULL;
+    int error_code = ERR_OK;
+
+    // Validate the program structure
+    int valid_error = valid();
+    if (valid_error != ERR_OK) {
+        if (valid_error == LEXICAL_ERROR) {
+            fprintf(out, "VALIDATION LEXICAL ERROR of prolog (import...)\n");
+            error_code = LEXICAL_ERROR;
+        } else {
+            fprintf(out, "VALIDATION SYNTAX ERROR of prolog (import...)\n");
+            error_code = SYNTAX_ERROR;
+        }
+    } else {
+        // Parse the main program
+        ast_root = program(&error_code);
+    }
+
+    // Set the parse error code
+    if (error_code != ERR_OK) {
+        if (ast_root != NULL) {
+            ast_free(ast_root);
+        }
+        *parse_error = error_code; // Propagate the error code
+        return NULL;
+    }
+
+    // No errors, return the AST root
+    *parse_error = ERR_OK;
+    return ast_root;
 }
 
 // ===============================================================================================================
