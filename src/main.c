@@ -21,38 +21,29 @@ int main(int argc, char** argv) {
     }
   }
 
-  // Initialize scanner with standard input and error output
-  scanner_init(stdin, stderr);
-
+  // Parser initialization
   ASTNode* ast_root = NULL;
-  int error_code = ERR_OK;
+  int parse_error = ERR_OK;
 
-  // Load first token for the parser
-  token = get_token();
+  // Run the parser
+  ast_root = run_parser(stdin, stderr, &parse_error);
 
-  if (valid() != ERR_OK) {
-    fprintf(stderr, "ERROR: Validation of prolog (import...) failed.\n");
-    error_code = SYNTAX_ERROR;
-  } else {
-    ast_root = program(&error_code);
-  }
-
-  // Check for errors during parsing
-  if (error_code != ERR_OK) {
+  // Check for parsing errors
+  if (ast_root == NULL) {
     if (debug) {
-      fprintf(stderr, "DEBUG: Parsing failed with error code %d\n", error_code);
+      fprintf(stdout, "Parsing failed with error code: %d\n", parse_error);
     }
-    ast_free(ast_root);
-    return error_code;
+    return parse_error; // Return the parsing error code
   }
+
+  // Semantic analysis would go here
+  // Generate code would go here
 
   if (debug) {
     fprintf(stdout, "<AST representation>\n");
     ast_fprint_debug(ast_root, stdout);
   }
 
-  // Semantic analysis
-  // Code generation
 
   // Free AST
   ast_free(ast_root);
