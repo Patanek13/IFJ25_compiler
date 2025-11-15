@@ -27,6 +27,15 @@ extern Token token;
 /*============================== Parser functions declaration ===============================*/
 
 /*
+* @ brief Runs the parser on the given input file and produces an AST.
+* @ param input_file Pointer to the input file to parse.
+* @ param output_file Pointer to the output file for any parser output.
+* @ param parse_error_code Pointer to an integer to store error codes.
+* @ return Pointer to the root ASTNode of the parsed program or NULL on error.
+*/
+ASTNode* run_parser(FILE* input_file, FILE* output_file, int* parse_error_code);
+
+/*
 * @ brief Parses conditional and loop statements.
 * @ param error_code Pointer to an integer to store error codes.
 * @ return Pointer to the ASTNode representing the conditional or loop statement.
