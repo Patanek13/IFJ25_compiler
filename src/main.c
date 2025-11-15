@@ -1,6 +1,7 @@
 /**
  * @file main.c
  * @author Sebastián Kuchta
+ * @author Patrik Lošťák (xlostap00)
  * @brief Main function with basic logic
  * @date 2025-10-01
  *
