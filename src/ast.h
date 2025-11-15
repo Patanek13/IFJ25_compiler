@@ -80,9 +80,44 @@ void ast_free(ASTNode *root);
 /*
  * @brief Debug function to print the AST (for testing purposes)
  * @param node Pointer to the root AST node
- * @param depth Current depth in the AST (for indentation)
+ * @param out FILE pointer to print the AST to
  */
-void ast_print_debug(const ASTNode *node, int depth);
+void ast_fprint_debug(const ASTNode *node, FILE *out);
 
+// ==== Helper Functions =====================
+/*
+ * @brief Convert ASTNodeType to string for debugging
+ * @param type ASTNodeType to convert
+ * @return String representation of the ASTNodeType
+ */
+const char *ast_node_type_to_string(ASTNodeType type);
+
+/*
+ * @brief Convert DataType to string for debugging
+ * @param data_type DataType to convert
+ * @return String representation of the DataType
+ */
+const char *data_type_to_string(DataType data_type);
+
+/* @brief Internal function to print the AST recursively
+ *
+ * @param node Current AST node
+ * @param out FILE pointer to print to
+ * @param prefix String prefix for formatting
+ * @param is_last Boolean indicating if this is the last child
+ */
+void ast_fprint_debug_inner(const ASTNode *node, FILE *out,
+                                   const char *prefix, bool is_last);
+
+/* @brief Print the AST for debugging to stdout
+ * @param root Pointer to the root AST node
+ */
+void ast_print_debug_stdout(const ASTNode *root);
+
+/* @brief Print the AST for debugging to a file
+ * @param root Pointer to the root AST node
+ * @param filename Name of the file to print to
+ * @return 0 on success, -1 on error
+ */
 
 #endif // AST_H
