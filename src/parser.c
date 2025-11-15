@@ -1,6 +1,7 @@
 /**
  * @file parser.c
  * @author Šimon Čorej (xcorejs00)
+ * @author Patrik Lošťák (xlostap00)
  * @brief Main Parser Function
  * @version 0.1
  * @date 2025-10-12

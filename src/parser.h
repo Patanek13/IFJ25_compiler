@@ -1,6 +1,7 @@
 /**
  * @file parser.h
  * @author Šimon Čorej xcorejs00
+ * @author Patrik Lošťák (xlostap00)
  * @brief Parser header file
  * @date 2025-10-28
  *
