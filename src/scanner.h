@@ -81,7 +81,8 @@ typedef enum {
     BOOLEAN,            /**< Boolean literal - true or false */
 
     OPERATOR,           /**< Operators +, -, *, / for precedence parsing */
-    PSEUDO_E,          /**< Pseudo-token for expression parsing */
+    PSEUDO_E,          /**< Pseudo-token E for expression parsing */
+    MARKER_LESS,       /**< Marker '<' for precedence parsing */
 
     CLASS,              /**< class */
     IF,                 /**< if */
@@ -157,6 +158,16 @@ typedef struct {
 //================================================================================================
 //                                      FUNCTION PROTOTYPES
 //================================================================================================
+
+
+//------------------------------------- Initialization -------------------------------------------
+/**
+ * @brief Initializes the scanner with the input file
+ *
+ * @param input_file File pointer to the input source code
+ * @param output_file File pointer to the output (error) stream
+ */
+void scanner_init(FILE* input_file, FILE* output_file);
 
 //------------------------------------- Buffer ---------------------------------------------------
 
