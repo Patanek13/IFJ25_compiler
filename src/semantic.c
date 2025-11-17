@@ -66,8 +66,8 @@ static SymTable* top_Scope(ScopeStack* stack) {
   * @return Pointer to SymbolData if found, NULL otherwise
 */
 static SymbolData* scope_lookup(ScopeStack* stack, const char* key) {
-    for (int i = stack->topIndex; i >= 0; i--) {
-        SymbolData* data = symtable_lookup(stack->tables[i], key);
+    for (int symbol_idx = stack->topIndex; symbol_idx >= 0; symbol_idx--) {
+        SymbolData* data = symtable_lookup(stack->tables[symbol_idx], key);
         if (data != NULL) {
             return data; // Found in this scope
         }
@@ -116,7 +116,26 @@ static void analyze_while(ASTNode* node, AnalysisContext* context);
 static DataType analyze_expression(ASTNode* node, AnalysisContext* context);
 static void analyze_setter(ASTNode* node, AnalysisContext* context);
 static void analyze_getter(ASTNode* node, AnalysisContext* context);
+static bool func_exists(SymTable* table, const char* base_key);
 /*===========================================================================*/
+
+/* @brief Checks if a function with the given base key exists in the symbol table
+  * @param table Pointer to the symbol table
+  * @param base_key Base key of the function (without parameter signature)
+  * @return true if function exists, false otherwise
+*/
+static bool func_exists(SymTable* table, const char* base_key) {
+    for (size_t item_idx = 0; item_idx < table->size; item_idx++) {
+        if (table->items[item_idx].state == SLOT_OCCUPIED) {
+            const char* key = table->items[item_idx].key;
+            // Check if key starts with base_key followed by '#'
+            if (strncmp(key, base_key, strlen(base_key)) == 0 && key[strlen(base_key)] == '#') {
+                return true; // Function with matching base key exists
+            }
+        }
+    }
+    return false; // No matching function found
+}
 
 /* @brief Fills up the global table with built-in functions
   * @param global_table Pointer to the global symbol table
@@ -257,6 +276,18 @@ static void fill_global_table(SymTable* global_table, int* error_code) {
     }
     free(key);
 
+    // Built-in function: Ifj.read_bool() -> Bool | Null
+    key = make_function_key("Ifj.read_bool", 0);
+    data = create_function_symbol(TYPE_BOOL, 0);
+    data.defined = true;
+    if(symtable_insert(global_table, key, data) == ERR_INTERNAL) {
+        fprintf(stderr, "Semantic Error: Failed to insert built-in function Ifj.read_bool\n");
+        *error_code = ERR_INTERNAL;
+        free(key);
+        return;
+    }
+    free(key);
+
 }
 
 /* @brief Calls the right semantic analysis function based on the AST node type
@@ -371,8 +402,8 @@ static void analyze_block(ASTNode* node, AnalysisContext* context) {
     }
 
     // Analyze all child nodes in the block
-    for (size_t i = 0; i < node->child_count; i++) {
-        analyze_node(node->children[i], context);
+    for (size_t child_idx = 0; child_idx < node->child_count; child_idx++) {
+        analyze_node(node->children[child_idx], context);
         if (*context->error_code != ERR_OK) {
             break; // Stop on first error
         }
@@ -421,11 +452,11 @@ static void analyze_function(ASTNode* node, AnalysisContext* context) {
             fprintf(stderr, "Semantic Error: Redefinition of function '%s'\n", func_name);
         }
         free(key);
-        return;
+        return; // Stop on redefinition error
     } else if (insert_result == ERR_INTERNAL) {
         *context->error_code = ERR_INTERNAL;
         free(key);
-        return;
+        return; // Stop on internal error
     }
 
     free(key);
@@ -444,31 +475,28 @@ static void analyze_function(ASTNode* node, AnalysisContext* context) {
     }
 
     // Insert parameters into the function's symbol table
-    for (size_t i = 0; i < param_count; i++) {
-        ASTNode* param_node = param_list->children[i];
+    for (size_t param_idx = 0; param_idx < param_count; param_idx++) {
+        ASTNode* param_node = param_list->children[param_idx];
         const char* param_name = param_node->value;
 
-        // Check for redefinition inside parameters
-        if (scope_lookup_current(context->scope_stack, param_name) != NULL) {
-            *context->error_code = ERR_SEMANTIC_REDEFINITION;
-            if (context->debug) {
-                fprintf(stderr, "Semantic Error: Redefinition of parameter '%s' in function '%s'\n", param_name, func_name);
-            }
-            continue; // Continue checking other parameters
-        }
 
         // Create variable symbol for the parameter
         SymbolData param_data = create_variable_symbol(TYPE_UNKNOWN);
-        symtable_insert(func_table, param_name, param_data);
-
-        // Store parameter types into global table (calling function info)
-        // We have already inserted the function symbol, so we can retrieve it
-        char* func_key = make_function_key(func_name, param_count);
-        SymbolData* global_func_symbol = symtable_lookup(context->global_table, func_key);
-        free(func_key);
-        if (global_func_symbol != NULL) {
-            global_func_symbol->info.function.param_types[i] = TYPE_UNKNOWN; // Initially unknown
+        // Insert parameter into function scope and check for redefinition
+        insert_result = symtable_insert(func_table, param_name, param_data);
+        if (insert_result == ERR_SEMANTIC_REDEFINITION) {
+            *context->error_code = ERR_SEMANTIC_REDEFINITION;
+            if (context->debug) {
+                fprintf(stderr, "Semantic Error: Redefinition of parameter '%s' in function '%s'\n",
+                        param_name, func_name);
+            }
+            return; // Stop on redefinition error
+        } else if (insert_result == ERR_INTERNAL) {
+            *context->error_code = ERR_INTERNAL;
+            return; // Stop on internal error
         }
+
+
     }
     // Analyze the function body block
     context->current_function = node; // Set current function context
@@ -580,3 +608,130 @@ static void analyze_assign(ASTNode *node, AnalysisContext* context) {
     }
   }
 }
+
+/* @brief Analyzes the call AST node
+  * @param node Pointer to the call ASTNode.
+  * @param pointer to the analysis context
+*/
+static void analyze_call(ASTNode* node, AnalysisContext* context) {
+    const char* func_name = node->children[0]->value; // First child is function ID
+    ASTNode* arg_list = node->children[1]; // Second child is argument list
+    size_t arg_count = arg_list->child_count;
+
+    if (context->debug) {
+        fprintf(stdout, "Semantic Analysis: Analyzing call node for function '%s'\n", func_name);
+    }
+
+    // Analyze all argument expressions to get their types (recursive)
+    for (size_t arg_idx = 0; arg_idx < arg_count; arg_idx++) {
+        analyze_expression(arg_list->children[arg_idx], context);
+        if (*context->error_code != ERR_OK) {
+            return;
+        }
+    }
+
+    // Create function key for lookup
+    char* func_key = make_function_key(func_name, arg_count);
+    if (func_key == NULL) {
+        *context->error_code = ERR_INTERNAL;
+        return;
+    }
+
+    // Lookup the function in the global symbol table
+    SymbolData* func_data = symtable_lookup(context->global_table, func_key);
+    free(func_key);
+
+    // If not found, set error 3 or 5
+    if (func_data == NULL) {
+        if (func_exists(context->global_table, func_name)) {
+            *context->error_code = ERR_SEMANTIC_FUNCTION; // Invalid argument count
+            if (context->debug) {
+                fprintf(stderr, "Semantic Error: Function '%s' called with invalid count of arguments (%zu)\n", func_name, arg_count);
+            }
+        } else {
+            *context->error_code = ERR_SEMANTIC_UNDEFINED; // Undefined function
+            if (context->debug) {
+                fprintf(stderr, "Semantic Error: Undefined function call '%s'\n", func_name);
+            }
+        }
+        return;
+    }
+
+    // Built-in func? Static checks
+    if (strncmp(func_name, "Ifj.", 4) == 0) {
+        // Built-in functions have been pre-defined in the global table
+        // Check for specific built-in functions
+        // Ifj.length(str: String) -> Num | Null
+        if (strcmp(func_name, "Ifj.length") == 0) {
+            ASTNode* arg = arg_list->children[0];
+            // Argument must be String
+            if (arg->type == NODE_LITERAL && arg->data_type != TYPE_STRING) {
+                *context->error_code = ERR_SEMANTIC_TYPE;
+                if (context->debug) {
+                    fprintf(stderr, "Semantic Error: Argument type mismatch in call to 'Ifj.length'\n");
+                }
+            }
+        } else if (strcmp(func_name, "Ifj.substring") == 0) {
+            // Ifj.substring(str: String, start: Num, length: Num) -> String | Null
+            ASTNode* arg1 = arg_list->children[0];
+            ASTNode* arg2 = arg_list->children[1];
+            ASTNode* arg3 = arg_list->children[2];
+            // First argument must be String
+            if (arg1->type == NODE_LITERAL && arg1->data_type != TYPE_STRING) {
+                *context->error_code = ERR_SEMANTIC_TYPE;
+                if (context->debug) {
+                    fprintf(stderr, "Semantic Error: First argument type mismatch in call to 'Ifj.substring'\n");
+                }
+            }
+            // Second and third arguments must be Int
+            if (arg2->type == NODE_LITERAL && arg2->data_type != TYPE_INT) {
+                *context->error_code = ERR_SEMANTIC_TYPE;
+                if (context->debug) {
+                    fprintf(stderr, "Semantic Error: Second argument type mismatch in call to 'Ifj.substring'\n");
+                }
+            }
+
+            if (arg3->type == NODE_LITERAL && arg3->data_type != TYPE_INT) {
+                *context->error_code = ERR_SEMANTIC_TYPE;
+                if (context->debug) {
+                    fprintf(stderr, "Semantic Error: Third argument type mismatch in call to 'Ifj.substring'\n");
+                }
+            }
+        } else if (strcmp(func_name, "Ifj.ord") == 0) {
+            // Ifj.ord(str: String, index: Num) -> Num
+            ASTNode* arg1 = arg_list->children[0];
+            ASTNode* arg2 = arg_list->children[1];
+            // First argument must be String
+            if (arg1->type == NODE_LITERAL && arg1->data_type != TYPE_STRING) {
+                *context->error_code = ERR_SEMANTIC_TYPE;
+                if (context->debug) {
+                    fprintf(stderr, "Semantic Error: First argument type mismatch in call to 'Ifj.ord'\n");
+                }
+            }
+            // Second argument must be Int
+            if (arg2->type == NODE_LITERAL && arg2->data_type != TYPE_INT) {
+                *context->error_code = ERR_SEMANTIC_TYPE;
+                if (context->debug) {
+                    fprintf(stderr, "Semantic Error: Second argument type mismatch in call to 'Ifj.ord'\n");
+                }
+            }
+        } else if (strcmp(func_name, "Ifj.chr") == 0) {
+            // Ifj.chr(ASCI code: Num) -> String
+            ASTNode* arg1 = arg_list->children[0];
+            // Argument must be Int
+            if (arg1->type == NODE_LITERAL && arg1->data_type != TYPE_INT) {
+                *context->error_code = ERR_SEMANTIC_TYPE;
+                if (context->debug) {
+                    fprintf(stderr, "Semantic Error: Argument type mismatch in call to 'Ifj.chr'\n");
+                }
+            }
+        }
+    }
+    // Set the call node's data type to the function's return type
+    node->data_type = func_data->type;
+}
+
+
+
+
+
