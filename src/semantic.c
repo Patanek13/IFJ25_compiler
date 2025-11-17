@@ -826,6 +826,24 @@ static void analyze_while(ASTNode* node, AnalysisContext* context) {
 }
 
 
+static DataType analyze_expression(ASTNode* node, AnalysisContext* context) {
+    // Base case: null node or error already occurred
+    if (node == NULL || *context->error_code != ERR_OK) {
+        return TYPE_UNKNOWN;
+    }
+
+    DataType result_type = TYPE_UNKNOWN;
+
+    switch (node->type) {
+        case NODE_LITERAL:
+            // Literal node: type is directly available
+            result_type = node->data_type;
+            break;
+        case NODE_ID: {
+          
+    }
+
+}
 
 
 
