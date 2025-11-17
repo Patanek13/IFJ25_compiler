@@ -50,10 +50,22 @@ static SymTable* pop_Scope(ScopeStack* stack) {
 
 /* @brief Returns the top symbol table on the scope stack
   * @param stack Pointer to the scope stack
+  * @return Pointer to SymTable if found, NULL otherwise
+*/
+static SymTable* top_Scope(ScopeStack* stack) {
+    if (stack->topIndex < 0) {
+        return NULL; // Stack is empty
+    }
+    // Return the top symbol table on the scope stack
+    return stack->tables[stack->topIndex];
+}
+
+/* @brief Search symbol in all scopes from top to bottom
+  * @param stack Pointer to the scope stack
   * @param key Symbol name to search for
   * @return Pointer to SymbolData if found, NULL otherwise
 */
-static SymbolData* top_Scope(ScopeStack* stack, const char* key) {
+static SymbolData* scope_lookup(ScopeStack* stack, const char* key) {
     for (int i = stack->topIndex; i >= 0; i--) {
         SymbolData* data = symtable_lookup(stack->tables[i], key);
         if (data != NULL) {
@@ -419,4 +431,34 @@ static void analyze_function(ASTNode* node, AnalysisContext* context) {
     free(old_table);
 }
 
+/*
+* @brief Analyzes the assign AST node (also var declaration)
+*/
+static void analyze_assign(ASTNode *node, AnalysisContext* context) {
+    ASTNode* id_node = node->children[0]; // First child is the ID
+    ASTNode* expr_node = node->children[1]; // Second child is the expression
+    const char* var_name = id_node->value; // Variable name
 
+    if (context->debug) {
+        fprintf(stdout, "Semantic Analysis: Analyzing assign node for variable '%s'\n", var_name);
+    }
+
+    // Analyze the expression to get its type
+    DataType expr_type = analyze_expression(expr_node, context);
+    if (*context->error_code != ERR_OK) {
+        return;
+    }
+
+    // Check if it is a declaration or assign
+    // Parser creates for var id ASSIGN_NODE with literal null as expr
+    bool is_declaration = false;
+    if (expr_node->type == NODE_LITERAL && expr_node->data_type == TYPE_NULL) {
+        is_declaration = true;
+    }
+
+    // Get the current scope symbol table
+    SymTable* current_scope = top_Scope(context->scope_stack);
+
+    SymbolData* sym_in_curr_scope = top_Scope_Current(context->scope_stack, var_name);
+
+}
