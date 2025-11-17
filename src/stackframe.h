@@ -9,7 +9,9 @@
 #ifndef STACKFRAME_H
 #define STACKFRAME_H
 
+#include "error.h"
 #define MAX_FRAME_SIZE 127
+#define MAX_STACK_SIZE 512
 #include "ast.h"
 
 typedef enum {
@@ -22,7 +24,7 @@ typedef struct FrameData {
   DataType type;
   union {
     int i;
-    double f;
+    float f;
     char *s;
     bool b;
   } data;
@@ -35,11 +37,25 @@ typedef struct FrameEntry {
 } FrameEntry;
 
 typedef struct Frame {
-  FrameType FrameType;
-  FrameEntry EntryTable[MAX_FRAME_SIZE];
+  FrameType frameType;
+  FrameEntry* entryTable[MAX_FRAME_SIZE];
 } Frame;
 
-unsigned int SF_hash(unsigned char* id);
-FrameEntry* SF_lookup(Frame frame, char* id);
+typedef struct {
+  Frame* stack;
+  int topIndex;
+} FrameStack;
+
+void F_init(Frame* frame, FrameType type);
+unsigned int F_hash(char* id);
+FrameEntry* F_lookup(Frame* frame, char* id);
+ErrorCode F_insert(Frame* frame, char* id, FrameData data);
+
+ErrorCode FS_init(FrameStack* fs);
+bool FS_IsEmpty(FrameStack* fs);
+bool FS_IsFull(FrameStack* fs);
+Frame* FS_Pop(FrameStack* fs);
+ErrorCode FS_Push(FrameStack* fs, Frame frame);
+void FS_Dispose(FrameStack* fs);
 
 #endif

@@ -7,6 +7,8 @@
  */
 
 #include "generator.h"
+#include "error.h"
+#include "stackframe.h"
 #include <stdio.h>
 
 int generate(ASTNode* node, SymTable* symbolTable){
@@ -37,10 +39,14 @@ int generate(ASTNode* node, SymTable* symbolTable){
   }
 }
 
-int generate_code(ASTNode* root, SymTable** symTableArray) {
+ErrorCode generate_code(ASTNode* root, SymTable** symTableArray) {
   //fixed prologue
   printf(".IFJcode25\n");
+  printf("JUMP $main");
+  Frame gf;
+  FrameStack fs;
+  F_init(&gf, GF);
+  FS_init(&fs);
 
-  
   generate(root, *symTableArray);
 }

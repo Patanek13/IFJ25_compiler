@@ -11,6 +11,7 @@
 #define GENERATOR_H
 
 #include "ast.h"
+#include "error.h"
 #include "symtable.h"
 
 /**
@@ -20,7 +21,7 @@
  * @param symTableArray Array of symbolic tables
  * @return int
  */
-int generate_code(ASTNode* root, SymTable** symTableArray);
+ErrorCode generate_code(ASTNode* root, SymTable** symTableArray);
 
 
 #endif
