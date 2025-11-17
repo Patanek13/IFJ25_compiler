@@ -19,7 +19,7 @@
  *
  * @param root AST root node
  * @param symTableArray Array of symbolic tables
- * @return int
+ * @return ErrorCode
  */
 ErrorCode generate_code(ASTNode* root, SymTable** symTableArray);
 

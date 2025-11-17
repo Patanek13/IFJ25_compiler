@@ -13,7 +13,7 @@
 
 int generate(ASTNode* node, SymTable* symbolTable){
   if (!node) return 0;
-  for (int i = 0; i < node->child_count; i++) {
+  for (size_t i = 0; i < node->child_count; i++) {
     generate(node->children[i], symbolTable);
   }
 
@@ -37,6 +37,7 @@ int generate(ASTNode* node, SymTable* symbolTable){
     case NODE_TERNARY:
       break;
   }
+  return 1;
 }
 
 ErrorCode generate_code(ASTNode* root, SymTable** symTableArray) {
@@ -48,5 +49,7 @@ ErrorCode generate_code(ASTNode* root, SymTable** symTableArray) {
   F_init(&gf, GF);
   FS_init(&fs);
 
-  generate(root, *symTableArray);
+  int state = generate(root, *symTableArray);
+
+  return state;
 }
