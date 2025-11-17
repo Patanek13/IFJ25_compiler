@@ -1,7 +1,7 @@
 build/
 .vscode/
 doc/
-lex_tests/
+scanner_tests/
 
 *.exe
 *.out
