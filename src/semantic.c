@@ -55,7 +55,7 @@ static SymTable* pop_Scope(ScopeStack* stack) {
 */
 static SymbolData* top_Scope(ScopeStack* stack, const char* key) {
     for (int i = stack->topIndex; i >= 0; i--) {
-        SymbolData* data = symtable_get(stack->tables[i], key);
+        SymbolData* data = symtable_lookup(stack->tables[i], key);
         if (data != NULL) {
             return data; // Found in this scope
         }
@@ -72,11 +72,13 @@ static SymbolData* top_Scope_Current(ScopeStack* stack, const char* key) {
     if (stack->topIndex < 0) {
         return NULL;
     }
-    return symtable_get(stack->tables[stack->topIndex], key);
+    return symtable_lookup(stack->tables[stack->topIndex], key);
 }
 
-/*========= Semantic Analysis Implementation =========*/
+/*========= SEMANTIC ANALYSIS IMPLEMENTATION =========*/
 
+/*========= Analysis Context Structure =========*/
+// Context structure to hold analysis state
 typedef struct {
     ScopeStack* scope_stack; // Stack of symbol tables for scopes
     bool debug;              // Debug flag
@@ -85,6 +87,24 @@ typedef struct {
     ASTNode* current_function; // Pointer to AST node of current function
 } AnalysisContext;
 
+/*================================================================*/
+
+/*======== Prototypes of Semantic Analysis Functions =============*/
+static void analyze_node(ASTNode* node, AnalysisContext* context);
+static void fill_global_table(SymTable* global_table);
+
+static void analyze_program(ASTNode* node, AnalysisContext* context);
+static void analyze_function(ASTNode* node, AnalysisContext* context);
+static void analyze_block(ASTNode* node, AnalysisContext* context);
+static void analyze_return(ASTNode* node, AnalysisContext* context);
+static void analyze_assign(ASTNode* node, AnalysisContext* context);
+static void analyze_call(ASTNode* node, AnalysisContext* context);
+static void analyze_if(ASTNode* node, AnalysisContext* context);
+static void analyze_while(ASTNode* node, AnalysisContext* context);
+static DataType analyze_expression(ASTNode* node, AnalysisContext* context);
+static void analyze_setter(ASTNode* node, AnalysisContext* context);
+static void analyze_getter(ASTNode* node, AnalysisContext* context);
+/*===========================================================================*/
 
 /* @brief Fills up the global table with built-in functions
   * @param global_table Pointer to the global symbol table
@@ -379,7 +399,24 @@ static void analyze_function(ASTNode* node, AnalysisContext* context) {
         SymbolData param_data = create_variable_symbol(TYPE_UNKNOWN);
         symtable_insert(func_table, param_name, param_data);
 
-        //
+        // Store parameter types into global table (calling function info)
+        // We have already inserted the function symbol, so we can retrieve it
+        char* func_key = make_function_key(func_name, param_count);
+        SymbolData* global_func_symbol = symtable_lookup(context->global_table, func_key);
+        free(func_key);
+        if (global_func_symbol != NULL) {
+            global_func_symbol->info.function.param_types[i] = TYPE_UNKNOWN; // Initially unknown
+        }
+    }
+    // Analyze the function body block
+    context->current_function = node; // Set current function context
+    analyze_node(func_block, context);
+    context->current_function = NULL; // Clear current function context
 
-
+    // Pop the function scope after analysis
+    SymTable* old_table = pop_Scope(context->scope_stack);
+    symtable_free(old_table);
+    free(old_table);
 }
+
+
