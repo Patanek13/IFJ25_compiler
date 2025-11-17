@@ -23,7 +23,7 @@
 //------------------------------------- Global variables -----------------------------------------
 
 FILE *file;                         // Input file from stdin
-FILE *out;                          // Output file to build/tokens.txt
+extern FILE *out;                          // Output file to build/tokens.txt
 char c;                             // Current character
 char buffer[BUFFER_SIZE];           // Current token buffer
 int i = 0;                          // Buffer index
@@ -54,6 +54,18 @@ static KeywordEntry keyword_table[] = {
 //================================================================================================
 //                                      BASIC FUNCTIONS
 //================================================================================================
+
+// Return textual representation for single-character operators used when
+// creating OPERATOR tokens.
+static const char *op_string(TokenType type) {
+    switch (type) {
+        case PLUS: return "+";
+        case MINUS: return "-";
+        case MULTIPLY: return "*";
+        case DIVIDE: return "/";
+        default: return "";
+    }
+}
 
 void scanner_init(FILE *input, FILE *output) {
     file = input;
@@ -107,8 +119,18 @@ Token add_token(TokenType type) {
         case ID:
         case GLOBAL_ID:
         case STRING:
+            buffer[i] = '\0';
             strncpy(token.value.string, buffer, BUFFER_SIZE - 1);
             token.value.string[BUFFER_SIZE - 1] = '\0';
+            break;
+
+        case PLUS:
+        case MINUS:
+        case MULTIPLY:
+        case DIVIDE:
+            strncpy(token.value.string, op_string(type), BUFFER_SIZE - 1);
+            token.value.string[BUFFER_SIZE - 1] = '\0';
+            token.type = OPERATOR;
             break;
 
         case INTEGER:
@@ -231,11 +253,11 @@ Token scan_exponent() {
     if (match('+') || match('-')) {
         advance();
     }
-    
+
     if (!isdigit(peek())) {
         return add_token(ERROR);
     }
-    
+
     while (isdigit(peek())) {
         advance();
     }
@@ -263,15 +285,15 @@ Token scan_number() {
     while (isdigit(peek())) {
         advance();
     }
-    
+
     if (match('.')) {
         return scan_floating();
     }
-    
+
     else if (match('e') || match('E')) {
         return scan_exponent();
     }
-    
+
     return add_token(INTEGER);
 }
 
@@ -279,11 +301,11 @@ Token scan_hex() {
     if (!isxdigit(peek())) {
         return add_token(ERROR);
     }
-    
+
     while (isxdigit(peek())) {
         advance();
     }
-    
+
     return add_token(INTEGER);
 }
 
@@ -291,11 +313,11 @@ Token scan_zero() {
     if (match('.')) {
         return scan_floating();
     }
-    
+
     if (match('x') || match('X')) {
         return scan_hex();
     }
-    
+
     return add_token(INTEGER);
 }
 
@@ -354,25 +376,25 @@ void handle_escape_sequence() {
     }
 }
 
-Token scan_normal_string() {    
+Token scan_normal_string() {
     while (c != '"' && c != EOF && c != '\n') {
         if (c == '\\') {
             handle_escape_sequence();
         }
         advance();
     }
-    
+
     if (c == '"') {
         replace('\0');
         return add_token(STRING);
     }
-    
+
     return add_token(ERROR);
 }
 
 Token scan_multiline_string() {
     int count = 0;
-    
+
     while (isspace(peek()) && peek() != '\n') {
         advance();
         reset_buffer();
@@ -380,11 +402,11 @@ Token scan_multiline_string() {
 
     while (true) {
         advance();
-        
+
         if (c == EOF) {
             return add_token(ERROR);
         }
-        
+
         if (c == '"') {
             count++;
             if (count == 3) {
@@ -397,7 +419,7 @@ Token scan_multiline_string() {
                 return add_token(STRING);
             }
         }
-        
+
         else {
             count = 0;
         }
@@ -407,17 +429,17 @@ Token scan_multiline_string() {
 Token scan_string() {
     reset_buffer();
     advance();
-    
+
     if (c == '"') {
         if (match('"')) {
             reset_buffer();
             return scan_multiline_string(); // MULTI-LINE STRING
         }
-        
+
         reset_buffer();
         return add_token(STRING); // EMPTY STRING
     }
-    
+
     return scan_normal_string(); // NORMAL STRING
 }
 
@@ -433,12 +455,12 @@ Token scan_operator(char op) {
             return add_token(match('=') ? MORE_EQUAL : MORE);
         case '!':
             return add_token(match('=') ? NOT_EQUAL : NOT);
-    
+
         case '&':
             return add_token(match('&') ? AND : ERROR);
         case '|':
             return add_token(match('|') ? OR : ERROR);
-    
+
         case '{': return add_token(BLOCK_START);
         case '}': return add_token(BLOCK_END);
         case '(': return add_token(BRACKET_START);
@@ -479,7 +501,7 @@ Token get_token() {
     }
 
 //------------------------------------- Comments -------------------------------------------------
-    
+
     if (c == '/') {
         return scan_slash();
     }

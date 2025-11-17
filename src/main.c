@@ -1,6 +1,7 @@
 /**
  * @file main.c
  * @author Sebastián Kuchta
+ * @author Patrik Lošťák (xlostap00)
  * @brief Main function with basic logic
  * @date 2025-10-01
  *
@@ -9,6 +10,9 @@
 #include "scanner.h"
 #include <stdbool.h>
 #include <string.h>
+#include "parser.h"
+#include "ast.h"
+
 
 int main(int argc, char** argv) {
   bool debug = false;
@@ -18,7 +22,36 @@ int main(int argc, char** argv) {
     }
   }
 
-  parser_function(debug);
+  // Parser initialization
+  ASTNode* ast_root = NULL;
+  int parse_error = ERR_OK;
 
-  return ERR_OK;
+  // Run the parser
+  ast_root = run_parser(stdin, stderr, &parse_error);
+
+  // Check for parsing errors
+  if (ast_root == NULL) {
+    if (debug) {
+      fprintf(stdout, "Parsing failed with error code: %d\n", parse_error);
+    }
+    return parse_error; // Return the parsing error code
+  }
+
+  // Semantic analysis would go here
+  // Generate code would go here
+
+  if (debug) {
+    fprintf(stdout, "<AST representation>\n");
+    ast_fprint_debug(ast_root, stdout);
+  }
+
+
+  // Free AST
+  ast_free(ast_root);
+
+  if (debug) {
+    fprintf(stdout, "Program ended successfully\n");
+  }
+
+  return ERR_OK; // Compilation successful
 }

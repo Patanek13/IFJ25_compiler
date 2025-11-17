@@ -1,0 +1,251 @@
+sme v valid
+nasli sme token v valid: IMPORT
+
+sme v valid
+nasli sme token v valid: STRING         STR[ifj25]
+
+sme v valid
+nasli sme token v valid: FOR
+
+sme v valid
+nasli sme token v valid: IFJ
+
+VALID OK
+nasli sme token v prog: CLASS
+
+nasli sme token v block: NEW_LINE
+
+nasli sme token v command: GLOBAL_ID      STR[__g]
+
+nasli sme token v assign: GLOBAL_ID      STR[__g]
+
+DEBUG: parse_expression volani
+DEBUG: parse_expression() s tokenem: 
+NULL_KEYWORD
+
+___________
+ parse_expression OK return 
+_____________
+___________
+ assign OK return 
+_____________
+nasli sme token v command: STATIC
+
+nasli sme token v func_decl: STATIC
+
+nasli sme token v param_list: BRACKET_END
+
+___________
+ param_list OK return 
+_____________
+nasli sme token v block: NEW_LINE
+
+nasli sme token v command: RETURN
+
+nasli sme token v return_func: INTEGER        INT[10]
+
+DEBUG: parse_expression volani
+DEBUG: parse_expression() s tokenem: 
+INTEGER        INT[10]
+
+___________
+ parse_expression OK return 
+_____________
+___________
+ return_func OK return 
+_____________
+___________
+ block OK return 
+_____________
+___________
+ func_decl OK return 
+_____________
+nasli sme token v command: STATIC
+
+nasli sme token v func_decl: STATIC
+
+nasli sme token v param_list: BRACKET_END
+
+___________
+ param_list OK return 
+_____________
+nasli sme token v block: NEW_LINE
+
+nasli sme token v command: RETURN
+
+nasli sme token v return_func: NEW_LINE
+
+___________
+ return_func OK return 
+_____________
+___________
+ block OK return 
+_____________
+___________
+ func_decl OK return 
+_____________
+nasli sme token v command: STATIC
+
+nasli sme token v func_decl: STATIC
+
+nasli sme token v param_list: ID             STR[a]
+
+nasli sme token v block: NEW_LINE
+
+nasli sme token v command: GLOBAL_ID      STR[__g]
+
+nasli sme token v assign: GLOBAL_ID      STR[__g]
+
+DEBUG: parse_expression volani
+DEBUG: parse_expression() s tokenem: 
+IFJ
+
+nasli sme token v b_i_c: IFJ
+
+nasli sme token v params: ID             STR[a]
+
+DEBUG: parse_expression volani
+DEBUG: parse_expression() s tokenem: 
+ID             STR[a]
+
+___________
+ parse_expression OK return 
+_____________
+___________
+ params OK return 
+_____________
+___________
+ b_i_c OK return 
+_____________
+___________
+ parse_expression OK return 
+_____________
+___________
+ assign OK return 
+_____________
+nasli sme token v command: GLOBAL_ID      STR[__g]
+
+nasli sme token v assign: GLOBAL_ID      STR[__g]
+
+DEBUG: parse_expression volani
+DEBUG: parse_expression() s tokenem: 
+IFJ
+
+nasli sme token v b_i_c: IFJ
+
+nasli sme token v params: ID             STR[b]
+
+DEBUG: parse_expression volani
+DEBUG: parse_expression() s tokenem: 
+ID             STR[b]
+
+___________
+ parse_expression OK return 
+_____________
+___________
+ params OK return 
+_____________
+___________
+ b_i_c OK return 
+_____________
+___________
+ parse_expression OK return 
+_____________
+___________
+ assign OK return 
+_____________
+nasli sme token v command: RETURN
+
+nasli sme token v return_func: ID             STR[a]
+
+DEBUG: parse_expression volani
+DEBUG: parse_expression() s tokenem: 
+ID             STR[a]
+
+___________
+ parse_expression OK return 
+_____________
+___________
+ return_func OK return 
+_____________
+___________
+ block OK return 
+_____________
+___________
+ func_decl OK return 
+_____________
+nasli sme token v command: STATIC
+
+nasli sme token v func_decl: STATIC
+
+nasli sme token v block: NEW_LINE
+
+nasli sme token v command: RETURN
+
+nasli sme token v return_func: STRING         STR[getter_val]
+
+DEBUG: parse_expression volani
+DEBUG: parse_expression() s tokenem: 
+STRING         STR[getter_val]
+
+___________
+ parse_expression OK return 
+_____________
+___________
+ return_func OK return 
+_____________
+___________
+ block OK return 
+_____________
+___________
+ func_decl OK return 
+_____________
+nasli sme token v command: STATIC
+
+nasli sme token v func_decl: STATIC
+
+nasli sme token v block: NEW_LINE
+
+nasli sme token v command: GLOBAL_ID      STR[__g]
+
+nasli sme token v assign: GLOBAL_ID      STR[__g]
+
+DEBUG: parse_expression volani
+DEBUG: parse_expression() s tokenem: 
+ID             STR[val]
+
+___________
+ parse_expression OK return 
+_____________
+___________
+ assign OK return 
+_____________
+___________
+ block OK return 
+_____________
+___________
+ func_decl OK return 
+_____________
+nasli sme token v command: STATIC
+
+nasli sme token v func_decl: STATIC
+
+nasli sme token v param_list: BRACKET_END
+
+___________
+ param_list OK return 
+_____________
+nasli sme token v block: NEW_LINE
+
+nasli sme token v command: VAR
+
+nasli sme token v command: VAR
+
+nasli sme token v command: ID             STR[x]
+
+nasli sme token v assign: ID             STR[x]
+
+ERROR: Ocekavam token type 13 ale nasel jsem 25
+ERROR: Failed to parse block
+PARSE ERROR
+Program ended with error
