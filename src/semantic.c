@@ -75,12 +75,12 @@ static SymbolData* scope_lookup(ScopeStack* stack, const char* key) {
     return NULL; // Not found in any scope
 }
 
-/* @brief Search symbol only in the current (top) scope
+/* @brief Search symbol only in the current scope
   * @param stack Pointer to the scope stack
   * @param key Symbol name to search for
   * @return Pointer to SymbolData if found, NULL otherwise
 */
-static SymbolData* top_Scope_Current(ScopeStack* stack, const char* key) {
+static SymbolData* scope_lookup_current(ScopeStack* stack, const char* key) {
     if (stack->topIndex < 0) {
         return NULL;
     }
@@ -103,7 +103,7 @@ typedef struct {
 
 /*======== Prototypes of Semantic Analysis Functions =============*/
 static void analyze_node(ASTNode* node, AnalysisContext* context);
-static void fill_global_table(SymTable* global_table);
+static void fill_global_table(SymTable* global_table, int* error_code);
 
 static void analyze_program(ASTNode* node, AnalysisContext* context);
 static void analyze_function(ASTNode* node, AnalysisContext* context);
@@ -121,7 +121,7 @@ static void analyze_getter(ASTNode* node, AnalysisContext* context);
 /* @brief Fills up the global table with built-in functions
   * @param global_table Pointer to the global symbol table
 */
-static void fill_global_table(SymTable* global_table) {
+static void fill_global_table(SymTable* global_table, int* error_code) {
     char* key = NULL;
     SymbolData data;
 
@@ -129,14 +129,24 @@ static void fill_global_table(SymTable* global_table) {
     key = make_function_key("Ifj.read_str", 0);
     data = create_function_symbol(TYPE_UNKNOWN, 0);
     data.defined = true;
-    symtable_insert(global_table, key, data);
+    if(symtable_insert(global_table, key, data) == ERR_INTERNAL) {
+        fprintf(stderr, "Semantic Error: Failed to insert built-in function Ifj.read_str\n");
+        *error_code = ERR_INTERNAL;
+        free(key);
+        return;
+    }
     free(key);
 
     // Built-in function: Ifj.read_num() -> Num | Null
     key = make_function_key("Ifj.read_num", 0);
     data = create_function_symbol(TYPE_UNKNOWN, 0);
     data.defined = true;
-    symtable_insert(global_table, key, data);
+    if(symtable_insert(global_table, key, data) == ERR_INTERNAL) {
+        fprintf(stderr, "Semantic Error: Failed to insert built-in function Ifj.read_num\n");
+        *error_code = ERR_INTERNAL;
+        free(key);
+        return;
+    }
     free(key);
 
     // Built-in function: Ifj.write(value: Any) -> Null
@@ -144,7 +154,12 @@ static void fill_global_table(SymTable* global_table) {
     data = create_function_symbol(TYPE_NULL, 1);
     data.defined = true;
     data.info.function.param_types[0] = TYPE_UNKNOWN; // Any type
-    symtable_insert(global_table, key, data);
+    if(symtable_insert(global_table, key, data) == ERR_INTERNAL) {
+        fprintf(stderr, "Semantic Error: Failed to insert built-in function Ifj.write\n");
+        *error_code = ERR_INTERNAL;
+        free(key);
+        return;
+    }
     free(key);
 
     // Built-in function: Ifj.length(str: String) -> Num
@@ -152,7 +167,12 @@ static void fill_global_table(SymTable* global_table) {
     data = create_function_symbol(TYPE_INT, 1);
     data.defined = true;
     data.info.function.param_types[0] = TYPE_STRING;
-    symtable_insert(global_table, key, data);
+    if(symtable_insert(global_table, key, data) == ERR_INTERNAL) {
+        fprintf(stderr, "Semantic Error: Failed to insert built-in function Ifj.length\n");
+        *error_code = ERR_INTERNAL;
+        free(key);
+        return;
+    }
     free(key);
 
     // Built-in function: Ifj.floor(num: Num) -> Num
@@ -160,7 +180,12 @@ static void fill_global_table(SymTable* global_table) {
     data = create_function_symbol(TYPE_INT, 1);
     data.defined = true;
     data.info.function.param_types[0] = TYPE_FLOAT;
-    symtable_insert(global_table, key, data);
+    if(symtable_insert(global_table, key, data) == ERR_INTERNAL) {
+        fprintf(stderr, "Semantic Error: Failed to insert built-in function Ifj.floor\n");
+        *error_code = ERR_INTERNAL;
+        free(key);
+        return;
+    }
     free(key);
 
     // Built-in function: Ifj.substring(str: String, start: Num, length: Num) -> String | Null
@@ -170,7 +195,12 @@ static void fill_global_table(SymTable* global_table) {
     data.info.function.param_types[0] = TYPE_STRING;
     data.info.function.param_types[1] = TYPE_INT;
     data.info.function.param_types[2] = TYPE_INT;
-    symtable_insert(global_table, key, data);
+    if(symtable_insert(global_table, key, data) == ERR_INTERNAL) {
+        fprintf(stderr, "Semantic Error: Failed to insert built-in function Ifj.substring\n");
+        *error_code = ERR_INTERNAL;
+        free(key);
+        return;
+    }
     free(key);
 
     // Built-in function: Ifj.str(value: Any) -> String
@@ -178,7 +208,12 @@ static void fill_global_table(SymTable* global_table) {
     data = create_function_symbol(TYPE_STRING, 1);
     data.defined = true;
     data.info.function.param_types[0] = TYPE_UNKNOWN; // Any type
-    symtable_insert(global_table, key, data);
+    if(symtable_insert(global_table, key, data) == ERR_INTERNAL) {
+        fprintf(stderr, "Semantic Error: Failed to insert built-in function Ifj.str\n");
+        *error_code = ERR_INTERNAL;
+        free(key);
+        return;
+    }
     free(key);
 
     // Built-in function: Ifj.strcmp(str1: String, str2: String) -> Num
@@ -187,7 +222,12 @@ static void fill_global_table(SymTable* global_table) {
     data.defined = true;
     data.info.function.param_types[0] = TYPE_STRING;
     data.info.function.param_types[1] = TYPE_STRING;
-    symtable_insert(global_table, key, data);
+    if(symtable_insert(global_table, key, data) == ERR_INTERNAL) {
+        fprintf(stderr, "Semantic Error: Failed to insert built-in function Ifj.strcmp\n");
+        *error_code = ERR_INTERNAL;
+        free(key);
+        return;
+    }
     free(key);
 
     // Built-in function: Ifj.ord(str: String, index: Num) -> Num
@@ -196,7 +236,12 @@ static void fill_global_table(SymTable* global_table) {
     data.defined = true;
     data.info.function.param_types[0] = TYPE_STRING;
     data.info.function.param_types[1] = TYPE_INT;
-    symtable_insert(global_table, key, data);
+    if(symtable_insert(global_table, key, data) == ERR_INTERNAL) {
+        fprintf(stderr, "Semantic Error: Failed to insert built-in function Ifj.ord\n");
+        *error_code = ERR_INTERNAL;
+        free(key);
+        return;
+    }
     free(key);
 
     // Built-in function: Ifj.chr(ASCI code: Num) -> String
@@ -204,7 +249,12 @@ static void fill_global_table(SymTable* global_table) {
     data = create_function_symbol(TYPE_STRING, 1);
     data.defined = true;
     data.info.function.param_types[0] = TYPE_INT;
-    symtable_insert(global_table, key, data);
+    if(symtable_insert(global_table, key, data) == ERR_INTERNAL) {
+        fprintf(stderr, "Semantic Error: Failed to insert built-in function Ifj.chr\n");
+        *error_code = ERR_INTERNAL;
+        free(key);
+        return;
+    }
     free(key);
 
 }
@@ -359,25 +409,25 @@ static void analyze_function(ASTNode* node, AnalysisContext* context) {
         return;
     }
 
+    // Create and insert function symbol into the global table
+    SymbolData func_data = create_function_symbol(TYPE_UNKNOWN, param_count);
+    func_data.defined = true; // Function is now defined
+
     // Check for redefinition in the global scope
-    if (symtable_lookup(context->global_table, key) != NULL) {
+    ErrorCode insert_result = symtable_insert(context->global_table, key, func_data);
+    if (insert_result == ERR_SEMANTIC_REDEFINITION) {
         *context->error_code = ERR_SEMANTIC_REDEFINITION;
         if (context->debug) {
             fprintf(stderr, "Semantic Error: Redefinition of function '%s'\n", func_name);
         }
         free(key);
         return;
-    }
-
-    // Create and insert function symbol into the global table
-    SymbolData func_data = create_function_symbol(TYPE_UNKNOWN, param_count);
-    func_data.defined = true; // Function is now defined
-
-    if (symtable_insert(context->global_table, key, func_data) != ERR_OK) {
+    } else if (insert_result == ERR_INTERNAL) {
         *context->error_code = ERR_INTERNAL;
         free(key);
         return;
     }
+
     free(key);
 
     // Create a new symbol table for the function scope
@@ -399,7 +449,7 @@ static void analyze_function(ASTNode* node, AnalysisContext* context) {
         const char* param_name = param_node->value;
 
         // Check for redefinition inside parameters
-        if (top_Scope_Current(context->scope_stack, param_name) != NULL) {
+        if (scope_lookup_current(context->scope_stack, param_name) != NULL) {
             *context->error_code = ERR_SEMANTIC_REDEFINITION;
             if (context->debug) {
                 fprintf(stderr, "Semantic Error: Redefinition of parameter '%s' in function '%s'\n", param_name, func_name);
@@ -459,6 +509,74 @@ static void analyze_assign(ASTNode *node, AnalysisContext* context) {
     // Get the current scope symbol table
     SymTable* current_scope = top_Scope(context->scope_stack);
 
-    SymbolData* sym_in_curr_scope = top_Scope_Current(context->scope_stack, var_name);
+    // Declaration
+    if (is_declaration) {
+        // Check for redefinition in the current scope
+        SymbolData var_data = create_variable_symbol(TYPE_NULL);
+        ErrorCode insert_result = symtable_insert(current_scope, var_name, var_data);
 
+        if (insert_result == ERR_SEMANTIC_REDEFINITION) {
+            *context->error_code = ERR_SEMANTIC_REDEFINITION;
+            if (context->debug) {
+                fprintf(stderr, "Semantic Error: Redefinition of variable '%s'\n", var_name);
+            }
+            return;
+        } else if (insert_result == ERR_INTERNAL) {
+            *context->error_code = ERR_INTERNAL;
+            return;
+        } else {
+            // Successfully declared variable with NULL type
+            id_node->data_type = TYPE_NULL;
+            return;
+          }
+    } else { // This is assign x = ...
+        // Lookup the variable in all scopes
+        SymbolData* var_symbol = scope_lookup(context->scope_stack, var_name);
+
+        if (var_symbol == NULL) {
+          // Is var global? (starts with __)
+          if (strncmp(var_name, "__", 2) == 0) {
+              // Is global variable, lookup or create in global table
+              var_symbol = symtable_lookup(context->global_table, var_name);
+              if (var_symbol == NULL) {
+                // Create global variable
+                SymbolData global_var_data = create_variable_symbol(expr_type);
+                symtable_insert(context->global_table, var_name, global_var_data);
+            } else {
+                var_symbol->type = expr_type; // Update type
+            }
+            id_node->data_type = expr_type; // Set AST node type
+        } else {
+            // It is a local variable, which must be already declared
+            *context->error_code = ERR_SEMANTIC_UNDEFINED;
+            if (context->debug) {
+                fprintf(stderr, "Semantic Error: Assignment to undefined variable '%s'\n", var_name);
+            }
+        }
+    } else {
+        // Symbol found, which one ?
+        if (var_symbol->kind == SYM_SETTER) {
+            // It is setter, check param type with expr_type
+            if (var_symbol->info.setter.param_type != expr_type &&
+                var_symbol->info.setter.param_type != TYPE_UNKNOWN &&
+                expr_type != TYPE_UNKNOWN) {
+                *context->error_code = ERR_SEMANTIC_TYPE;
+                if (context->debug) {
+                    fprintf(stderr, "Semantic Error: Type mismatch in setter '%s' assignment\n", var_name);
+                }
+            }
+            id_node->data_type = TYPE_NULL; // Setter nothing returns
+        } else if (var_symbol->kind == SYM_VARIABLE) {
+            // It is var
+            var_symbol->type = expr_type; // Update type
+            id_node->data_type = expr_type; // Set AST node type
+        } else {
+            // cannot assign to function/getter
+            *context->error_code = ERR_SEMANTIC_OTHER;
+            if (context->debug) {
+                fprintf(stderr, "Semantic Error: Invalid assignment target '%s'\n", var_name);
+            }
+        }
+    }
+  }
 }
