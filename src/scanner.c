@@ -593,6 +593,7 @@ void print_token(Token token) {
         case NEW_LINE:      fprintf(output, "NEW_LINE"); break;
         case EOF_TOKEN:     fprintf(output, "EOF_TOKEN"); break;
         case ERROR:         fprintf(output, "ERROR"); break;
+        case OPERATOR:      fprintf(output, "OPERATOR"); break;
         default:            fprintf(output, "UNKNOWN"); break;
     }
 
@@ -613,6 +614,9 @@ void print_token(Token token) {
     }
     else if (token.type == BOOLEAN) {
         fprintf(output, "(%s)", token.value.boolean ? "true" : "false");
+    }
+    else if (token.type == OPERATOR) {
+        fprintf(output, "(%s)", token.value.string);
     }
 
     fprintf(output, "\n");
