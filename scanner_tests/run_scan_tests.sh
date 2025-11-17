@@ -9,6 +9,7 @@ for infile in $TEST_DIR/*.in; do
     base=$(basename "$infile" .in)
     outfile="$TEST_DIR/$base.out"
 
+    echo ""
     echo "Running $base..."
 
     $EXE -s < "$infile" > output.tmp

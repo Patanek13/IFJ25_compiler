@@ -1,4 +1,8 @@
+
+Running identificators1...
+  ✓ PASS
+
 Running keywords...
   ✓ PASS
 
-Summary: 1 passed, 0 failed.
+Summary: 2 passed, 0 failed.

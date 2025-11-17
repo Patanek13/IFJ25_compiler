@@ -591,7 +591,7 @@ void print_token(Token token) {
         case AND:           fprintf(output, "AND"); break;
         case OR:            fprintf(output, "OR"); break;
         case NEW_LINE:      fprintf(output, "NEW_LINE"); break;
-        case EOF_TOKEN:     fprintf(output, "EOF"); break;
+        case EOF_TOKEN:     fprintf(output, "EOF_TOKEN"); break;
         case ERROR:         fprintf(output, "ERROR"); break;
         default:            fprintf(output, "UNKNOWN"); break;
     }
