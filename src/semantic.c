@@ -731,6 +731,102 @@ static void analyze_call(ASTNode* node, AnalysisContext* context) {
     node->data_type = func_data->type;
 }
 
+/* @brief Analyzes the return AST node
+  * @param node Pointer to the return ASTNode.
+  * @param pointer to the analysis context
+*/
+static void analyze_return(ASTNode* node, AnalysisContext* context) {
+    if (context->debug) {
+        fprintf(stdout, "Semantic Analysis: Analyzing return node\n");
+    }
+
+    // Get the current function's expected return type
+    if (context->current_function == NULL) {
+        *context->error_code = ERR_SEMANTIC_OTHER;
+        if (context->debug) {
+            fprintf(stderr, "Semantic Error: 'return' statement outside of function\n");
+        }
+        return;
+    }
+
+    const char* func_name = context->current_function->value;
+    size_t param_count = context->current_function->children[0]->child_count;
+    char* func_key = make_function_key(func_name, param_count);
+    if (func_key == NULL) {
+        *context->error_code = ERR_INTERNAL;
+        return;
+    }
+
+    SymbolData* func_data = symtable_lookup(context->global_table, func_key);
+    free(func_key);
+
+    if (func_data == NULL) {
+        *context->error_code = ERR_INTERNAL;
+        return;
+    }
+
+    DataType expected_return_type = func_data->type;
+
+    // Analyze the return expression to get its type
+    ASTNode* expr_node = node->children[0]; // First child is the return expression
+    DataType return_type = analyze_expression(expr_node, context);
+    if (*context->error_code != ERR_OK) {
+        return;
+    }
+
+    // Check if the return type matches the expected return type
+    if (expected_return_type != TYPE_UNKNOWN && return_type != expected_return_type && return_type != TYPE_UNKNOWN) {
+        *context->error_code = ERR_SEMANTIC_TYPE;
+        if (context->debug) {
+            fprintf(stderr, "Semantic Error: Return type mismatch in function '%s'\n", func_name);
+        }
+    }
+}
+
+static void analyze_if(ASTNode* node, AnalysisContext* context) {
+    if (context->debug) {
+        fprintf(stdout, "Semantic Analysis: Analyzing if node\n");
+    }
+
+    // First child is the cond expression
+    analyze_expression(node->children[0], context);
+    if (*context->error_code != ERR_OK) {
+        return;
+    }
+
+    // Second child is the if block
+    analyze_node(node->children[1], context);
+    if (*context->error_code != ERR_OK) {
+        return;
+      }
+
+      // Optional third child is the else block (empty if not present)
+      if (node->child_count > 2) {
+          analyze_node(node->children[2], context);
+      }
+}
+
+/* @brief Analyzes the while AST node
+  * @param node Pointer to the while ASTNode.
+  * @param pointer to the analysis context
+*/
+static void analyze_while(ASTNode* node, AnalysisContext* context) {
+    if (context->debug) {
+        fprintf(stdout, "Semantic Analysis: Analyzing while node\n");
+    }
+
+    // First child is the cond expression
+    analyze_expression(node->children[0], context);
+    if (*context->error_code != ERR_OK) {
+        return;
+    }
+
+    // Second child is the while block
+    analyze_node(node->children[1], context);
+}
+
+
+
 
 
 
