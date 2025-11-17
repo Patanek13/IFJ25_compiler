@@ -597,22 +597,22 @@ void print_token(Token token) {
     }
 
     if (token.type == INTEGER) {
-        fprintf(output, "        INT[%d]", token.value.integer);
+        fprintf(output, "(%d)", token.value.integer);
     }
     else if (token.type == FLOATING) {
-        fprintf(output, "       FLT[%f]", token.value.floating);
+        fprintf(output, "(%f)", token.value.floating);
     }
     else if (token.type == STRING) {
-        fprintf(output, "         STR[%s]", token.value.string);
+        fprintf(output, "(%s)", token.value.string);
     }
     else if (token.type == ID) {
-        fprintf(output, "             STR[%s]", token.value.string);
+        fprintf(output, "(%s)", token.value.string);
     }
     else if (token.type == GLOBAL_ID) {
-        fprintf(output, "      STR[%s]", token.value.string);
+        fprintf(output, "(%s)", token.value.string);
     }
     else if (token.type == BOOLEAN) {
-        fprintf(output, "        BOOL[%s]", token.value.boolean ? "true" : "false");
+        fprintf(output, "(%s)", token.value.boolean ? "true" : "false");
     }
 
     fprintf(output, "\n");

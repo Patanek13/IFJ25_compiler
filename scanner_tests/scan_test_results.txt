@@ -1,0 +1,4 @@
+Running keywords...
+  ✓ PASS
+
+Summary: 1 passed, 0 failed.
