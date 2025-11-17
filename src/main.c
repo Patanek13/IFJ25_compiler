@@ -16,10 +16,21 @@
 
 int main(int argc, char** argv) {
   bool debug = false;
+  bool scan_test = false;
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-d") == 0) {
       debug = true;
     }
+    if (strcmp(argv[i], "-s") == 0) {
+      scan_test = true;
+    }
+  }
+
+  // Scanner only test mode
+  if (scan_test) {
+    scanner_init(stdin, stdout);
+    parser_function(true);
+    return ERR_OK;
   }
 
   // Parser initialization

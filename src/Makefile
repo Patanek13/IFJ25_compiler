@@ -23,6 +23,12 @@ test-ast:
 		$(CC) $(CFLAGS) -o $(BUILDDIR)/ast_test ast.c strutils.c $(TESTDIR)/test_ast.c
 	@echo "Running AST tests..."
 	$(BUILDDIR)/ast_test
+
+test-scanner:
+	mkdir -p $(BUILDDIR)
+	$(CC) $(CFLAGS) -o $(BUILDDIR)/$(OUTFILE) *.c
+	@echo "Running scanner tests..."
+	../scanner_tests/run_scan_tests.sh > ../scanner_tests/scan_test_results.txt
 	
 doc: doxygen Doxyfile
 
