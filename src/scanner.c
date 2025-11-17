@@ -6,10 +6,8 @@
  *
  */
 
-// TODO ADD OPTION TO TEST SCANNER ONLY
-// TODO WRITE TESTS FOR EDGE CASES
-// TODO DECIDE WHAT THE FUCK TO DO WITH OPERATORS
-// TODO FIX FSM ON FIGMA
+// RUN TESTS
+// make && ../build/IFJcompiler -s < ../lex_tests/test1.wren > ../lex_tests/test_output.txt
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,7 +20,7 @@
 //------------------------------------- Global variables -----------------------------------------
 
 FILE *file;                         // Input file (stdin)
-FILE *out;                          // Output file (stdout)
+FILE *output;                       // Output file (stdout)
 char c;                             // Current character
 char buffer[BUFFER_SIZE];           // Current token buffer
 int i = 0;                          // Buffer index
@@ -66,9 +64,9 @@ static const char *op_string(TokenType type) {
     }
 }
 
-void scanner_init(FILE *input, FILE *output) {
+void scanner_init(FILE *input, FILE *output_file) {
     file = input;
-    out = output;
+    output = output_file;
 }
 
 //------------------------------------- Buffer ---------------------------------------------------
@@ -548,76 +546,76 @@ Token get_token() {
 
 void print_token(Token token) {
     switch (token.type){
-        case ID:            fprintf(out, "ID"); break;
-        case GLOBAL_ID:     fprintf(out, "GLOBAL_ID"); break;
-        case CLASS:         fprintf(out, "CLASS"); break;
-        case IF:            fprintf(out, "IF"); break;
-        case ELSE:          fprintf(out, "ELSE"); break;
-        case IS:            fprintf(out, "IS"); break;
-        case NULL_KEYWORD:  fprintf(out, "NULL_KEYWORD"); break;
-        case RETURN:        fprintf(out, "RETURN"); break;
-        case VAR:           fprintf(out, "VAR"); break;
-        case WHILE:         fprintf(out, "WHILE"); break;
-        case IFJ:           fprintf(out, "IFJ"); break;
-        case STATIC:        fprintf(out, "STATIC"); break;
-        case IMPORT:        fprintf(out, "IMPORT"); break;
-        case FOR:           fprintf(out, "FOR"); break;
-        case NUM_TYPE:      fprintf(out, "NUM_TYPE"); break;
-        case STR_TYPE:      fprintf(out, "STR_TYPE"); break;
-        case NULL_TYPE:     fprintf(out, "NULL_TYPE"); break;
-        case BOOL_TYPE:     fprintf(out, "BOOL_TYPE"); break;
-        case INTEGER:       fprintf(out, "INTEGER"); break;
-        case FLOATING:      fprintf(out, "FLOATING"); break;
-        case STRING:        fprintf(out, "STRING"); break;
-        case BOOLEAN:       fprintf(out, "BOOLEAN"); break;
-        case BLOCK_START:   fprintf(out, "BLOCK_START"); break;
-        case BLOCK_END:     fprintf(out, "BLOCK_END"); break;
-        case BRACKET_START: fprintf(out, "BRACKET_START"); break;
-        case BRACKET_END:   fprintf(out, "BRACKET_END"); break;
-        case COLON:         fprintf(out, "COLON"); break;
-        case QUESTION:      fprintf(out, "QUESTION"); break;
-        case DOT:           fprintf(out, "DOT"); break;
-        case COMMA:         fprintf(out, "COMMA"); break;
-        case PLUS:          fprintf(out, "PLUS"); break;
-        case MINUS:         fprintf(out, "MINUS"); break;
-        case MULTIPLY:      fprintf(out, "MULTIPLY"); break;
-        case DIVIDE:        fprintf(out, "DIVIDE"); break;
-        case EQUAL:         fprintf(out, "EQUAL"); break;
-        case EQUAL_EQUAL:   fprintf(out, "EQUAL_EQUAL"); break;
-        case LESS:          fprintf(out, "LESS"); break;
-        case LESS_EQUAL:    fprintf(out, "LESS_EQUAL"); break;
-        case MORE:          fprintf(out, "MORE"); break;
-        case MORE_EQUAL:    fprintf(out, "MORE_EQUAL"); break;
-        case NOT:           fprintf(out, "NOT"); break;
-        case NOT_EQUAL:     fprintf(out, "NOT_EQUAL"); break;
-        case AND:           fprintf(out, "AND"); break;
-        case OR:            fprintf(out, "OR"); break;
-        case NEW_LINE:      fprintf(out, "NEW_LINE"); break;
-        case EOF_TOKEN:     fprintf(out, "EOF"); break;
-        case ERROR:         fprintf(out, "ERROR"); break;
-        default:            fprintf(out, "UNKNOWN"); break;
+        case ID:            fprintf(output, "ID"); break;
+        case GLOBAL_ID:     fprintf(output, "GLOBAL_ID"); break;
+        case CLASS:         fprintf(output, "CLASS"); break;
+        case IF:            fprintf(output, "IF"); break;
+        case ELSE:          fprintf(output, "ELSE"); break;
+        case IS:            fprintf(output, "IS"); break;
+        case NULL_KEYWORD:  fprintf(output, "NULL_KEYWORD"); break;
+        case RETURN:        fprintf(output, "RETURN"); break;
+        case VAR:           fprintf(output, "VAR"); break;
+        case WHILE:         fprintf(output, "WHILE"); break;
+        case IFJ:           fprintf(output, "IFJ"); break;
+        case STATIC:        fprintf(output, "STATIC"); break;
+        case IMPORT:        fprintf(output, "IMPORT"); break;
+        case FOR:           fprintf(output, "FOR"); break;
+        case NUM_TYPE:      fprintf(output, "NUM_TYPE"); break;
+        case STR_TYPE:      fprintf(output, "STR_TYPE"); break;
+        case NULL_TYPE:     fprintf(output, "NULL_TYPE"); break;
+        case BOOL_TYPE:     fprintf(output, "BOOL_TYPE"); break;
+        case INTEGER:       fprintf(output, "INTEGER"); break;
+        case FLOATING:      fprintf(output, "FLOATING"); break;
+        case STRING:        fprintf(output, "STRING"); break;
+        case BOOLEAN:       fprintf(output, "BOOLEAN"); break;
+        case BLOCK_START:   fprintf(output, "BLOCK_START"); break;
+        case BLOCK_END:     fprintf(output, "BLOCK_END"); break;
+        case BRACKET_START: fprintf(output, "BRACKET_START"); break;
+        case BRACKET_END:   fprintf(output, "BRACKET_END"); break;
+        case COLON:         fprintf(output, "COLON"); break;
+        case QUESTION:      fprintf(output, "QUESTION"); break;
+        case DOT:           fprintf(output, "DOT"); break;
+        case COMMA:         fprintf(output, "COMMA"); break;
+        case PLUS:          fprintf(output, "PLUS"); break;
+        case MINUS:         fprintf(output, "MINUS"); break;
+        case MULTIPLY:      fprintf(output, "MULTIPLY"); break;
+        case DIVIDE:        fprintf(output, "DIVIDE"); break;
+        case EQUAL:         fprintf(output, "EQUAL"); break;
+        case EQUAL_EQUAL:   fprintf(output, "EQUAL_EQUAL"); break;
+        case LESS:          fprintf(output, "LESS"); break;
+        case LESS_EQUAL:    fprintf(output, "LESS_EQUAL"); break;
+        case MORE:          fprintf(output, "MORE"); break;
+        case MORE_EQUAL:    fprintf(output, "MORE_EQUAL"); break;
+        case NOT:           fprintf(output, "NOT"); break;
+        case NOT_EQUAL:     fprintf(output, "NOT_EQUAL"); break;
+        case AND:           fprintf(output, "AND"); break;
+        case OR:            fprintf(output, "OR"); break;
+        case NEW_LINE:      fprintf(output, "NEW_LINE"); break;
+        case EOF_TOKEN:     fprintf(output, "EOF"); break;
+        case ERROR:         fprintf(output, "ERROR"); break;
+        default:            fprintf(output, "UNKNOWN"); break;
     }
 
     if (token.type == INTEGER) {
-        fprintf(out, "        INT[%d]", token.value.integer);
+        fprintf(output, "        INT[%d]", token.value.integer);
     }
     else if (token.type == FLOATING) {
-        fprintf(out, "       FLT[%f]", token.value.floating);
+        fprintf(output, "       FLT[%f]", token.value.floating);
     }
     else if (token.type == STRING) {
-        fprintf(out, "         STR[%s]", token.value.string);
+        fprintf(output, "         STR[%s]", token.value.string);
     }
     else if (token.type == ID) {
-        fprintf(out, "             STR[%s]", token.value.string);
+        fprintf(output, "             STR[%s]", token.value.string);
     }
     else if (token.type == GLOBAL_ID) {
-        fprintf(out, "      STR[%s]", token.value.string);
+        fprintf(output, "      STR[%s]", token.value.string);
     }
     else if (token.type == BOOLEAN) {
-        fprintf(out, "        BOOL[%s]", token.value.boolean ? "true" : "false");
+        fprintf(output, "        BOOL[%s]", token.value.boolean ? "true" : "false");
     }
 
-    fprintf(out, "\n");
+    fprintf(output, "\n");
 }
 
 void parser_function(bool debug) {
