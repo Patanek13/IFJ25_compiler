@@ -48,6 +48,10 @@ int main(int argc, char** argv) {
     }
     ast_free(ast_root);
     return parse_error; // Return the parsing error code
+  } else {
+    if (debug) {
+      fprintf(stdout, "Parsing completed successfully.\n");
+    }
   }
 
   // Semantic analysis
@@ -58,7 +62,12 @@ int main(int argc, char** argv) {
     }
     ast_free(ast_root);
     return semantic_error; // Return the semantic error code
+  } else {
+    if (debug) {
+      fprintf(stdout, "Semantic analysis completed successfully.\n");
+    }
   }
+  
   // Generate code would go here
 
   if (debug) {
