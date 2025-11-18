@@ -12,6 +12,7 @@
 
 #include "ast.h"
 #include "error.h"
+#include "stackframe.h"
 #include "symtable.h"
 
 /**
@@ -21,7 +22,6 @@
  * @param symTableArray Array of symbolic tables
  * @return ErrorCode
  */
-ErrorCode generate_code(ASTNode* root, SymTable** symTableArray);
-
-
+ErrorCode generate_code(ASTNode* node, Frame* gf, FrameStack* fs);
+ErrorCode generate_program(ASTNode* root, SymTable** symTableArray, bool debug);
 #endif
