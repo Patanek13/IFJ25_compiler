@@ -20,6 +20,7 @@ typedef enum {
     NODE_SETTER,   // Setter node
     NODE_GETTER,   // Getter node
     NODE_ID, // Name of variable or function
+    NODE_TYPE_ID, // Type identifier (Num, String, Bool, Null)
     NODE_BLOCK, // Block of statements {...}
     NODE_RETURN, // Return statement
     NODE_ASSIGN, // x = expr
@@ -44,9 +45,17 @@ typedef enum {
     TYPE_STRING // String type
 } DataType;
 
+// AST Frame Types
+typedef enum {
+    FRAME_GLOBAL,
+    FRAME_LOCAL,
+    FRAME_TEMP
+} ASTFrameType;
+
 // ==== AST Node Structure =====================
 typedef struct ASTNode {
     ASTNodeType type; // Type of the AST node
+    ASTFrameType frame; // Frame type of the AST node
     char *value; // Value of the node (for literals, identifiers...)
     DataType data_type; // Data type of the node
     struct ASTNode **children; // Array of pointers to child nodes

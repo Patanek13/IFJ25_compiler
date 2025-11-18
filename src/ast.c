@@ -101,6 +101,8 @@ const char *ast_node_type_to_string(ASTNodeType type) {
     return "NODE_LITERAL";
   case NODE_ID:
     return "NODE_ID";
+  case NODE_TYPE_ID:
+    return "NODE_TYPE_ID";
   case NODE_ARG_LIST:
     return "NODE_ARG_LIST";
   case NODE_PARAM_LIST:
@@ -129,6 +131,19 @@ const char *data_type_to_string(DataType data_type) {
     return "TYPE_STRING";
   default:
     return "TYPE_?";
+  }
+}
+
+const char *ast_frame_type_to_string(ASTFrameType frame) {
+  switch (frame) {
+  case FRAME_GLOBAL:
+    return "FRAME_GLOBAL";
+  case FRAME_LOCAL:
+    return "FRAME_LOCAL";
+  case FRAME_TEMP:
+    return "FRAME_TEMP";
+  default:
+    return "FRAME_?";
   }
 }
 
@@ -206,7 +221,7 @@ void ast_fprint_debug_inner(const ASTNode *node, FILE *out,
 
   // Print data type
   const char *data_name = data_type_to_string(node->data_type);
-  fprintf(out, "%s]", data_name);
+  fprintf(out, "%s] [%s]", data_name, ast_frame_type_to_string(node->frame));
   fprintf(out, "\n");
 
   // Calculate length for new prefix string
