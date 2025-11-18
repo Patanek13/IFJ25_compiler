@@ -1,0 +1,17 @@
+
+Running escape_sequences...
+  ✓ PASS
+
+Running escape_sequences2...
+  ✓ PASS
+
+Running identificators1...
+  ✓ PASS
+
+Running keywords...
+  ✓ PASS
+
+Running numbers1...
+  ✓ PASS
+
+Summary: 5 passed, 0 failed.

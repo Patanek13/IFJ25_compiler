@@ -1,0 +1,11 @@
+Running lexical tests in ../scanner_tests/exampleCodesIFJ25/lex_tests (timeout=5s)
+
+[PASS] test15_unclosed_string_1.txt   expected=1 got=1
+[PASS] test16_illegal_char_1.txt      expected=1 got=1
+[PASS] test24_lex_unterminated_comment_1.txt expected=1 got=1
+[PASS] test27_lex_bad_escape_1.txt    expected=1 got=1
+[PASS] test2_lexical_error_no_escapeseq_1.txt expected=1 got=1
+[PASS] test33_lex_hex_invalid_1.txt   expected=1 got=1
+[PASS] test36_lex_tab_in_string_0.txt expected=0 got=0
+
+Summary: 7 total | 7 passed | 0 failed | 0 skipped
