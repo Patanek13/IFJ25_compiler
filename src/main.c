@@ -29,8 +29,7 @@ int main(int argc, char** argv) {
   // Scanner only test mode
   if (scan_test) {
     scanner_init(stdin, stdout);
-    parser_function(true);
-    return ERR_OK;
+    return parser_function(true);
   }
 
   // Parser initialization
