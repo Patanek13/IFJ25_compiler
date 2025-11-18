@@ -835,6 +835,12 @@ static void analyze_while(ASTNode* node, AnalysisContext* context) {
 
 
 static DataType analyze_expression(ASTNode* node, AnalysisContext* context) {
+    if (context->debug) {
+            fprintf(stderr, "DEBUG: Analyzing expression node type: %d\n", node->type);
+            if (node->type == NODE_BINOP) fprintf(stderr, "DEBUG: Binop operator: %s\n", node->value);
+            if (node->type == NODE_TYPE_ID) fprintf(stderr, "DEBUG: Type ID: %s\n", node->value);
+          }
+
     // Base case: null node or error already occurred
     if (node == NULL || *context->error_code != ERR_OK) {
         return TYPE_UNKNOWN;
@@ -843,6 +849,14 @@ static DataType analyze_expression(ASTNode* node, AnalysisContext* context) {
     DataType result_type = TYPE_UNKNOWN;
 
     switch (node->type) {
+        case NODE_TYPE_ID:
+            // Type is not value --> cannot be used in expressions
+            // Maybe ERR_SEMANTIC_OTHER idk
+            *context->error_code = ERR_SEMANTIC_TYPE;
+            if (context->debug) {
+                fprintf(stderr, "Semantic Error: Invalid use of type identifier '%s' in expression\n", node->value);
+            }
+            return TYPE_UNKNOWN;
         case NODE_LITERAL:
             // Literal node: type is directly available
             result_type = node->data_type;
@@ -901,15 +915,29 @@ static DataType analyze_expression(ASTNode* node, AnalysisContext* context) {
             // Recursively analyze left and right operands
             ASTNode* left_node = node->children[0];
             ASTNode* right_node = node->children[1];
-            DataType left_type = analyze_expression(left_node, context);
-            DataType right_type = analyze_expression(right_node, context);
             const char* operator = node->value;
 
-            // See if error occurred during operand analysis
-            if (*context->error_code != ERR_OK) {
-                return TYPE_UNKNOWN;
-            }
+            if (strcmp(operator, "is") == 0) {
+                analyze_expression(left_node, context);
+                if (*context->error_code != ERR_OK) {
+                    return TYPE_UNKNOWN;
+                }
 
+                // Just analyze right node (type)
+                if (right_node->type != NODE_TYPE_ID) {
+                    *context->error_code = ERR_SEMANTIC_TYPE;
+                    if (context->debug) {
+                        fprintf(stderr, "Semantic Error: Right operand of 'is' must be a type identifier\n");
+                    }
+                    result_type = TYPE_BOOL;
+            }
+          } else {
+                DataType left_type = analyze_expression(left_node, context);
+                DataType right_type = analyze_expression(right_node, context);
+
+                if (*context->error_code != ERR_OK) {
+                    return TYPE_UNKNOWN;
+                }
 
             // Type checking for arithmetic operators (+, -, *, /)
             if (strcmp(operator, "+") == 0) {
@@ -979,12 +1007,8 @@ static DataType analyze_expression(ASTNode* node, AnalysisContext* context) {
                        strcmp(operator, "||") == 0) {
                 // Logical operators works with truuthy/falsy values of any type
                 result_type = TYPE_BOOL;
-
-            // Type checking for IS operator
-            } else if (strcmp(operator, "is") == 0) {
-                // parser ensures right operand is type
-                result_type = TYPE_BOOL;
             }
+          }
             break;
         }
 
