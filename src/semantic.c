@@ -327,23 +327,20 @@ static void analyze_node(ASTNode* node, AnalysisContext* context, AnalysisPhase 
                 }
             }
             return; // Stop to not analyze program again below
+        // Phase 1: Definition
         case NODE_BLOCK:
             analyze_block(node, context, phase);
             return; // Stop to not analyze block again below
-    }
 
-
-    // Definition and analysis of other nodes
-    switch (node->type) {
         case NODE_FUNCTION:
             analyze_function(node, context, phase);
-            break;
+            return; // Stop to not analyze function again below
         case NODE_SETTER:
             analyze_setter(node, context, phase);
-            break;
+            return; // Stop to not analyze setter again below
         case NODE_GETTER:
             analyze_getter(node, context, phase);
-            break;
+            return; // Stop to not analyze getter again below
         // Phase 2
         default:
             if (phase == PHASE_ANALYSIS) {
@@ -376,39 +373,43 @@ static void analyze_node(ASTNode* node, AnalysisContext* context, AnalysisPhase 
                   case NODE_PARAM_LIST:
                   case NODE_ARG_LIST:
                       break; // Nothing to do here
+                  default:
+                      // SHOULD NOT REACH HERE
+                      break;
               }
-      }
-            break;
-  }
+          }
+          // In phase 1, other nodes are ignored
+       break;
+    }
 }
 
-/*
-* @brief Analyzes the root AST node (program)
-* @param root Pointer to the root ASTNode of the program.
-* @param pointer to the analysis context
-*/
-static void analyze_program(ASTNode* node, AnalysisContext* context, AnalysisPhase phase) {
-    if (context->debug) {
-        fprintf(stdout, "Semantic Analysis: Analyzing program node\n");
-    }
+// /*
+// * @brief Analyzes the root AST node (program)
+// * @param root Pointer to the root ASTNode of the program.
+// * @param pointer to the analysis context
+// */
+// static void analyze_program(ASTNode* node, AnalysisContext* context, AnalysisPhase phase) {
+//     if (context->debug) {
+//         fprintf(stdout, "Semantic Analysis: Analyzing program node\n");
+//     }
 
-    // Expecting program node to have one child: the main block
-    if (node->child_count > 0 && node->children[0] != NULL) {
-        analyze_node(node->children[0], context, phase);
-    }
+//     // Expecting program node to have one child: the main block
+//     if (node->child_count > 0 && node->children[0] != NULL) {
+//         analyze_node(node->children[0], context, phase);
+//     }
 
-    // After analyzing the program, check for undefined main function
-    char* key = make_function_key("main", 0);
-    SymbolData* main_func = symtable_lookup(context->global_table, key);
+//     // After analyzing the program, check for undefined main function
+//     char* key = make_function_key("main", 0);
+//     SymbolData* main_func = symtable_lookup(context->global_table, key);
 
-    if (main_func == NULL || !main_func->defined) {
-        *context->error_code = ERR_SEMANTIC_UNDEFINED;
-        if (context->debug) {
-            fprintf(stderr, "Semantic Error: 'main' function is undefined\n");
-        }
-    }
-    free(key);
-}
+//     if (main_func == NULL || !main_func->defined) {
+//         *context->error_code = ERR_SEMANTIC_UNDEFINED;
+//         if (context->debug) {
+//             fprintf(stderr, "Semantic Error: 'main' function is undefined\n");
+//         }
+//     }
+//     free(key);
+// }
 
 /*
 * @brief Analyzes the block AST node
@@ -422,11 +423,13 @@ static void analyze_block(ASTNode* node, AnalysisContext* context, AnalysisPhase
 
     bool new_scope_created = false;
 
-    if (phase == PHASE_ANALYSIS) {
+    // In analysis phase, create a new scope for the block
+    if (phase == PHASE_ANALYSIS &&
+        node->parent->type != NODE_FUNCTION &&
+        node->parent->type != NODE_SETTER &&
+        node->parent->type != NODE_GETTER) {
 
-    // Blocks inside functions (IF, WHILE,...) create new local scope
-    // The function body block scope is handled in analyze_function
-    if (node->parent->type != NODE_FUNCTION) {
+
       SymTable* local_table = malloc(sizeof(SymTable));
       if (local_table == NULL || symtable_init(local_table) != ERR_OK) {
         *context->error_code = ERR_INTERNAL;
@@ -439,7 +442,6 @@ static void analyze_block(ASTNode* node, AnalysisContext* context, AnalysisPhase
       }
       new_scope_created = true;
     }
-  }
 
     // Analyze all child nodes in the block
     for (size_t child_idx = 0; child_idx < node->child_count; child_idx++) {
@@ -858,8 +860,11 @@ static void analyze_return(ASTNode* node, AnalysisContext* context) {
     DataType expected_return_type = func_data->type;
 
     // Analyze the return expression to get its type
+
     ASTNode* expr_node = node->children[0]; // First child is the return expression
-    DataType return_type = analyze_expression(expr_node, context);
+    // If there is an expression, analyze it
+    if (expr_node) {
+        DataType return_type = analyze_expression(expr_node, context);
     if (*context->error_code != ERR_OK) {
         return;
     }
@@ -870,6 +875,15 @@ static void analyze_return(ASTNode* node, AnalysisContext* context) {
         if (context->debug) {
             fprintf(stderr, "Semantic Error: Return type mismatch in function '%s'\n", func_name);
         }
+      }
+    } else {
+        // No return expression, expected type must be Null
+        if (expected_return_type != TYPE_NULL && expected_return_type != TYPE_UNKNOWN) {
+            *context->error_code = ERR_SEMANTIC_TYPE;
+            if (context->debug) {
+                fprintf(stderr, "Semantic Error: Function '%s' returns NULL but non-NULL value expected\n", func_name);
+            }
+        }
     }
 }
 
@@ -878,10 +892,12 @@ static void analyze_if(ASTNode* node, AnalysisContext* context, AnalysisPhase ph
         fprintf(stdout, "Semantic Analysis: Analyzing if node\n");
     }
 
-    // First child is the cond expression
-    analyze_expression(node->children[0], context);
-    if (*context->error_code != ERR_OK) {
-        return;
+    // First child is the cond expression (only analyzed in analysis phase)
+    if (phase == PHASE_ANALYSIS) {
+        analyze_expression(node->children[0], context);
+        if (*context->error_code != ERR_OK) {
+            return;
+        }
     }
 
     // Second child is the if block
@@ -905,10 +921,12 @@ static void analyze_while(ASTNode* node, AnalysisContext* context, AnalysisPhase
         fprintf(stdout, "Semantic Analysis: Analyzing while node\n");
     }
 
-    // First child is the cond expression
-    analyze_expression(node->children[0], context);
-    if (*context->error_code != ERR_OK) {
-        return;
+    // First child is the cond expression (only analyzed in analysis phase)
+    if (phase == PHASE_ANALYSIS) {
+        analyze_expression(node->children[0], context);
+        if (*context->error_code != ERR_OK) {
+            return;
+        }
     }
 
     // Second child is the while block
@@ -1199,11 +1217,11 @@ static void analyze_getter(ASTNode* node, AnalysisContext* context, AnalysisPhas
         ErrorCode insert_result = symtable_insert(context->global_table, key, getter_data);
         if (insert_result == ERR_SEMANTIC_REDEFINITION) {
             *context->error_code = ERR_SEMANTIC_REDEFINITION;
-        if (context->debug) {
-            fprintf(stderr, "Semantic Error: Redefinition of getter '%s'\n", getter_name);
-        }
-        free(key);
-        return; // Stop on redefinition error
+            if (context->debug) {
+                fprintf(stderr, "Semantic Error: Redefinition of getter '%s'\n", getter_name);
+            }
+            free(key);
+            return; // Stop on redefinition error
     } else if (insert_result == ERR_INTERNAL) {
         *context->error_code = ERR_INTERNAL;
         free(key);
@@ -1269,9 +1287,9 @@ static void analyze_setter(ASTNode* node, AnalysisContext* context, AnalysisPhas
         ErrorCode insert_result = symtable_insert(context->global_table, key, setter_data);
         if (insert_result == ERR_SEMANTIC_REDEFINITION) {
             *context->error_code = ERR_SEMANTIC_REDEFINITION;
-        if (context->debug) {
-            fprintf(stderr, "Semantic Error: Redefinition of setter '%s'\n", setter_name);
-        }
+            if (context->debug) {
+                fprintf(stderr, "Semantic Error: Redefinition of setter '%s'\n", setter_name);
+            }
             free(key);
             return; // Stop on redefinition error
     } else if (insert_result == ERR_INTERNAL) {
@@ -1396,6 +1414,24 @@ int semantic_analysis(ASTNode* root, bool debug) {
         fprintf(stdout, "Semantic Analysis: Starting Phase 2\n");
     }
     analyze_node(root, &context, PHASE_ANALYSIS);
+
+    // Check for main function existence
+    if (error_code == ERR_OK) {
+        char* main_key = make_function_key("main", 0);
+        if (main_key == NULL) {
+            error_code = ERR_INTERNAL;
+        } else {
+            SymbolData* main_func = symtable_lookup(global_table, main_key);
+
+            if (main_func == NULL || !main_func->defined) {
+                error_code = ERR_SEMANTIC_UNDEFINED;
+                if (debug) {
+                    fprintf(stderr, "Semantic Error: Undefined 'main' function\n");
+                }
+            }
+            free(main_key);
+        }
+    }
 
     // Cleanup
     // Stack should have only global scope
