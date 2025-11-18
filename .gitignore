@@ -1,6 +1,5 @@
 build/
 .vscode/
 doc/
-scannertests/
 
 *.exe
