@@ -17,7 +17,7 @@
 * @ param debug Boolean flag to enable debug output.
 * @ return Integer indicating success or specific semantic error code.
 */
-int semantic_check(ASTNode* root, bool debug);
+int semantic_analysis(ASTNode* root, bool debug);
 
 
 
