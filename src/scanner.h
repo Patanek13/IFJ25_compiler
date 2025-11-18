@@ -375,6 +375,6 @@ Token get_token(void);
 //================================================================================================
 
 void print_token(Token token);
-void parser_function(bool debug);
+bool parser_function(bool debug);
 
 #endif // SCANNER_H

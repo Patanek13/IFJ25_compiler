@@ -633,12 +633,17 @@ void print_token(Token token) {
     fprintf(output, "\n");
 }
 
-void parser_function(bool debug) {
+bool parser_function(bool debug) {
+    bool error = false;
     Token token;
     do {
         token = get_token();
+        if (token.type == ERROR) {
+            error = true;
+        }
         if (debug) {
             print_token(token);
         }
     } while (token.type != EOF_TOKEN);
+    return error;
 }
