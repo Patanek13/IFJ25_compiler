@@ -37,24 +37,54 @@ unsigned int F_hash(char* id) {
 FrameEntry* F_lookup(Frame* frame, char* id) {
   unsigned int key = F_hash(id);
   if (frame != NULL && frame->entryTable[key] != NULL) {
-    return frame->entryTable[key];
+    FrameEntry* item = frame->entryTable[key];
+    while (item != NULL) { // prechadzanie synonymami
+      if (strcmp(item->id, id) == 0) {
+        return item;
+      } else {
+        item = item->next;
+      }
+    }
+    return NULL;
   } else {
     return NULL;
   }
 }
 
-ErrorCode F_insert(Frame* frame, char* id, FrameData data) {
-  unsigned int key = F_hash(id);
-  if (frame == NULL || frame->entryTable[key] != NULL) {
-    return ERR_INTERNAL;
-  } else {
-    FrameEntry* entry = malloc(sizeof(FrameEntry));
-    entry->data = data;
-    frame->entryTable[key] = entry;
+ErrorCode F_insert(Frame* frame, char* id, DataType type) {
+  FrameEntry* item = F_lookup(frame, id);
+  if (item != NULL) {
+    item->type = type;
+    return ERR_OK;
+  } else if (frame != NULL){
+    unsigned int key = F_hash(id);
+    item = malloc(sizeof(FrameEntry));
+    if (item == NULL) return false;
+    item->id = id;
+    item->type = type;
+    item->initialized = 0;
+    item->next = NULL;
+    if (frame->entryTable[key] != NULL) item->next = frame->entryTable[key];
+    frame->entryTable[key] = item;
     return ERR_OK;
   }
+  return ERR_INTERNAL;
 }
 
+void F_cleanup(Frame* frame) {
+  if (frame != NULL) {
+    for (int i = 0; i < MAX_FRAME_SIZE; i++) {
+      FrameEntry* item = frame->entryTable[i];
+      FrameEntry* nextItem = NULL;
+      while (item != NULL) {
+        nextItem = item->next;
+        free(item);
+        item = nextItem;
+      }
+      frame->entryTable[i] = NULL;
+    }
+  }
+}
 
 
 ErrorCode FS_init(FrameStack *fs) {
@@ -77,6 +107,14 @@ bool FS_IsEmpty(FrameStack *fs) {
 
 bool FS_IsFull(FrameStack *fs) {
   return (fs->topIndex == (MAX_STACK_SIZE-1));
+}
+
+Frame* FS_Top(FrameStack* fs) {
+  if (!FS_IsEmpty(fs)) {
+    return &fs->stack[(fs->topIndex)];
+  } else {
+    return NULL;
+  }
 }
 
 Frame* FS_Pop(FrameStack* fs) {
