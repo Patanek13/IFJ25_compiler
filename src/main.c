@@ -45,10 +45,19 @@ int main(int argc, char** argv) {
     if (debug) {
       fprintf(stdout, "Parsing failed with error code: %d\n", parse_error);
     }
+    free(ast_root);
     return parse_error; // Return the parsing error code
   }
 
-  // Semantic analysis would go here
+  // Semantic analysis
+  int semantic_error = semantic_analysis(ast_root, debug);
+  if (semantic_error != ERR_OK) {
+    if (debug) {
+      fprintf(stdout, "Semantic analysis failed with error code: %d\n", semantic_error);
+    }
+    free(ast_root);
+    return semantic_error; // Return the semantic error code
+  }
   // Generate code would go here
 
   if (debug) {
