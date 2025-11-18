@@ -467,14 +467,14 @@ static int do_reduction(Stack* tokenStack, ASTStack* astStack, int* error_code) 
     if (handle_len == 1 && token_to_int(handle[0]) == IDX_OPERAND) {
         // new_node = NULL; // Uzel uz je na astStack, nic nedelame
         // Debug vypis
-        //fprintf(out, "DEBUG do_reduction: Rozpoznano pravidlo E -> operand (len 1)\n");
+        fprintf(out, "DEBUG do_reduction: Rozpoznano pravidlo E -> operand (len 1)\n");
     }
 
     // Pravidlo 2: E -> ( E )
     else if (handle_len == 3 && handle[2].type == BRACKET_START && handle[1].type == PSEUDO_E && handle[0].type == BRACKET_END) {
         // new_node = NULL; // Uzel uz je na astStack, nic nedelame
         // Debug vypis
-        //fprintf(out, "DEBUG do_reduction: Rozpoznano pravidlo E -> ( E ) (len 3)\n");
+        fprintf(out, "DEBUG do_reduction: Rozpoznano pravidlo E -> ( E ) (len 3)\n");
     }
     // Pravidlo 3 a 4: E -> op E (unarni)  NEBO E -> E op E (binarni)
     // Handle (reversed) je [E, op]
@@ -549,7 +549,7 @@ static int do_reduction(Stack* tokenStack, ASTStack* astStack, int* error_code) 
         Token op_token = handle[1];
 
         // Debug vypis
-        //fprintf(out, "DEBUG do_reduction: Rozpoznano pravidlo E -> E op E (len 3)\n");
+        fprintf(out, "DEBUG do_reduction: Rozpoznano pravidlo E -> E op E (len 3)\n");
 
         ASTNode *right, *left;
         if (ast_stack_pop(astStack, &right) != ERR_OK) { *error_code = SYNTAX_ERROR; return SYNTAX_ERROR; } // Pop E_right
@@ -616,10 +616,11 @@ static int do_reduction(Stack* tokenStack, ASTStack* astStack, int* error_code) 
     }
 
     // Debug vypis
-    //fprintf(out, "DEBUG: Vlozen pseudo-token E na tokenStack.\n");
+    fprintf(out, "DEBUG: Vlozen pseudo-token E na tokenStack.\n");
     //print_token_stack(tokenStack);
 
     fprintf(out, "DEBUG: Redukce uspesna.\n");
+    print_token_stack(tokenStack);
     return ERR_OK;
 }
 
@@ -671,6 +672,16 @@ ASTNode* parse_expression(int *error_code) {
 
         // 'b' = aktualni token na vstupu
         Token current_token = token;
+        if (is_new_token){
+            if ((current_token.type == NEW_LINE) && (top_terminal.type == OPERATOR)){
+                token = get_token();
+                fprintf(out, "---------\ngetting next token\n-----------\n");
+                current_token = token;
+            }
+            else if ((current_token.type == NEW_LINE) && (top_terminal.type != END_EXPR)){
+                current_token.type = END_EXPR;
+            }
+        }
 
         int top_idx = token_to_int(top_terminal);
         int current_idx;
