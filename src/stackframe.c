@@ -111,7 +111,7 @@ bool FS_IsFull(FrameStack *fs) {
 
 Frame* FS_Top(FrameStack* fs) {
   if (!FS_IsEmpty(fs)) {
-    return &fs->stack[(fs->topIndex)];
+    return fs->stack[(fs->topIndex)];
   } else {
     return NULL;
   }
@@ -120,13 +120,13 @@ Frame* FS_Top(FrameStack* fs) {
 Frame* FS_Pop(FrameStack* fs) {
   if (!FS_IsEmpty(fs)) {
     fs->topIndex--;
-    return &fs->stack[(fs->topIndex++)];
+    return fs->stack[(fs->topIndex++)];
   } else {
     return NULL;
   }
 }
 
-ErrorCode FS_Push(FrameStack *fs, Frame frame) {
+ErrorCode FS_Push(FrameStack *fs, Frame* frame) {
   if (!FS_IsFull(fs)) {
     fs->topIndex++;
     fs->stack[fs->topIndex] = frame;

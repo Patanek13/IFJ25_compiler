@@ -39,7 +39,7 @@ typedef struct Frame {
 } Frame;
 
 typedef struct {
-  Frame* stack;
+  Frame** stack;
   int topIndex;
 } FrameStack;
 
@@ -53,7 +53,7 @@ ErrorCode FS_init(FrameStack* fs);
 bool FS_IsEmpty(FrameStack* fs);
 bool FS_IsFull(FrameStack* fs);
 Frame* FS_Pop(FrameStack* fs);
-ErrorCode FS_Push(FrameStack* fs, Frame frame);
+ErrorCode FS_Push(FrameStack* fs, Frame* frame);
 void FS_Dispose(FrameStack* fs);
 Frame* FS_Top(FrameStack* fs);
 
