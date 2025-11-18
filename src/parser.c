@@ -393,16 +393,16 @@ static ASTNode* create_ast_node_from_token(Token t, int* error_code) {
             break;
         }
         case NUM_TYPE:
-            node = ast_create_node(NODE_ID, "Num", TYPE_UNKNOWN);
+            node = ast_create_node(NODE_TYPE_ID, "Num", TYPE_UNKNOWN);
             break;
         case STR_TYPE:
-            node = ast_create_node(NODE_ID, "String", TYPE_UNKNOWN);
+            node = ast_create_node(NODE_TYPE_ID, "String", TYPE_UNKNOWN);
             break;
         case NULL_TYPE:
-            node = ast_create_node(NODE_ID, "Null", TYPE_UNKNOWN);
+            node = ast_create_node(NODE_TYPE_ID, "Null", TYPE_UNKNOWN);
             break;
         case BOOL_TYPE:
-            node = ast_create_node(NODE_ID, "Bool", TYPE_UNKNOWN);
+            node = ast_create_node(NODE_TYPE_ID, "Bool", TYPE_UNKNOWN);
             break;
 
         default:
