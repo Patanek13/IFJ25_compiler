@@ -320,7 +320,7 @@ Token scan_zero() {
 
 //------------------------------------- Strings --------------------------------------------------
 
-void handle_x_sequence() {
+bool handle_x_sequence() {
     char hex1 = advance();
     char hex2 = advance();
     if (isxdigit(hex1) && isxdigit(hex2)) {
@@ -328,32 +328,41 @@ void handle_x_sequence() {
         char hex_char = (char) strtol(hex_str, NULL, 16);
         i -= 2;
         replace(hex_char);
+        return true;
     }
+
+    return false;
 }
 
-void handle_escape_sequence() {
+bool handle_escape_sequence() {
     i--;
     advance();
     switch (c) {
         case 'n':
             replace('\n');
+            return true;
             break;
         case 't':
             replace('\t');
+            return true;
             break;
         case 'r':
             replace('\r');
+            return true;
             break;
         case '"':
             replace('"');
+            return true;
             break;
         case '\\':
             replace('\\');
+            return true;
             break;
         case 'x':
-            handle_x_sequence();
+            return handle_x_sequence();
             break;
         default:
+            return false;
             break;
     }
 }
@@ -361,7 +370,9 @@ void handle_escape_sequence() {
 Token scan_normal_string() {
     while (c != '"' && c != EOF && c != '\n') {
         if (c == '\\') {
-            handle_escape_sequence();
+            if (!handle_escape_sequence()) {
+                return add_token(ERROR);
+            }
         }
         advance();
     }

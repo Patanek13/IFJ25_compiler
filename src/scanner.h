@@ -322,19 +322,13 @@ Token scan_hex(void);
  */
 Token scan_zero(void);
 
-/**
- * @brief Decide if '-' is part of negative number or MINUS token
- *
- * @return INTEGER, MINUS TOKEN
- */
-Token scan_minus(void);
 
 //------------------------------------- Strings --------------------------------------------------
 
 /**
  * @brief Process escape sequences in strings
  */
-void handle_escape_sequence(void);
+bool handle_escape_sequence(void);
 
 /**
  * @brief Scan normal string
