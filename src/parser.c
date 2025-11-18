@@ -53,6 +53,7 @@ bool match_token(TokenType type){
 }
 
 // debug token
+// Checks current token against desired tokentype returns true if they match and recieves new token
 bool check_and_take_token(TokenType type, int *error_code){
     // Check for lexical errors
     if (token.type == ERROR) {
@@ -73,6 +74,21 @@ bool check_and_take_token(TokenType type, int *error_code){
         return false;
     }
 
+    return true;
+}
+// Checks current token against desired tokentype returns true if they match, doesnt ask for new token
+bool check_token(TokenType type, int *error_code){
+    // Check for lexical errors
+    if (token.type == ERROR) {
+        *error_code = LEXICAL_ERROR;
+        return false;
+    }
+
+    if (token.type != type){
+        fprintf(out, "ERROR: Ocekavam token type %d ale nasel jsem %d\n", type, token.type);
+        *error_code = SYNTAX_ERROR;
+        return false;
+    }
     return true;
 }
 
@@ -451,14 +467,14 @@ static int do_reduction(Stack* tokenStack, ASTStack* astStack, int* error_code) 
     if (handle_len == 1 && token_to_int(handle[0]) == IDX_OPERAND) {
         // new_node = NULL; // Uzel uz je na astStack, nic nedelame
         // Debug vypis
-        //fprintf(out, "DEBUG do_reduction: Rozpoznano pravidlo E -> operand (len 1)\n");
+        fprintf(out, "DEBUG do_reduction: Rozpoznano pravidlo E -> operand (len 1)\n");
     }
 
     // Pravidlo 2: E -> ( E )
     else if (handle_len == 3 && handle[2].type == BRACKET_START && handle[1].type == PSEUDO_E && handle[0].type == BRACKET_END) {
         // new_node = NULL; // Uzel uz je na astStack, nic nedelame
         // Debug vypis
-        //fprintf(out, "DEBUG do_reduction: Rozpoznano pravidlo E -> ( E ) (len 3)\n");
+        fprintf(out, "DEBUG do_reduction: Rozpoznano pravidlo E -> ( E ) (len 3)\n");
     }
     // Pravidlo 3 a 4: E -> op E (unarni)  NEBO E -> E op E (binarni)
     // Handle (reversed) je [E, op]
@@ -533,7 +549,7 @@ static int do_reduction(Stack* tokenStack, ASTStack* astStack, int* error_code) 
         Token op_token = handle[1];
 
         // Debug vypis
-        //fprintf(out, "DEBUG do_reduction: Rozpoznano pravidlo E -> E op E (len 3)\n");
+        fprintf(out, "DEBUG do_reduction: Rozpoznano pravidlo E -> E op E (len 3)\n");
 
         ASTNode *right, *left;
         if (ast_stack_pop(astStack, &right) != ERR_OK) { *error_code = SYNTAX_ERROR; return SYNTAX_ERROR; } // Pop E_right
@@ -600,10 +616,11 @@ static int do_reduction(Stack* tokenStack, ASTStack* astStack, int* error_code) 
     }
 
     // Debug vypis
-    //fprintf(out, "DEBUG: Vlozen pseudo-token E na tokenStack.\n");
+    fprintf(out, "DEBUG: Vlozen pseudo-token E na tokenStack.\n");
     //print_token_stack(tokenStack);
 
     fprintf(out, "DEBUG: Redukce uspesna.\n");
+    print_token_stack(tokenStack);
     return ERR_OK;
 }
 
@@ -655,6 +672,16 @@ ASTNode* parse_expression(int *error_code) {
 
         // 'b' = aktualni token na vstupu
         Token current_token = token;
+        if (is_new_token){
+            if ((current_token.type == NEW_LINE) && (top_terminal.type == OPERATOR)){
+                token = get_token();
+                fprintf(out, "---------\ngetting next token\n-----------\n");
+                current_token = token;
+            }
+            else if ((current_token.type == NEW_LINE) && (top_terminal.type != END_EXPR)){
+                current_token.type = END_EXPR;
+            }
+        }
 
         int top_idx = token_to_int(top_terminal);
         int current_idx;
@@ -1351,6 +1378,8 @@ ASTNode* built_in_call(int* error_code) {
     return call_node;
 }
 
+
+
 ASTNode* cond_loop(int* error_code) {
     fprintf(out, "nasli sme token v cond_loop cond_state: %s: ", (cond_state)? "while":"if");
     print_token(token);
@@ -1438,7 +1467,7 @@ ASTNode* cond_loop(int* error_code) {
                 ast_add_child(cond_node, else_if_node);
             } else if (token.type == BLOCK_START) {
                 // klasika else
-                token = get_token(); // nacist {
+                token = get_token(); // nacist /n
                 // check for lexical errors after consuming token
                 if (token.type == ERROR) {
                     *error_code = LEXICAL_ERROR;
@@ -1473,7 +1502,7 @@ ASTNode* cond_loop(int* error_code) {
     }
 
     // cekam newline po celym if/while
-    if (!check_and_take_token(NEW_LINE, error_code)) {
+    if (!check_token(NEW_LINE, error_code)) {
         ast_free(cond_node);
         return NULL;
     }
@@ -1991,7 +2020,7 @@ ASTNode* command(int *error_code) {
         case IF:
         case WHILE:
             command_node = cond_loop(error_code);
-            if (*error_code != ERR_OK){ return NULL; }
+            if (*error_code != ERR_OK){ fprintf(out, "___________\n command cond OK return \n_____________\n"); return NULL; }
             // cond_loop uz vzal newline
             break;
 
