@@ -119,6 +119,14 @@ static void analyze_getter(ASTNode* node, AnalysisContext* context);
 static bool func_exists(SymTable* table, const char* base_key);
 /*===========================================================================*/
 
+/* @brief Checks if the given DataType is numeric (INT or FLOAT)
+  * @param type DataType to check
+  * @return true if numeric, false otherwise
+*/
+static bool is_num_type(DataType type) {
+    return type == TYPE_INT || type == TYPE_FLOAT;
+}
+
 /* @brief Checks if a function with the given base key exists in the symbol table
   * @param table Pointer to the symbol table
   * @param base_key Base key of the function (without parameter signature)
@@ -307,10 +315,10 @@ static void analyze_node(ASTNode* node, AnalysisContext* context) {
             analyze_function(node, context);
             break;
         case NODE_SETTER:
-            analyze_setter(node, context);
+            //analyze_setter(node, context);
             break;
         case NODE_GETTER:
-            analyze_getter(node, context);
+            //analyze_getter(node, context);
             break;
         case NODE_BLOCK:
             analyze_block(node, context);
@@ -840,10 +848,273 @@ static DataType analyze_expression(ASTNode* node, AnalysisContext* context) {
             result_type = node->data_type;
             break;
         case NODE_ID: {
-          
+            // ID node, lookup in scope
+            const char* var_name = node->value;
+            SymbolData* var_symbol = scope_lookup(context->scope_stack, var_name);
+            if (var_symbol == NULL) {
+                // Is var global? (starts with __)
+                if (strncmp(var_name, "__", 2) == 0) {
+                    // Is global variable, lookup in global table
+                    var_symbol = symtable_lookup(context->global_table, var_name);
+                    if (var_symbol == NULL) {
+                        // Global variable undefined, set type null
+                        result_type = TYPE_NULL;
+                    } else {
+                        result_type = var_symbol->type;
+                    }
+                  } else {
+                    // Undefined variable
+                    *context->error_code = ERR_SEMANTIC_UNDEFINED;
+                    if (context->debug) {
+                        fprintf(stderr, "Semantic Error: Undefined variable '%s'\n", var_name);
+                    }
+                    return TYPE_UNKNOWN;
+                  }
+              } else {
+                // Symbol found
+                if (var_symbol->kind == SYM_GETTER) {
+                    // getter, result type is getter return type
+                    result_type = var_symbol->type;
+                } else if (var_symbol->kind == SYM_VARIABLE) {
+                    // var
+                    result_type = var_symbol->type;
+                } else {
+                    // cannot use function/setter as variable
+                    *context->error_code = ERR_SEMANTIC_OTHER;
+                    if (context->debug) {
+                        fprintf(stderr, "Semantic Error: Invalid use of '%s' as variable\n", var_name);
+                    }
+                    return TYPE_UNKNOWN;
+                }
+              }
+            break;
+        }
+
+        case NODE_CALL:
+            // Call node, analyze the call
+            analyze_call(node, context);
+            result_type = node->data_type; // Call node's data type is set in analyze_call
+            break;
+
+        case NODE_BINOP: {
+            // Binary operation node
+            // Recursively analyze left and right operands
+            ASTNode* left_node = node->children[0];
+            ASTNode* right_node = node->children[1];
+            DataType left_type = analyze_expression(left_node, context);
+            DataType right_type = analyze_expression(right_node, context);
+            const char* operator = node->value;
+
+            // See if error occurred during operand analysis
+            if (*context->error_code != ERR_OK) {
+                return TYPE_UNKNOWN;
+            }
+
+
+            // Type checking for arithmetic operators (+, -, *, /)
+            if (strcmp(operator, "+") == 0) {
+                // Addition or string concatenation
+                if (is_num_type(left_type) && is_num_type(right_type)) {
+                    // addition
+                    // Atleast one operand is float -> result is float
+                    result_type = (left_type == TYPE_FLOAT || right_type == TYPE_FLOAT) ? TYPE_FLOAT : TYPE_INT;
+                } else if (left_type == TYPE_STRING && right_type == TYPE_STRING) {
+                    // String concatenation
+                    result_type = TYPE_STRING;
+                } else if (left_type == TYPE_UNKNOWN || right_type == TYPE_UNKNOWN) {
+                    result_type = TYPE_UNKNOWN; // Don't know yet
+                } else {
+                    *context->error_code = ERR_SEMANTIC_TYPE;
+                    if (context->debug) {
+                        fprintf(stderr, "Semantic Error: Type mismatch in binary operation '%s'\n", operator);
+                    }
+                }
+
+            // Type checking for subtraction, multiplication, division
+            } else if (strcmp(operator, "-") == 0 ||
+                       strcmp(operator, "*") == 0 ||
+                       strcmp(operator, "/") == 0) {
+                // Subtraction, multiplication, division
+                if (is_num_type(left_type) && is_num_type(right_type)) {
+                    // Atleast one operand is float -> result is float
+                    result_type = (left_type == TYPE_FLOAT || right_type == TYPE_FLOAT) ? TYPE_FLOAT : TYPE_INT;
+                } else if (left_type == TYPE_UNKNOWN || right_type == TYPE_UNKNOWN) {
+                    result_type = TYPE_UNKNOWN; // Don't know yet
+                    // Division by zero check maybe
+                    // Can add probable result type based on left operand
+                } else {
+                    *context->error_code = ERR_SEMANTIC_TYPE;
+                    if (context->debug) {
+                        fprintf(stderr, "Semantic Error: Type mismatch in binary operation '%s'\n", operator);
+                    }
+                }
+
+            // Type checking for comparison operators (<, <=, >, >=)
+            } else if (strcmp(operator, "<") == 0 ||
+                       strcmp(operator, "<=") == 0 ||
+                       strcmp(operator, ">") == 0 ||
+                       strcmp(operator, ">=") == 0) {
+                // Comparison operators, result type is always BOOL
+                if (is_num_type(left_type) && is_num_type(right_type)) {
+                    // Has to be both num types
+                    result_type = TYPE_BOOL;
+                } else if (left_type == TYPE_UNKNOWN || right_type == TYPE_UNKNOWN) {
+                    result_type = TYPE_BOOL; // Has to be bool or runtime error
+                } else {
+                    *context->error_code = ERR_SEMANTIC_TYPE;
+                    if (context->debug) {
+                        fprintf(stderr, "Semantic Error: Type mismatch in comparison operation '%s'\n", operator);
+                    }
+                }
+
+            // Type checking for equality operators (==, !=)
+            } else if (strcmp(operator, "==") == 0 ||
+                       strcmp(operator, "!=") == 0) {
+                // Equality operators, result type is always BOOL
+                // Allow comparison of any types
+                result_type = TYPE_BOOL;
+
+            // Type checking for logical operators (&&, ||)
+            } else if (strcmp(operator, "&&") == 0 ||
+                       strcmp(operator, "||") == 0) {
+                // Logical operators works with truuthy/falsy values of any type
+                result_type = TYPE_BOOL;
+
+            // Type checking for IS operator
+            } else if (strcmp(operator, "is") == 0) {
+                // parser ensures right operand is type
+                result_type = TYPE_BOOL;
+            }
+            break;
+        }
+
+        case NODE_UNOP: {
+            // Unary operation node
+            ASTNode* operand_node = node->children[0];
+            DataType operand_type = analyze_expression(operand_node, context);
+            const char* operator = node->value;
+
+            // Type checking for unary minus (-)
+            if (strcmp(operator, "-") == 0) {
+                if (is_num_type(operand_type)) {
+                    result_type = operand_type; // Result type is same as operand
+                } else if (operand_type == TYPE_UNKNOWN) {
+                    result_type = TYPE_UNKNOWN; // Don't know yet
+                } else {
+                    *context->error_code = ERR_SEMANTIC_TYPE;
+                    if (context->debug) {
+                        fprintf(stderr, "Semantic Error: Type mismatch in unary operation '%s'\n", operator);
+                    }
+                }
+
+            // Type checking for logical NOT (!)
+            } else if (strcmp(operator, "!") == 0) {
+                // Works with truthy/falsy values of any type
+                result_type = TYPE_BOOL;
+            }
+            break;
+        }
+
+        case NODE_TERNARY: {
+            // Ternary operation node (cond ? expr1 : expr2)
+            ASTNode* cond_node = node->children[0];
+            ASTNode* expr1_node = node->children[1];
+            ASTNode* expr2_node = node->children[2];
+
+            // Analyze condition
+            analyze_expression(cond_node, context);
+
+            // Analyze both expressions
+            DataType true_type = analyze_expression(expr1_node, context);
+            DataType false_type = analyze_expression(expr2_node, context);
+            if (*context->error_code != ERR_OK) {
+                return TYPE_UNKNOWN;
+            }
+
+            // If both types are the same, result type is that type
+            if (true_type == false_type) {
+                result_type = true_type;
+            } else {
+                result_type = TYPE_UNKNOWN; // Types differ, cannot determine
+            }
+            break;
+        }
+
+        default:
+            break;
+  }
+  // Set the node's final or probable data type
+    node->data_type = result_type;
+    return result_type;
+}
+
+
+int semantic_analysis(ASTNode* root, bool debug) {
+    if (root == NULL) {
+        return ERR_INTERNAL; // No AST to analyze
     }
 
+    int error_code = ERR_OK;
+
+    // Initialize global symbol table
+    SymTable* global_table = malloc(sizeof(SymTable));
+    if (global_table == NULL || symtable_init(global_table) != ERR_OK) {
+        free(global_table);
+        fprintf(stderr, "Semantic Error: Failed to initialize global symbol table\n");
+        return ERR_INTERNAL;
+    }
+
+    // Malloc scope stack
+    ScopeStack* scope_stack = malloc(sizeof(ScopeStack));
+    if (scope_stack == NULL) {
+        symtable_free(global_table);
+        free(global_table);
+        fprintf(stderr, "Semantic Error: Failed to initialize scope stack\n");
+        return ERR_INTERNAL;
+    }
+    init_Scope_Stack(scope_stack);
+
+    // push global scope
+    if (!push_Scope(scope_stack, global_table)) {
+        symtable_free(global_table);
+        free(global_table);
+        free(scope_stack);
+        fprintf(stderr, "Semantic Error: Failed to push global scope\n");
+        return ERR_INTERNAL;
+    }
+
+    // Insert built-in functions into the global symbol table
+    fill_global_table(global_table, &error_code);
+    if (error_code != ERR_OK) {
+        symtable_free(global_table);
+        free(global_table);
+        free(scope_stack);
+        return error_code;
+    }
+
+    // prepare analysis context
+    AnalysisContext context;
+    context.global_table = global_table;
+    context.scope_stack = scope_stack;
+    context.current_function = NULL;
+    context.debug = debug;
+    context.error_code = &error_code;
+
+    // Start analyzing from the root node
+    analyze_node(root, &context);
+
+    // Cleanup
+    // Stack should have only global scope
+    SymTable* global_scope = pop_Scope(scope_stack);
+    symtable_free(global_scope);
+    free(global_scope);
+    free(scope_stack);
+
+    return error_code;
 }
+
+
+
 
 
 
