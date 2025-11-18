@@ -53,6 +53,7 @@ bool match_token(TokenType type){
 }
 
 // debug token
+// Checks current token against desired tokentype returns true if they match and recieves new token
 bool check_and_take_token(TokenType type, int *error_code){
     // Check for lexical errors
     if (token.type == ERROR) {
@@ -73,6 +74,21 @@ bool check_and_take_token(TokenType type, int *error_code){
         return false;
     }
 
+    return true;
+}
+// Checks current token against desired tokentype returns true if they match, doesnt ask for new token
+bool check_token(TokenType type, int *error_code){
+    // Check for lexical errors
+    if (token.type == ERROR) {
+        *error_code = LEXICAL_ERROR;
+        return false;
+    }
+
+    if (token.type != type){
+        fprintf(out, "ERROR: Ocekavam token type %d ale nasel jsem %d\n", type, token.type);
+        *error_code = SYNTAX_ERROR;
+        return false;
+    }
     return true;
 }
 
@@ -1351,6 +1367,8 @@ ASTNode* built_in_call(int* error_code) {
     return call_node;
 }
 
+
+
 ASTNode* cond_loop(int* error_code) {
     fprintf(out, "nasli sme token v cond_loop cond_state: %s: ", (cond_state)? "while":"if");
     print_token(token);
@@ -1438,7 +1456,7 @@ ASTNode* cond_loop(int* error_code) {
                 ast_add_child(cond_node, else_if_node);
             } else if (token.type == BLOCK_START) {
                 // klasika else
-                token = get_token(); // nacist {
+                token = get_token(); // nacist /n
                 // check for lexical errors after consuming token
                 if (token.type == ERROR) {
                     *error_code = LEXICAL_ERROR;
@@ -1473,7 +1491,7 @@ ASTNode* cond_loop(int* error_code) {
     }
 
     // cekam newline po celym if/while
-    if (!check_and_take_token(NEW_LINE, error_code)) {
+    if (!check_token(NEW_LINE, error_code)) {
         ast_free(cond_node);
         return NULL;
     }
@@ -1991,7 +2009,7 @@ ASTNode* command(int *error_code) {
         case IF:
         case WHILE:
             command_node = cond_loop(error_code);
-            if (*error_code != ERR_OK){ return NULL; }
+            if (*error_code != ERR_OK){ fprintf(out, "___________\n command cond OK return \n_____________\n"); return NULL; }
             // cond_loop uz vzal newline
             break;
 
