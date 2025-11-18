@@ -200,13 +200,13 @@ SymbolData create_getter_symbol(DataType type) {
 }
 
 SymbolData create_setter_symbol(DataType param_type) {
-  SymbolData data = create_function_symbol(TYPE_NULL, 1);
+  SymbolData data;
   data.kind = SYM_SETTER;
+  data.type = TYPE_NULL; // Setters do not return a value
   data.defined = true;
 
-  if (data.info.function.param_types != NULL) {
-    data.info.function.param_types[0] = param_type;
-  }
+  // Set parameter type directly in setter info
+  data.info.setter.param_type = param_type;
 
   return data;
 }
