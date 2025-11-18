@@ -10,6 +10,7 @@
 #include "ast.h"
 #include "error.h"
 #include "symtable.h"
+#include "strutils.h"
 
 /*
 * @ brief Performs semantic analysis on the given AST.
