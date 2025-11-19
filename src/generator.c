@@ -91,7 +91,7 @@ ErrorCode generate_code(ASTNode* node, Frame* gf, FrameStack* fs){
     }
     case NODE_BLOCK: { // postupny chod prikazmi v code block
       scope_counter++;
-      for (int i = 0; i < node->child_count; i++) {
+      for (size_t i = 0; i < node->child_count; i++) {
         returnError = generate_code(node->children[i], gf, fs);
         if (returnError != ERR_OK) {
           scope_counter--;
@@ -100,6 +100,7 @@ ErrorCode generate_code(ASTNode* node, Frame* gf, FrameStack* fs){
       }
       scope_counter--;
       returnError = ERR_OK;
+      return ERR_OK;
     }
 
     case NODE_RETURN: {
@@ -119,13 +120,12 @@ ErrorCode generate_code(ASTNode* node, Frame* gf, FrameStack* fs){
 
     case NODE_CALL: {
       returnError = generate_code(node->children[1], gf, fs); //ARG_LIST
-
+      return ERR_OK;
     }
     case NODE_BINOP: {
       fprintf(stdout, "DEFVAR LF@tmpVar$%i\n", tmp_counter);
       tmp_counter++;
-
-
+      return ERR_OK;
     }
     case NODE_LITERAL: {
       if (node->data_type == TYPE_FLOAT) {
@@ -140,18 +140,34 @@ ErrorCode generate_code(ASTNode* node, Frame* gf, FrameStack* fs){
     case NODE_IF:
     case NODE_WHILE:{
       fprintf(stdout, "LABEL while$%d", scope_counter);
+      return ERR_OK;
     }
     case NODE_PARAM_LIST:
       return ERR_OK;
-    case NODE_ARG_LIST:
-      for (int i = 0; i < node->child_count; i++) {
+    case NODE_ARG_LIST: {
+      for (size_t i = 0; i < node->child_count; i++) {
         ASTNode* arg = node->children[i];
         fprintf(stdout, "PUSHS %s@%s\n", dataTypeToStr(arg->data_type), arg->value);
       }
+      return ERR_OK;
+    }
     case NODE_UNOP:
     case NODE_TERNARY:
-    case NODE_PROGRAM:
-      return ERR_INTERNAL;
+    case NODE_PROGRAM: {
+      fprintf(stdout, ".IFJcode25\n");
+      fprintf(stdout, "JUMP $main$0\n");
+      fprintf(stdout, "DEFVAR GF@$tempVar1");
+      fprintf(stdout, "DEFVAR GF@$tempVar2");
+      //generate all functions
+      ASTNode* mainBlock = node->children[0];
+      for (size_t i = 0; i < mainBlock->child_count; i++) {
+        returnError = generate_code(mainBlock->children[i], gf, fs);
+        if (returnError != ERR_OK) {
+          return ERR_INTERNAL;
+        }
+      }
+      return ERR_OK;
+    }
     default:
       return ERR_OK;
   }
@@ -160,9 +176,7 @@ ErrorCode generate_code(ASTNode* node, Frame* gf, FrameStack* fs){
 
 ErrorCode generate_program(ASTNode* root, SymTable** symTableArray, bool debug) {
   if (root == NULL) return ERR_INTERNAL;
-  //fixed prologue
-  printf(".IFJcode25\n");
-  printf("JUMP $main$0\n");
+
   Frame gf;
   FrameStack fs;
   F_init(&gf, GF);
@@ -175,14 +189,9 @@ ErrorCode generate_program(ASTNode* root, SymTable** symTableArray, bool debug) 
   if (symTableArray == NULL) {
     return ERR_INTERNAL;
   }
-  //generate all functions
-  ASTNode* mainBlock = root->children[0];
-  for (size_t i = 0; i < mainBlock->child_count; i++) {
-    state = generate_code(mainBlock->children[i], &gf, &fs);
-    if (state != ERR_OK) {
-      return ERR_INTERNAL;
-    }
-  }
+
+  state = generate_code(root, &gf, &fs);
+
 
   return state;
 }
