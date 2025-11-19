@@ -73,7 +73,7 @@ void symtable_free(SymTable *table) {
 }
 
 
-SymbolData *symtable_lookup(SymTable *table, const char *key) {
+SymItem *symtable_lookup_item(SymTable *table, const char *key) {
   if (table == NULL || key == NULL) {
     return NULL;
   }
@@ -88,10 +88,18 @@ SymbolData *symtable_lookup(SymTable *table, const char *key) {
     }
 
     if (item->state == SLOT_OCCUPIED && strcmp(item->key, key) == 0) {
-      return &item->data; // Found
+      return item; // Found (returning SymItem pointer)
     }
   }
   return NULL; // Not found
+}
+
+SymbolData *symtable_lookup(SymTable *table, const char *key) {
+  SymItem *item = symtable_lookup_item(table, key);
+  if (item != NULL) {
+    return &item->data;
+  }
+  return NULL;
 }
 
 
@@ -200,13 +208,13 @@ SymbolData create_getter_symbol(DataType type) {
 }
 
 SymbolData create_setter_symbol(DataType param_type) {
-  SymbolData data = create_function_symbol(TYPE_NULL, 1);
+  SymbolData data;
   data.kind = SYM_SETTER;
+  data.type = TYPE_NULL; // Setters do not return a value
   data.defined = true;
 
-  if (data.info.function.param_types != NULL) {
-    data.info.function.param_types[0] = param_type;
-  }
+  // Set parameter type directly in setter info
+  data.info.setter.param_type = param_type;
 
   return data;
 }

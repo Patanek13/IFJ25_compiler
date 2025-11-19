@@ -69,6 +69,13 @@ typedef struct SymTable {
 
 // ====== Function prototypes =======================
 
+/* @brief Lookup symbol table item
+ * @param table Pointer to the symbol table
+ * @param key Pointer to the symbol name
+ * @return Pointer to the symbol table item if found, NULL otherwise
+ */
+SymItem* symtable_lookup_item(SymTable* table, const char* key);
+
 /*
  * @brief Initialize symbol table
  * @param table Pointer to the symbol table

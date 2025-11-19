@@ -48,9 +48,9 @@ typedef enum {
 
 // AST Frame Types
 typedef enum {
-    FRAME_GLOBAL,
-    FRAME_LOCAL,
-    FRAME_TEMP
+    FRAME_GLOBAL, // Global frame
+    FRAME_LOCAL,   // Local frame
+    FRAME_UNKNOWN  // Unknown frame
 } ASTFrameType;
 
 // ==== AST Node Structure =====================
