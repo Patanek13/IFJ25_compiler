@@ -590,7 +590,7 @@ static void analyze_function(ASTNode* node, AnalysisContext* context, AnalysisPh
 }
 
 /*
-* @brief Analyzes the assign AST node (also var declaration)
+* @brief Analyzes the assign AST node
 */
 static void analyze_assign(ASTNode *node, AnalysisContext* context) {
     ASTNode* id_node = node->children[0]; // First child is the ID
@@ -759,7 +759,7 @@ static void analyze_call(ASTNode* node, AnalysisContext* context) {
             ASTNode* arg = arg_list->children[0];
             // Argument must be String
             if (arg->type == NODE_LITERAL && arg->data_type != TYPE_STRING) {
-                *context->error_code = ERR_SEMANTIC_TYPE;
+                *context->error_code = ERR_SEMANTIC_FUNCTION;
                 if (context->debug) {
                     fprintf(stderr, "Semantic Error: Argument type mismatch in call to 'Ifj.length'\n");
                 }
@@ -771,21 +771,21 @@ static void analyze_call(ASTNode* node, AnalysisContext* context) {
             ASTNode* arg3 = arg_list->children[2];
             // First argument must be String
             if (arg1->type == NODE_LITERAL && arg1->data_type != TYPE_STRING) {
-                *context->error_code = ERR_SEMANTIC_TYPE;
+                *context->error_code = ERR_SEMANTIC_FUNCTION;
                 if (context->debug) {
                     fprintf(stderr, "Semantic Error: First argument type mismatch in call to 'Ifj.substring'\n");
                 }
             }
             // Second and third arguments must be Int
             if (arg2->type == NODE_LITERAL && arg2->data_type != TYPE_INT) {
-                *context->error_code = ERR_SEMANTIC_TYPE;
+                *context->error_code = ERR_SEMANTIC_FUNCTION;
                 if (context->debug) {
                     fprintf(stderr, "Semantic Error: Second argument type mismatch in call to 'Ifj.substring'\n");
                 }
             }
 
             if (arg3->type == NODE_LITERAL && arg3->data_type != TYPE_INT) {
-                *context->error_code = ERR_SEMANTIC_TYPE;
+                *context->error_code = ERR_SEMANTIC_FUNCTION;
                 if (context->debug) {
                     fprintf(stderr, "Semantic Error: Third argument type mismatch in call to 'Ifj.substring'\n");
                 }
@@ -796,14 +796,14 @@ static void analyze_call(ASTNode* node, AnalysisContext* context) {
             ASTNode* arg2 = arg_list->children[1];
             // First argument must be String
             if (arg1->type == NODE_LITERAL && arg1->data_type != TYPE_STRING) {
-                *context->error_code = ERR_SEMANTIC_TYPE;
+                *context->error_code = ERR_SEMANTIC_FUNCTION;
                 if (context->debug) {
                     fprintf(stderr, "Semantic Error: First argument type mismatch in call to 'Ifj.ord'\n");
                 }
             }
             // Second argument must be Int
             if (arg2->type == NODE_LITERAL && arg2->data_type != TYPE_INT) {
-                *context->error_code = ERR_SEMANTIC_TYPE;
+                *context->error_code = ERR_SEMANTIC_FUNCTION;
                 if (context->debug) {
                     fprintf(stderr, "Semantic Error: Second argument type mismatch in call to 'Ifj.ord'\n");
                 }
@@ -813,9 +813,36 @@ static void analyze_call(ASTNode* node, AnalysisContext* context) {
             ASTNode* arg1 = arg_list->children[0];
             // Argument must be Int
             if (arg1->type == NODE_LITERAL && arg1->data_type != TYPE_INT) {
-                *context->error_code = ERR_SEMANTIC_TYPE;
+                *context->error_code = ERR_SEMANTIC_FUNCTION;
                 if (context->debug) {
                     fprintf(stderr, "Semantic Error: Argument type mismatch in call to 'Ifj.chr'\n");
+                }
+            }
+        } else if (strcmp(func_name, "Ifj.floor") == 0) {
+            // Ifj.floor(num: Num) -> Num
+            ASTNode* arg1 = arg_list->children[0];
+            // Argument must be Num
+            if (arg1->type == NODE_LITERAL && !is_num_type(arg1->data_type)) {
+                *context->error_code = ERR_SEMANTIC_FUNCTION;
+                if (context->debug) {
+                    fprintf(stderr, "Semantic Error: Argument type mismatch in call to 'Ifj.floor'\n");
+                }
+            }
+        } else if (strcmp(func_name, "Ifj.strcmp") == 0) {
+            // Ifj.strcmp(str1: String, str2: String) -> Num
+            ASTNode* arg1 = arg_list->children[0];
+            ASTNode* arg2 = arg_list->children[1];
+            // Both arguments must be String
+            if (arg1->type == NODE_LITERAL && arg1->data_type != TYPE_STRING) {
+                *context->error_code = ERR_SEMANTIC_FUNCTION;
+                if (context->debug) {
+                    fprintf(stderr, "Semantic Error: First argument type mismatch in call to 'Ifj.strcmp'\n");
+                }
+            }
+            if (arg2->type == NODE_LITERAL && arg2->data_type != TYPE_STRING) {
+                *context->error_code = ERR_SEMANTIC_FUNCTION;
+                if (context->debug) {
+                    fprintf(stderr, "Semantic Error: Second argument type mismatch in call to 'Ifj.strcmp'\n");
                 }
             }
         }
