@@ -196,16 +196,16 @@ ErrorCode generate_code(ASTNode* node, Frame* gf, FrameStack* fs){
       //counter.labelCounter = 0;
       int numOfParams = node->children[0]->child_count;
       fprintf(stdout, "LABEL $%s$%i\n",node->value, numOfParams);
-      Frame* lf = malloc(sizeof(Frame));
-      F_init(lf, LF);
+      //Frame* lf = malloc(sizeof(Frame));
+      //F_init(lf, LF);
       fprintf(stdout, "CREATEFRAME\n");
-      FS_Push(fs, lf);
+      //FS_Push(fs, lf);
       fprintf(stdout, "PUSHFRAME\n");
-      populateVarDefinitions(node, lf);
+      populateVarDefinitions(node, gf);
       if (numOfParams > 0) {
         for (int i = numOfParams - 1; i >= 0; i--) {
-          ASTNode* param = node->children[0]->children[i];
-          F_insert(lf, param->value, param->data_type);
+          //ASTNode* param = node->children[0]->children[i];
+          //F_insert(lf, param->value, param->data_type);
           fprintf(stdout, "DEFVAR LF@%s\n", node->children[0]->children[i]->value);
           fprintf(stdout, "POPS LF@%s\n", node->children[0]->children[i]->value);
         }
@@ -216,8 +216,8 @@ ErrorCode generate_code(ASTNode* node, Frame* gf, FrameStack* fs){
 
       if (strcmp(node->value, "main") != 0) {
         fprintf(stdout, "PUSHS nil@nil\n");
-        FS_Pop(fs);
-        F_cleanup(lf);
+        //FS_Pop(fs);
+        //F_cleanup(lf);
         fprintf(stdout, "POPFRAME\n");
         fprintf(stdout, "RETURN\n");
       }
