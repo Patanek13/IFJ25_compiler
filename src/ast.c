@@ -17,6 +17,7 @@ ASTNode *ast_create_node(ASTNodeType type, const char *value,
   }
   node->type = type;
   node->data_type = data_type;
+  node->frame = FRAME_GLOBAL; // Default frame
 
   if (value) {
     node->value = str_dup(value);
