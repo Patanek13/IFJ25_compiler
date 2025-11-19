@@ -91,6 +91,8 @@ const char *ast_node_type_to_string(ASTNodeType type) {
     return "NODE_GETTER";
   case NODE_ASSIGN:
     return "NODE_ASSIGN";
+  case NODE_VAR_DECL:
+    return "NODE_VAR_DECL";
   case NODE_BINOP:
     return "NODE_BINOP";
   case NODE_UNOP:
