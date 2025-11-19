@@ -15,6 +15,12 @@
 #include "stackframe.h"
 #include "symtable.h"
 
+typedef struct {
+  int labelCounter;
+} labelManager;
+
+int getUniqueLabelId(labelManager* lm);
+
 /**
  * @brief Entry point for code generation
  *
