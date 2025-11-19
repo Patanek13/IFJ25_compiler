@@ -28,8 +28,8 @@ test-scanner:
 	mkdir -p $(BUILDDIR)
 	$(CC) $(CFLAGS) -o $(BUILDDIR)/$(OUTFILE) *.c
 	@echo "Running scanner tests..."
-	../scanner_tests/run_scan_tests.sh > ../scanner_tests/scan_test_results.txt
-	../scanner_tests/run_lex_tests.sh > ../scanner_tests/lex_test_results.txt
+	../scannertests/run_scan_tests.sh > ../scannertests/scan_test_results.txt
+	../scannertests/run_lex_tests.sh > ../scannertests/lex_test_results.txt
 	
 doc: doxygen Doxyfile
 

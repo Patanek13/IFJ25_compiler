@@ -247,7 +247,7 @@ Token scan_global_id() {
 //------------------------------------- Numbers --------------------------------------------------
 
 Token scan_exponent() {
-    if (match('+') || match('-')) {
+    if (peek() == '+' || peek() == '-') {
         advance();
     }
 
