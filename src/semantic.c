@@ -81,18 +81,6 @@ static SymbolData* scope_lookup(ScopeStack* stack, const char* key) {
     return NULL; // Not found in any scope
 }
 
-/* @brief Search symbol only in the current scope
-  * @param stack Pointer to the scope stack
-  * @param key Symbol name to search for
-  * @return Pointer to SymbolData if found, NULL otherwise
-*/
-static SymbolData* scope_lookup_current(ScopeStack* stack, const char* key) {
-    if (stack->topIndex < 0) {
-        return NULL;
-    }
-    return symtable_lookup(stack->tables[stack->topIndex], key);
-}
-
 /*========= SEMANTIC ANALYSIS IMPLEMENTATION =========*/
 
 /*========= Analysis Context Structure =========*/
@@ -103,6 +91,8 @@ typedef struct {
     int* error_code;        // Pointer to error code
     SymTable* global_table; // Global symbol table
     ASTNode* current_function; // Pointer to AST node of current function
+    size_t block_depth;      // Current block depth
+    const char* current_function_name; // Name of the current function
 } AnalysisContext;
 
 /*================================================================*/
@@ -429,6 +419,16 @@ static void analyze_var_decl(ASTNode* node, AnalysisContext* context) {
         if (context->debug) {
             fprintf(stdout, "Semantic Analysis: Declared variable '%s'\n", var_name);
         }
+        // Name mangling and set frame
+        char mangled_name[256];
+        const char* func_name = (context->current_function_name != NULL) ? context->current_function_name : "global";
+
+        snprintf(mangled_name, sizeof(mangled_name), "%s_%zu_%s", func_name, context->block_depth, var_name);
+
+        // Update the AST node with the mangled name and frame
+        free(id_node->value); // Free old name
+        id_node->value = str_dup(mangled_name); // Set mangled name
+        id_node->frame = FRAME_LOCAL; // Local frame
         id_node->data_type = TYPE_NULL; // Initially untyped
     }
 }
@@ -463,6 +463,8 @@ static void analyze_block(ASTNode* node, AnalysisContext* context, AnalysisPhase
         return;
       }
       new_scope_created = true;
+
+      context->block_depth++; // Increase block depth for new block
     }
 
     // Analyze all child nodes in the block
@@ -478,6 +480,7 @@ static void analyze_block(ASTNode* node, AnalysisContext* context, AnalysisPhase
         SymTable* old_table = pop_Scope(context->scope_stack);
         symtable_free(old_table);
         free(old_table);
+        context->block_depth--; // Decrease block depth after exiting block
     }
   }
 
@@ -543,6 +546,11 @@ static void analyze_function(ASTNode* node, AnalysisContext* context, AnalysisPh
         return;
     }
 
+    // Set current function name in context
+    context->current_function_name = func_name;
+    context->current_function = node; // Set current function AST node
+    context->block_depth = 1; // Block depth starts at 1 inside function
+
     // Insert parameters into the function's symbol table
     for (size_t param_idx = 0; param_idx < param_count; param_idx++) {
         ASTNode* param_node = param_list->children[param_idx];
@@ -568,9 +576,11 @@ static void analyze_function(ASTNode* node, AnalysisContext* context, AnalysisPh
 
     }
     // Analyze the function body block
-    context->current_function = node; // Set current function context
     analyze_node(func_block, context, phase);
+
     context->current_function = NULL; // Clear current function context
+    context->current_function_name = NULL; // Clear current function name
+    context->block_depth = 0; // Reset block depth
 
     // Pop the function scope after analysis
     SymTable* old_table = pop_Scope(context->scope_stack);
@@ -609,12 +619,15 @@ static void analyze_assign(ASTNode *node, AnalysisContext* context) {
             }
             sprintf(setter_key, "%s=", var_name);
 
-            SymbolData* setter_symbol = scope_lookup(context->scope_stack, setter_key);
+            // Lookup setter in global table
+            SymItem* setter_item = symtable_lookup_item(context->global_table, setter_key);
             free(setter_key);
 
-            if (setter_symbol != NULL && setter_symbol->kind == SYM_SETTER) {
+            if (setter_item != NULL && setter_item->data.kind == SYM_SETTER) {
                 // It is a setter call
-                var_symbol = setter_symbol;
+                var_symbol = &setter_item->data;
+                free(id_node->value); // Free old name
+                id_node->value = str_dup(setter_item->key); // Set setter name
             } else if (strncmp(var_name, "__", 2) == 0) {
                 // It is a global variable (starts with __), declare if not exists
                 // Check in global table
@@ -650,6 +663,7 @@ static void analyze_assign(ASTNode *node, AnalysisContext* context) {
                 fprintf(stderr, "Semantic Error: Type mismatch in setter '%s' assignment\n", var_name);
             }
         }
+        id_node->frame = FRAME_GLOBAL; // Setter is always global frame
         id_node->data_type = TYPE_NULL; // Setter nothing returns, it is setter call
 
     } else if (var_symbol->kind == SYM_VARIABLE) {
@@ -657,6 +671,23 @@ static void analyze_assign(ASTNode *node, AnalysisContext* context) {
         //DEBUG:
         if (context->debug) {
             fprintf(stderr, "DEBUG ASSIGN: Symbol '%s' updated type to %d (%s)\n", var_name, expr_type, data_type_to_string(expr_type));
+        }
+
+        // Find out the scoope
+        if (strncmp(var_name, "__", 2) == 0) {
+            id_node->frame = FRAME_GLOBAL; // Global variable
+            // No need to mangle global var name
+        } else {
+            id_node->frame = FRAME_LOCAL; // Local variable
+
+            // Name mangling
+            char mangled_name[256];
+            const char* func_name = (context->current_function_name != NULL) ? context->current_function_name : "global";
+
+            // Use current block depth but not excactly, because variable could be declared in outer block
+            snprintf(mangled_name, sizeof(mangled_name), "%s_%zu_%s", func_name, context->block_depth, var_name);
+            free(id_node->value); // Free old name
+            id_node->value = str_dup(mangled_name); // Set mangled name
         }
 
         var_symbol->type = expr_type; // Update type
@@ -1070,9 +1101,18 @@ static DataType analyze_expression(ASTNode* node, AnalysisContext* context) {
                     // Multiplication
                     // Atleast one operand is float -> result is float
                     result_type = (left_type == TYPE_FLOAT || right_type == TYPE_FLOAT) ? TYPE_FLOAT : TYPE_INT;
-                } else if(left_type == TYPE_STRING && is_num_type(right_type)) {
-                    // String iteration --> string multiplied by num
-                    result_type = TYPE_STRING;
+                } else if(left_type == TYPE_STRING) {
+                    // String iteration --> string multiplied by Num (type int)
+                    if (right_type == TYPE_INT) {
+                        result_type = TYPE_STRING;
+                    } else if (right_type == TYPE_UNKNOWN) {
+                        result_type = TYPE_STRING; // Don't know yet
+                    } else {
+                        *context->error_code = ERR_SEMANTIC_TYPE;
+                        if (context->debug) {
+                            fprintf(stderr, "Semantic Error: Type mismatch in binary operation '%s'\n", operator);
+                        }
+                    }
                 } else if (left_type == TYPE_UNKNOWN || right_type == TYPE_UNKNOWN) {
                     result_type = TYPE_UNKNOWN; // Don't know yet
                 } else {
