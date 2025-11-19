@@ -11,6 +11,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include "parser.h"
+#include "semantic.h"
 #include "ast.h"
 
 
@@ -42,17 +43,35 @@ int main(int argc, char** argv) {
   // Check for parsing errors
   if (ast_root == NULL) {
     if (debug) {
-      fprintf(stdout, "Parsing failed with error code: %d\n", parse_error);
+      fprintf(stderr, "Parsing failed with error code: %d\n", parse_error);
     }
+    ast_free(ast_root);
     return parse_error; // Return the parsing error code
+  } else {
+    if (debug) {
+      fprintf(stderr, "Parsing completed successfully.\n");
+    }
   }
 
-  // Semantic analysis would go here
+  // Semantic analysis
+  int semantic_error = semantic_analysis(ast_root, debug);
+  if (semantic_error != ERR_OK) {
+    if (debug) {
+      fprintf(stderr, "Semantic analysis failed with error code: %d\n", semantic_error);
+    }
+    ast_free(ast_root);
+    return semantic_error; // Return the semantic error code
+  } else {
+    if (debug) {
+      fprintf(stderr, "Semantic analysis completed successfully.\n");
+    }
+  }
+
   // Generate code would go here
 
   if (debug) {
-    fprintf(stdout, "<AST representation>\n");
-    ast_fprint_debug(ast_root, stdout);
+    fprintf(stderr, "<AST representation>\n");
+    ast_fprint_debug(ast_root, stderr);
   }
 
 
@@ -60,7 +79,7 @@ int main(int argc, char** argv) {
   ast_free(ast_root);
 
   if (debug) {
-    fprintf(stdout, "Program ended successfully\n");
+    fprintf(stderr, "Program ended successfully\n");
   }
 
   return ERR_OK; // Compilation successful
