@@ -7,8 +7,10 @@
  *
  */
 #include "error.h"
+#include "generator.h"
 #include "scanner.h"
 #include <stdbool.h>
+#include <stdio.h>
 #include <string.h>
 #include "parser.h"
 #include "semantic.h"
@@ -67,7 +69,8 @@ int main(int argc, char** argv) {
     }
   }
 
-  // Generate code would go here
+  ErrorCode generatorError = generate_program(ast_root, NULL, false);
+  fprintf(stderr, "Generator status: %i ", generatorError);
 
   if (debug) {
     fprintf(stderr, "<AST representation>\n");
