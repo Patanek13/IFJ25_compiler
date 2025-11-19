@@ -1888,12 +1888,48 @@ ASTNode* command(int *error_code) {
 
           } else if (token.type == EQUAL) {
               // Neni to volani, takze prirazeni
-              token = id_token; // Vratim se k id tokenu pro assign
-              command_node = assign(error_code);
-              if (*error_code != ERR_OK) {
+              // vytvorit uzel pro prirazeni (NODE_ASSIGN)
+              ASTNode* assign_node = ast_create_node(NODE_ASSIGN, NULL, TYPE_UNKNOWN);
+              if (assign_node == NULL) {
+                  *error_code = ERR_INTERNAL;
                   return NULL;
               }
-            // assign necha token za vyrazem
+
+              // vytvorit uzel pro ID
+              ASTNode* id_node = ast_create_node(NODE_ID, id_token.value.string, TYPE_UNKNOWN);
+              if (id_node == NULL) {
+                  ast_free(assign_node);
+                  *error_code = ERR_INTERNAL;
+                  return NULL;
+              }
+              // pridat id jako child k assign_node
+              ast_add_child(assign_node, id_node);
+
+              // nacist dalsi token, musi byt literal nebo expression
+              token = get_token();
+              // Check for lexical errors after consuming token
+              if (token.type == ERROR) {
+                  ast_free(assign_node);
+                  *error_code = LEXICAL_ERROR;
+                  return NULL;
+              }
+
+              // zpracovat vyraz
+              ASTNode* expr_node = parse_expression(error_code);
+              if (*error_code != ERR_OK) {
+                  ast_free(assign_node);
+                  return NULL;
+              }
+
+              // pridat expr_node jako child k assign_node
+              ast_add_child(assign_node, expr_node);
+              command_node = assign_node;
+
+              // cekam NEW_LINE
+              if (!check_and_take_token(NEW_LINE, error_code)) {
+                  ast_free(command_node);
+                  return NULL;
+              }
           } else {
               fprintf(out, "ERROR: Neocekavany token po ID: ");
               print_token(token);
@@ -1944,10 +1980,47 @@ ASTNode* command(int *error_code) {
 
             if (token.type == EQUAL) {
                 // Je to prirazeni
-                token = id_token; // Vratime token zpet na GLOBAL_ID
-                command_node = assign(error_code);
-                if (*error_code != ERR_OK){ return NULL; }
-                // assign uz se postaral o newline
+              ASTNode* assign_node = ast_create_node(NODE_ASSIGN, NULL, TYPE_UNKNOWN);
+              if (assign_node == NULL) {
+                  *error_code = ERR_INTERNAL;
+                  return NULL;
+              }
+
+              // vytvorit uzel pro ID
+              ASTNode* id_node = ast_create_node(NODE_ID, id_token.value.string, TYPE_UNKNOWN);
+              if (id_node == NULL) {
+                  ast_free(assign_node);
+                  *error_code = ERR_INTERNAL;
+                  return NULL;
+              }
+              // pridat id jako child k assign_node
+              ast_add_child(assign_node, id_node);
+
+              // nacist dalsi token, musi byt literal nebo expression
+              token = get_token();
+              // Check for lexical errors after consuming token
+              if (token.type == ERROR) {
+                  ast_free(assign_node);
+                  *error_code = LEXICAL_ERROR;
+                  return NULL;
+              }
+
+              // zpracovat vyraz
+              ASTNode* expr_node = parse_expression(error_code);
+              if (*error_code != ERR_OK) {
+                  ast_free(assign_node);
+                  return NULL;
+              }
+
+              // pridat expr_node jako child k assign_node
+              ast_add_child(assign_node, expr_node);
+              command_node = assign_node;
+
+              // cekam NEW_LINE
+              if (!check_and_take_token(NEW_LINE, error_code)) {
+                  ast_free(command_node);
+                  return NULL;
+              }
             } else {
                 fprintf(out, "ERROR: Neocekavany token po GLOBAL_ID: ");
                 print_token(token);
@@ -1981,8 +2054,8 @@ ASTNode* command(int *error_code) {
             }
 
             // vytvorit uzel pro deklaraci promenne
-            command_node = ast_create_node(NODE_ASSIGN, NULL, TYPE_UNKNOWN);
-            if (command_node == NULL) {
+            ASTNode* decl_node = ast_create_node(NODE_VAR_DECL, NULL, TYPE_UNKNOWN);
+            if (decl_node == NULL) {
                 *error_code = ERR_INTERNAL;
                 free(var_name);
                 return NULL;
@@ -1992,22 +2065,14 @@ ASTNode* command(int *error_code) {
             ASTNode* id_node = ast_create_node(NODE_ID, var_name, TYPE_UNKNOWN);
             free(var_name);
             if (id_node == NULL) {
-                ast_free(command_node);
+                ast_free(decl_node);
                 *error_code = ERR_INTERNAL;
                 return NULL;
             }
             // pridat id jako child k assign_node
-            ast_add_child(command_node, id_node);
+            ast_add_child(decl_node, id_node);
 
-            // promenna inicializovana na null
-            ASTNode* null_node = ast_create_node(NODE_LITERAL, "null", TYPE_NULL);
-            if (null_node == NULL) {
-                ast_free(command_node);
-                *error_code = ERR_INTERNAL;
-                return NULL;
-            }
-            // pridat null jako child k assign_node
-            ast_add_child(command_node, null_node);
+            command_node = decl_node;
             // cekam NEW_LINE
             token = get_token();
             if (!check_and_take_token(NEW_LINE, error_code)) {
