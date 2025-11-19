@@ -73,7 +73,7 @@ void symtable_free(SymTable *table) {
 }
 
 
-SymbolData *symtable_lookup(SymTable *table, const char *key) {
+SymItem *symtable_lookup_item(SymTable *table, const char *key) {
   if (table == NULL || key == NULL) {
     return NULL;
   }
@@ -88,10 +88,18 @@ SymbolData *symtable_lookup(SymTable *table, const char *key) {
     }
 
     if (item->state == SLOT_OCCUPIED && strcmp(item->key, key) == 0) {
-      return &item->data; // Found
+      return item; // Found (returning SymItem pointer)
     }
   }
   return NULL; // Not found
+}
+
+SymbolData *symtable_lookup(SymTable *table, const char *key) {
+  SymItem *item = symtable_lookup_item(table, key);
+  if (item != NULL) {
+    return &item->data;
+  }
+  return NULL;
 }
 
 
