@@ -304,7 +304,7 @@ static void analyze_node(ASTNode* node, AnalysisContext* context, AnalysisPhase 
     }
 
     if (context->debug) {
-        fprintf(stdout, "Semantic Analysis: Analyzing node of type %d\n", node->type);
+        fprintf(stderr, "Semantic Analysis: Analyzing node of type %d\n", node->type);
     }
 
     switch (node->type) {
@@ -417,7 +417,7 @@ static void analyze_var_decl(ASTNode* node, AnalysisContext* context) {
     } else {
         // Successfully declared variable
         if (context->debug) {
-            fprintf(stdout, "Semantic Analysis: Declared variable '%s'\n", var_name);
+            fprintf(stderr, "Semantic Analysis: Declared variable '%s'\n", var_name);
         }
         // Name mangling and set frame
         char mangled_name[256];
@@ -491,7 +491,7 @@ static void analyze_block(ASTNode* node, AnalysisContext* context, AnalysisPhase
 */
 static void analyze_function(ASTNode* node, AnalysisContext* context, AnalysisPhase phase) {
     if (context->debug) {
-        fprintf(stdout, "Semantic Analysis: Analyzing function node\n");
+        fprintf(stderr, "Semantic Analysis: Analyzing function node\n");
     }
 
     // Get information about the function from the AST node
@@ -598,7 +598,7 @@ static void analyze_assign(ASTNode *node, AnalysisContext* context) {
     const char* var_name = id_node->value; // Variable name
 
     if (context->debug) {
-        fprintf(stdout, "Semantic Analysis: Analyzing assign node for variable '%s'\n", var_name);
+        fprintf(stderr, "Semantic Analysis: Analyzing assign node for variable '%s'\n", var_name);
     }
 
     // Analyze the expression to get its type
@@ -712,7 +712,7 @@ static void analyze_call(ASTNode* node, AnalysisContext* context) {
     size_t arg_count = arg_list->child_count;
 
     if (context->debug) {
-        fprintf(stdout, "Semantic Analysis: Analyzing call node for function '%s' return type: %s\n", func_name, data_type_to_string(node->data_type));
+        fprintf(stderr, "Semantic Analysis: Analyzing call node for function '%s' return type: %s\n", func_name, data_type_to_string(node->data_type));
     }
 
     // Analyze all argument expressions to get their types (recursive)
@@ -830,7 +830,7 @@ static void analyze_call(ASTNode* node, AnalysisContext* context) {
 */
 static void analyze_return(ASTNode* node, AnalysisContext* context) {
     if (context->debug) {
-        fprintf(stdout, "Semantic Analysis: Analyzing return node\n");
+        fprintf(stderr, "Semantic Analysis: Analyzing return node\n");
     }
 
     // Get the current function's expected return type
@@ -907,7 +907,7 @@ static void analyze_return(ASTNode* node, AnalysisContext* context) {
 
 static void analyze_if(ASTNode* node, AnalysisContext* context, AnalysisPhase phase) {
     if (context->debug) {
-        fprintf(stdout, "Semantic Analysis: Analyzing if node\n");
+        fprintf(stderr, "Semantic Analysis: Analyzing if node\n");
     }
 
     // First child is the cond expression (only analyzed in analysis phase)
@@ -936,7 +936,7 @@ static void analyze_if(ASTNode* node, AnalysisContext* context, AnalysisPhase ph
 */
 static void analyze_while(ASTNode* node, AnalysisContext* context, AnalysisPhase phase) {
     if (context->debug) {
-        fprintf(stdout, "Semantic Analysis: Analyzing while node\n");
+        fprintf(stderr, "Semantic Analysis: Analyzing while node\n");
     }
 
     // First child is the cond expression (only analyzed in analysis phase)
@@ -1241,7 +1241,7 @@ static DataType analyze_expression(ASTNode* node, AnalysisContext* context) {
 */
 static void analyze_getter(ASTNode* node, AnalysisContext* context, AnalysisPhase phase) {
     if (context->debug) {
-        fprintf(stdout, "Semantic Analysis: Analyzing getter node\n");
+        fprintf(stderr, "Semantic Analysis: Analyzing getter node\n");
     }
 
     const char* getter_name = node->value;
@@ -1309,7 +1309,7 @@ static void analyze_getter(ASTNode* node, AnalysisContext* context, AnalysisPhas
 
 static void analyze_setter(ASTNode* node, AnalysisContext* context, AnalysisPhase phase) {
     if (context->debug) {
-        fprintf(stdout, "Semantic Analysis: Analyzing setter node\n");
+        fprintf(stderr, "Semantic Analysis: Analyzing setter node\n");
     }
 
     const char* setter_name = node->value;
@@ -1442,7 +1442,7 @@ int semantic_analysis(ASTNode* root, bool debug) {
 
     // Phase 1
     if (debug) {
-        fprintf(stdout, "Semantic Analysis: Starting Phase 1\n");
+        fprintf(stderr, "Semantic Analysis: Starting Phase 1\n");
     }
 
     analyze_node(root, &context, PHASE_DEFINITION);
@@ -1457,7 +1457,7 @@ int semantic_analysis(ASTNode* root, bool debug) {
 
     // Phase 2
     if (debug) {
-        fprintf(stdout, "Semantic Analysis: Starting Phase 2\n");
+        fprintf(stderr, "Semantic Analysis: Starting Phase 2\n");
     }
     analyze_node(root, &context, PHASE_ANALYSIS);
 
