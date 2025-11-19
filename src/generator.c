@@ -420,7 +420,7 @@ ErrorCode generate_program(ASTNode* root, SymTable** symTableArray, bool debug) 
   if (debug) {
     fprintf(stderr, "Debug mode ON\n");
   }
-  if (symTableArray == NULL) {
+  if (symTableArray != NULL) {
     return ERR_INTERNAL;
   }
 
