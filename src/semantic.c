@@ -111,12 +111,12 @@ typedef struct {
 static void analyze_node(ASTNode* node, AnalysisContext* context, AnalysisPhase phase);
 static void fill_global_table(SymTable* global_table, int* error_code);
 
-static void analyze_program(ASTNode* node, AnalysisContext* context, AnalysisPhase phase);
 static void analyze_function(ASTNode* node, AnalysisContext* context, AnalysisPhase phase);
 static void analyze_block(ASTNode* node, AnalysisContext* context, AnalysisPhase phase);
 static void analyze_return(ASTNode* node, AnalysisContext* context);
 static void analyze_assign(ASTNode* node, AnalysisContext* context);
 static void analyze_call(ASTNode* node, AnalysisContext* context);
+static void analyze_var_decl(ASTNode* node, AnalysisContext* context);
 static void analyze_if(ASTNode* node, AnalysisContext* context, AnalysisPhase phase);
 static void analyze_while(ASTNode* node, AnalysisContext* context, AnalysisPhase phase);
 static DataType analyze_expression(ASTNode* node, AnalysisContext* context);
@@ -351,6 +351,9 @@ static void analyze_node(ASTNode* node, AnalysisContext* context, AnalysisPhase 
                   case NODE_ASSIGN:
                       analyze_assign(node, context);
                       break;
+                  case NODE_VAR_DECL:
+                      analyze_var_decl(node, context);
+                      break;
                   case NODE_CALL:
                       analyze_call(node, context);
                       break;
@@ -383,33 +386,52 @@ static void analyze_node(ASTNode* node, AnalysisContext* context, AnalysisPhase 
     }
 }
 
-// /*
-// * @brief Analyzes the root AST node (program)
-// * @param root Pointer to the root ASTNode of the program.
-// * @param pointer to the analysis context
-// */
-// static void analyze_program(ASTNode* node, AnalysisContext* context, AnalysisPhase phase) {
-//     if (context->debug) {
-//         fprintf(stdout, "Semantic Analysis: Analyzing program node\n");
-//     }
+/*
+* @brief Analyzes the variable declaration AST node
+* @param node Pointer to the variable declaration ASTNode.
+* @param pointer to the analysis context
+*/
+static void analyze_var_decl(ASTNode* node, AnalysisContext* context) {
+    if (context->debug) {
+        fprintf(stderr, "Semantic Analysis: Analyzing variable declaration node\n");
+    }
 
-//     // Expecting program node to have one child: the main block
-//     if (node->child_count > 0 && node->children[0] != NULL) {
-//         analyze_node(node->children[0], context, phase);
-//     }
+    ASTNode* id_node = node->children[0]; // First child is the identifier
+    const char* var_name = id_node->value;
 
-//     // After analyzing the program, check for undefined main function
-//     char* key = make_function_key("main", 0);
-//     SymbolData* main_func = symtable_lookup(context->global_table, key);
+    // Check if not trying to declare global variable
+    if (strncmp(var_name, "__", 2) == 0) {
+        *context->error_code = ERR_SEMANTIC_REDEFINITION; // can be ERR_SEMANTIC_OTHER
+        if (context->debug) {
+            fprintf(stderr, "Semantic Error: Cannot declare variable with reserved name '__'\n");
+        }
+        return;
+    }
 
-//     if (main_func == NULL || !main_func->defined) {
-//         *context->error_code = ERR_SEMANTIC_UNDEFINED;
-//         if (context->debug) {
-//             fprintf(stderr, "Semantic Error: 'main' function is undefined\n");
-//         }
-//     }
-//     free(key);
-// }
+    // Check for redefinition in the current scope
+    SymTable* current_scope = top_Scope(context->scope_stack);
+
+    // Insert variable into current scope
+    SymbolData var_data = create_variable_symbol(TYPE_NULL);
+    ErrorCode insert_result = symtable_insert(current_scope, var_name, var_data);
+    // Handle possible errors
+    if (insert_result == ERR_SEMANTIC_REDEFINITION) {
+        *context->error_code = ERR_SEMANTIC_REDEFINITION;
+        if (context->debug) {
+            fprintf(stderr, "Semantic Error: Redefinition of variable '%s'\n", var_name);
+        }
+
+    } else if (insert_result == ERR_INTERNAL) {
+        *context->error_code = ERR_INTERNAL;
+        return; // Stop on internal error
+    } else {
+        // Successfully declared variable
+        if (context->debug) {
+            fprintf(stdout, "Semantic Analysis: Declared variable '%s'\n", var_name);
+        }
+        id_node->data_type = TYPE_NULL; // Initially untyped
+    }
+}
 
 /*
 * @brief Analyzes the block AST node
@@ -575,113 +597,78 @@ static void analyze_assign(ASTNode *node, AnalysisContext* context) {
         return;
     }
 
-    // Check if it is a declaration or assign
-    // Parser creates for var id ASSIGN_NODE with literal null as expr
-    bool is_declaration = false;
-    if (expr_node->type == NODE_LITERAL && expr_node->data_type == TYPE_NULL) {
-        is_declaration = true;
-    }
-
-    // Get the current scope symbol table
-    SymTable* current_scope = top_Scope(context->scope_stack);
-
-    // Declaration
-    if (is_declaration) {
-        // Check for redefinition in the current scope
-        SymbolData var_data = create_variable_symbol(TYPE_NULL);
-        ErrorCode insert_result = symtable_insert(current_scope, var_name, var_data);
-
-        if (insert_result == ERR_SEMANTIC_REDEFINITION) {
-            *context->error_code = ERR_SEMANTIC_REDEFINITION;
-            if (context->debug) {
-                fprintf(stderr, "Semantic Error: Redefinition of variable '%s'\n", var_name);
-            }
-            return;
-        } else if (insert_result == ERR_INTERNAL) {
-            *context->error_code = ERR_INTERNAL;
-            return;
-        } else {
-            // Successfully declared variable with NULL type
-            id_node->data_type = TYPE_NULL;
-            return;
-          }
-    } else { // This is assign x = ...
         // Lookup the variable in all scopes
         SymbolData* var_symbol = scope_lookup(context->scope_stack, var_name);
-        // for setter call
-        bool is_setter_call = false;
-        // Variable not found or found getter (cannot assign to getter)
-        if (var_symbol == NULL || var_symbol->kind == SYM_GETTER) {
+        // Local variable not found or found getter, global (cannot assign to getter)
+        if (var_symbol == NULL || var_symbol->kind != SYM_VARIABLE) {
             // Try to find setter with same name "name="
             char* setter_key = malloc(strlen(var_name) + 2); // +1 for '=' +1 for '\0'
-            if (setter_key != NULL) {
-                sprintf(setter_key, "%s=", var_name);
-                SymbolData* setter_symbol = scope_lookup(context->scope_stack, setter_key);
-                free(setter_key);
-
-                if (setter_symbol != NULL && setter_symbol->kind == SYM_SETTER) {
-                  // It is a setter call
-                  var_symbol = setter_symbol;
-                  is_setter_call = true;
-                }
-              } else {
+            if (setter_key == NULL) {
                 *context->error_code = ERR_INTERNAL;
                 return;
-              }
             }
+            sprintf(setter_key, "%s=", var_name);
 
-        if (var_symbol == NULL) {
-          // Is var global? (starts with __)
-          if (strncmp(var_name, "__", 2) == 0) {
-              // Is global variable, lookup or create in global table
-              var_symbol = symtable_lookup(context->global_table, var_name);
-              if (var_symbol == NULL) {
-                // Create global variable
-                SymbolData global_var_data = create_variable_symbol(expr_type);
-                symtable_insert(context->global_table, var_name, global_var_data);
-            } else {
-                var_symbol->type = expr_type; // Update type
-            }
-            id_node->data_type = expr_type; // Set AST node type
+            SymbolData* setter_symbol = scope_lookup(context->scope_stack, setter_key);
+            free(setter_key);
+
+            if (setter_symbol != NULL && setter_symbol->kind == SYM_SETTER) {
+                // It is a setter call
+                var_symbol = setter_symbol;
+            } else if (strncmp(var_name, "__", 2) == 0) {
+                // It is a global variable (starts with __), declare if not exists
+                // Check in global table
+                var_symbol = symtable_lookup(context->global_table, var_name);
+
+
+                if (var_symbol == NULL) {
+                    // Global variable, declare it if not exists
+                    SymbolData global_var_data = create_variable_symbol(expr_type);
+                    symtable_insert(context->global_table, var_name, global_var_data);
+
+                    // Update type in ast node
+                    id_node->data_type = expr_type;
+                    return;
+                  }
         } else {
             // It is a local variable, which must be already declared
             *context->error_code = ERR_SEMANTIC_UNDEFINED;
             if (context->debug) {
                 fprintf(stderr, "Semantic Error: Assignment to undefined variable '%s'\n", var_name);
             }
-        }
-    } else {
-        // Symbol found, which one ?
-        if (var_symbol->kind == SYM_SETTER) {
-            // It is setter, check param type with expr_type
-            if (var_symbol->info.setter.param_type != expr_type &&
-                var_symbol->info.setter.param_type != TYPE_UNKNOWN &&
-                expr_type != TYPE_UNKNOWN) {
-                *context->error_code = ERR_SEMANTIC_TYPE;
-                if (context->debug) {
-                    fprintf(stderr, "Semantic Error: Type mismatch in setter '%s' assignment\n", var_name);
-                }
-            }
-            id_node->data_type = TYPE_NULL; // Setter nothing returns, it is setter call
-        } else if (var_symbol->kind == SYM_VARIABLE) {
-            // It is var
-            var_symbol->type = expr_type; // Update type
-            id_node->data_type = expr_type; // Set AST node type
-        } else if (var_symbol->kind == SYM_GETTER) {
-            // Setter not found but, it is getter, cannot assign
-            *context->error_code = ERR_SEMANTIC_OTHER;
-            if (context->debug) {
-                fprintf(stderr, "Semantic Error: Cannot assign to getter '%s'\n", var_name);
-            }
-        } else {
-            // cannot assign to function/getter
-            *context->error_code = ERR_SEMANTIC_OTHER;
-            if (context->debug) {
-                fprintf(stderr, "Semantic Error: Invalid assignment target '%s'\n", var_name);
-            }
+            return;
         }
     }
-  }
+
+    if (var_symbol->kind == SYM_SETTER) {
+        // It is setter, check param type with expr_type
+        if (var_symbol->info.setter.param_type != expr_type &&
+            var_symbol->info.setter.param_type != TYPE_UNKNOWN &&
+            expr_type != TYPE_UNKNOWN) {
+            *context->error_code = ERR_SEMANTIC_TYPE;
+            if (context->debug) {
+                fprintf(stderr, "Semantic Error: Type mismatch in setter '%s' assignment\n", var_name);
+            }
+        }
+        id_node->data_type = TYPE_NULL; // Setter nothing returns, it is setter call
+
+    } else if (var_symbol->kind == SYM_VARIABLE) {
+        // It is local or global var, set its type
+        //DEBUG:
+        if (context->debug) {
+            fprintf(stderr, "DEBUG ASSIGN: Symbol '%s' updated type to %d (%s)\n", var_name, expr_type, data_type_to_string(expr_type));
+        }
+
+        var_symbol->type = expr_type; // Update type
+        id_node->data_type = expr_type; // Set AST node type
+
+    } else {
+        // cannot assign to function/getter
+        *context->error_code = ERR_SEMANTIC_OTHER;
+        if (context->debug) {
+            fprintf(stderr, "Semantic Error: Invalid assignment target '%s'\n", var_name);
+        }
+    }
 }
 
 /* @brief Analyzes the call AST node
@@ -694,7 +681,7 @@ static void analyze_call(ASTNode* node, AnalysisContext* context) {
     size_t arg_count = arg_list->child_count;
 
     if (context->debug) {
-        fprintf(stdout, "Semantic Analysis: Analyzing call node for function '%s'\n", func_name);
+        fprintf(stdout, "Semantic Analysis: Analyzing call node for function '%s' return type: %s\n", func_name, data_type_to_string(node->data_type));
     }
 
     // Analyze all argument expressions to get their types (recursive)
@@ -992,6 +979,10 @@ static DataType analyze_expression(ASTNode* node, AnalysisContext* context) {
                 } else if (var_symbol->kind == SYM_VARIABLE) {
                     // var
                     result_type = var_symbol->type;
+                    //DEBUG:
+                    if (context->debug) {
+                        fprintf(stderr, "DEBUG ID: Symbol '%s' read type %d (%s)\n", var_name, result_type, data_type_to_string(result_type));
+                    }
                 } else {
                     // cannot use function/setter as variable
                     *context->error_code = ERR_SEMANTIC_OTHER;
@@ -1042,13 +1033,28 @@ static DataType analyze_expression(ASTNode* node, AnalysisContext* context) {
             // Type checking for arithmetic operators (+, -, *, /)
             if (strcmp(operator, "+") == 0) {
                 // Addition or string concatenation
+                //DEBUG:
+                if (context->debug) {
+                    fprintf(stderr, "DEBUG ADD: Left type: %s, Right type: %s\n", data_type_to_string(left_type), data_type_to_string(right_type));
+                }
+
                 if (is_num_type(left_type) && is_num_type(right_type)) {
                     // addition
                     // Atleast one operand is float -> result is float
                     result_type = (left_type == TYPE_FLOAT || right_type == TYPE_FLOAT) ? TYPE_FLOAT : TYPE_INT;
-                } else if (left_type == TYPE_STRING && right_type == TYPE_STRING) {
+                } else if ((left_type == TYPE_STRING || left_type == TYPE_UNKNOWN) &&
+                           (right_type == TYPE_STRING || right_type == TYPE_UNKNOWN || right_type == TYPE_NULL)) {
                     // String concatenation
-                    result_type = TYPE_STRING;
+                    if (left_type == TYPE_NULL || (right_node->type == NODE_LITERAL && right_type == TYPE_NULL)) {
+                        // If TYPE_NULL literal, static error
+                        *context->error_code = ERR_SEMANTIC_TYPE;
+                        if (context->debug) {
+                            fprintf(stderr, "Semantic Error: Cannot concatenate NULL to String\n");
+                        }
+                    } else {
+                        // Allow String + Unknown or Var with TYPE_NULL type (could be string at runtime)
+                        result_type = TYPE_STRING;
+                    }
                 } else if (left_type == TYPE_UNKNOWN || right_type == TYPE_UNKNOWN) {
                     result_type = TYPE_UNKNOWN; // Don't know yet
                 } else {
