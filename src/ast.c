@@ -17,7 +17,7 @@ ASTNode *ast_create_node(ASTNodeType type, const char *value,
   }
   node->type = type;
   node->data_type = data_type;
-  node->frame = FRAME_GLOBAL; // Default frame
+  node->frame = FRAME_UNKNOWN; // Default frame
 
   if (value) {
     node->value = str_dup(value);
@@ -143,8 +143,8 @@ const char *ast_frame_type_to_string(ASTFrameType frame) {
     return "FRAME_GLOBAL";
   case FRAME_LOCAL:
     return "FRAME_LOCAL";
-  case FRAME_TEMP:
-    return "FRAME_TEMP";
+  case FRAME_UNKNOWN:
+    return "FRAME_UNKNOWN";
   default:
     return "FRAME_?";
   }
