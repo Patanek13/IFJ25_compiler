@@ -363,6 +363,7 @@ ErrorCode generate_code(ASTNode* node, Frame* gf, FrameStack* fs){
       }
 
       fprintf(stdout, "LABEL $end$%i", uniqueId);
+      return ERR_OK;
     }
     case NODE_WHILE:{
       int uniqueId = labelCounter++;
