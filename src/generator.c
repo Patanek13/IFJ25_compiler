@@ -16,6 +16,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+int labelCounter = 0;
+
 char* dataTypeToStr(DataType type) {
   char* dataType;
   switch (type) {
@@ -55,7 +57,7 @@ void populateVarDefinitions(ASTNode* node, Frame* lf) {
     fprintf(stdout, "DEFVAR %s@%s\n", getFrameFromId(node->value),node->value);
   }
 
-  for (int i = 0; i < node->child_count; i++) {
+  for (size_t i = 0; i < node->child_count; i++) {
     populateVarDefinitions(node->children[i], lf);
   }
 }
@@ -155,6 +157,34 @@ ErrorCode generate_binOp(ASTNode* node, Frame* gf, FrameStack* fs){
   return ERR_OK;
 }
 
+ErrorCode generate_builtIn(ASTNode* node, Frame* gf) {
+  char* funId = node->value;
+  if (strcmp(funId, "Ifj.write") == 0) {
+    for (size_t i = 0; i< node->children[1]->child_count; i++) {
+      generate_code(node->children[1]->children[i], gf, NULL);
+      fprintf(stdout, "POPS GF@__$tempRes\n");
+      fprintf(stdout, "WRITE GF@__$tempRes\n");
+    }
+    fprintf(stdout, "PUSHS nil@nil");
+    return ERR_OK;
+  } else if (strcmp(funId, "Ifj.read_num") == 0) {
+    fprintf(stdout, "READ GF@__$tempRes int\n");
+    fprintf(stdout, "PUSHS GF@__$tempRes\n");
+    return ERR_OK;
+  } else if (strcmp(funId, "Ifj.read_str") == 0) {
+    fprintf(stdout, "READ GF@__$tempRes string\n");
+    fprintf(stdout, "PUSHS GF@__$tempRes\n");
+    return ERR_OK;
+  } else if (strcmp(funId, "Ifj.length") == 0) {
+    generate_code(node->children[1], gf, NULL);
+    fprintf(stdout, "POPS GF@__$temp1\n");
+    fprintf(stdout, "STRLEN GF@__$tempRes GF@__$temp1\n");
+    fprintf(stdout, "PUSHS GF@__$tempRes");
+    return ERR_OK;
+  }
+  return ERR_OK;
+}
+
 ErrorCode generate_code(ASTNode* node, Frame* gf, FrameStack* fs){
   if (!node) return 0;
 
@@ -162,8 +192,8 @@ ErrorCode generate_code(ASTNode* node, Frame* gf, FrameStack* fs){
 
   switch (node->type) {
     case NODE_FUNCTION: {
-      labelManager counter;
-      counter.labelCounter = 0;
+      //labelManager counter;
+      //counter.labelCounter = 0;
       int numOfParams = node->children[0]->child_count;
       fprintf(stdout, "LABEL $%s$%i\n",node->value, numOfParams);
       Frame* lf = malloc(sizeof(Frame));
@@ -204,11 +234,12 @@ ErrorCode generate_code(ASTNode* node, Frame* gf, FrameStack* fs){
 
       ASTNode* codeBlock = node->children[1];
       populateVarDefinitions(codeBlock, gf);
-      generate_code(codeBlock, gf, fs);
+      returnError = generate_code(codeBlock, gf, fs);
 
       fprintf(stdout, "PUSHS nil@nil");
       fprintf(stdout, "POPFRAME");
       fprintf(stdout, "RETURN");
+      return returnError;
     }
 
     case NODE_GETTER:{
@@ -249,8 +280,12 @@ ErrorCode generate_code(ASTNode* node, Frame* gf, FrameStack* fs){
 
     case NODE_RETURN: {
       //Frame* lf = FS_Top(fs);
-      generate_code(node, gf, fs); //generuje vyraz v return
-      fprintf(stdout, "PUSHS LF@%s\n", node->children[0]->value);
+      if (node->child_count > 0) {
+        generate_code(node, gf, fs); //generuje vyraz v return na vrchol zasobniku
+      } else {
+        fprintf(stdout, "PUSHS nil@nil");
+      }
+      //fprintf(stdout, "PUSHS LF@%s\n", node->children[0]->value);
       Frame* lf = FS_Pop(fs);
       F_cleanup(lf);
       free(lf);
@@ -263,16 +298,31 @@ ErrorCode generate_code(ASTNode* node, Frame* gf, FrameStack* fs){
       if (node->value[idLen-1] == '=') { //identify setter
         char setterId[idLen-1];
         strncpy(setterId, node->value, idLen-1);
-        generate_code(node->children[1], gf, fs); // prava cast na zasobik
+        returnError = generate_code(node->children[1], gf, fs); // prava cast na zasobik
 
         fprintf(stdout, "CALL $set$%s\n", setterId);
       } else {
-        generate_code(node->children[1], gf, fs); // prava cast na zasobnik
+        returnError = generate_code(node->children[1], gf, fs); // prava cast na zasobnik
         fprintf(stdout, "POPS %s@%s\n", getFrameFromId(node->children[0]->value), node->children[0]->value);
       }
+      return returnError;
     }
 
     case NODE_CALL: {
+      char* funcId = node->value;
+
+      if (strncmp(funcId,"Ifj.", 4) == 0) {
+        returnError = generate_builtIn(node, gf);
+      } else {
+        int numOfArgs = node->children[1]->child_count;
+        if (numOfArgs > 0) {
+          ASTNode* args = node->children[1];
+          for (size_t i = 0; i < args->child_count; i++) {
+            generate_code(args->children[i], gf, fs); // push argumentov na stack
+          }
+        }
+        fprintf(stdout, "CALL %s$%i", node->value, numOfArgs);
+      }
       returnError = generate_code(node->children[1], gf, fs); //ARG_LIST
       return ERR_OK;
     }
@@ -298,9 +348,31 @@ ErrorCode generate_code(ASTNode* node, Frame* gf, FrameStack* fs){
       fprintf(stdout, "MOVE %s@%s nil@nil\n", getFrameFromId(node->children[0]->value), node->children[0]->value);
       return ERR_OK;
     }
-    case NODE_IF:
+    case NODE_IF:{
+      int uniqueId = labelCounter++;
+      generate_code(node->children[0], gf, fs);
+      fprintf(stdout, "PUSHS bool@false");
+      fprintf(stdout, "JUMPIFEQS $else$%i", uniqueId);
+
+      generate_code(node->children[1], gf, fs);
+      fprintf(stdout, "JUMP $end$%i", uniqueId);
+      fprintf(stdout, "LABEL $else$%i", uniqueId);
+
+      if (node->child_count > 2) {
+        generate_code(node->children[2], gf, fs);
+      }
+
+      fprintf(stdout, "LABEL $end$%i", uniqueId);
+    }
     case NODE_WHILE:{
-      //fprintf(stdout, "LABEL while$%d", scope_counter);
+      int uniqueId = labelCounter++;
+      fprintf(stdout, "LABEL $while$start$%i", uniqueId);
+      generate_code(node, gf, fs);
+      fprintf(stdout, "PUSHS bool@false");
+      fprintf(stdout, "JUMPIFEQS $while$end$%i", uniqueId);
+      generate_code(node->children[1], gf, fs);
+      fprintf(stdout, "JUMP $while$start$%i", uniqueId);
+      fprintf(stdout, "LABEL $while$end$%i", uniqueId);
       return ERR_OK;
     }
     case NODE_PARAM_LIST:
