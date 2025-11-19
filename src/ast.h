@@ -24,6 +24,7 @@ typedef enum {
     NODE_BLOCK, // Block of statements {...}
     NODE_RETURN, // Return statement
     NODE_ASSIGN, // x = expr
+    NODE_VAR_DECL, // var x
     NODE_CALL, // Function call foo(a,b)
     NODE_BINOP, // Binary operation (+, -, *, /...)
     NODE_LITERAL, // Literal value (num, string, bool, null)

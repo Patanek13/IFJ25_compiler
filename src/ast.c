@@ -17,7 +17,6 @@ ASTNode *ast_create_node(ASTNodeType type, const char *value,
   }
   node->type = type;
   node->data_type = data_type;
-  node->frame = FRAME_GLOBAL; // Default frame type
 
   if (value) {
     node->value = str_dup(value);
@@ -92,6 +91,8 @@ const char *ast_node_type_to_string(ASTNodeType type) {
     return "NODE_GETTER";
   case NODE_ASSIGN:
     return "NODE_ASSIGN";
+  case NODE_VAR_DECL:
+    return "NODE_VAR_DECL";
   case NODE_BINOP:
     return "NODE_BINOP";
   case NODE_UNOP:
