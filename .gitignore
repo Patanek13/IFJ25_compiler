@@ -10,3 +10,4 @@ IFJcompiler
 *.tar
 *.out
 TEST/
+check.log
