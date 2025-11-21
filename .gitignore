@@ -4,3 +4,10 @@ build/
 doc/
 
 *.exe
+IFJcompiler
+*.zip
+*.tar.gz
+*.tar
+*.out
+TEST/
+check.log
