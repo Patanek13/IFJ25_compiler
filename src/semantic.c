@@ -408,8 +408,8 @@ static void analyze_var_decl(ASTNode* node, AnalysisContext* context) {
 
     if (insert_result == ERR_SEMANTIC_REDEFINITION) {
         *context->error_code = ERR_SEMANTIC_REDEFINITION;
-        // Cleanup the mangled name copy in local variable (if symtable didn't take ownership, but here we passed struct by value copy)
-        // Note: create_variable_symbol creates a struct on stack. `mangled_name` pointer is copied.
+        // Cleanup the mangled name copy in local variable
+        // create_variable_symbol creates a struct on stack. mangled_name pointer is copied.
         // If insert fails, we must free it because SymTable didn't take it.
         free(var_data.mangled_name);
         if (context->debug) fprintf(stderr, "Semantic Error: Redefinition of variable '%s'\n", var_name);
@@ -425,8 +425,8 @@ static void analyze_var_decl(ASTNode* node, AnalysisContext* context) {
         id_node->frame = FRAME_LOCAL;
         id_node->data_type = TYPE_NULL;
 
-        // Warning: In symtable_insert, the SymbolData is copied into the table.
-        // So the pointer `var_data.mangled_name` is now owned by the table item. Do not free here.
+        // In symtable_insert, the SymbolData is copied into the table.
+        // pointer var_data.mangled_name is now owned by the table item. Do not free here.
     }
 }
 
@@ -596,7 +596,7 @@ static void analyze_assign(ASTNode *node, AnalysisContext* context) {
     DataType expr_type = analyze_expression(expr_node, context);
     if (*context->error_code != ERR_OK) return;
 
-    // 1. Try finding variable in scopes
+    // 1. Try find variable in scopes
     SymbolData* var_symbol = scope_lookup(context->scope_stack, var_name);
 
     // 2. If not found locally, check for Setter or Global
@@ -615,8 +615,7 @@ static void analyze_assign(ASTNode *node, AnalysisContext* context) {
 
             // AST Update for Setter: Use "name=" and FRAME_GLOBAL
             free(id_node->value);
-            id_node->value = setter_key; // Take ownership of setter_key pointer
-            // Note: setter_key pointer is used here, so we DO NOT free it.
+            id_node->value = setter_key; // Reuse allocated key
 
             id_node->frame = FRAME_GLOBAL;
             id_node->data_type = TYPE_NULL;
@@ -965,7 +964,6 @@ static DataType analyze_expression(ASTNode* node, AnalysisContext* context) {
                     if(!func_name_str) { *context->error_code=ERR_INTERNAL; return TYPE_UNKNOWN;}
 
                     // Clean up current node (it was an ID)
-                    // We don't free node->value because we are reusing the pointer in func_id_node?
                     // No, ast_create_node makes a copy. So we must free node->value.
                     free(node->value);
                     node->value = NULL;
@@ -1018,8 +1016,6 @@ static DataType analyze_expression(ASTNode* node, AnalysisContext* context) {
                     }
                 }
             } else if (var_symbol->kind == SYM_GETTER) {
-                // Should have been handled above, but if found in local scope (impossible for getter)
-                // treat as error or same logic.
                 result_type = var_symbol->type;
             } else {
                 *context->error_code = ERR_SEMANTIC_OTHER;
