@@ -401,7 +401,7 @@ static void analyze_var_decl(ASTNode* node, AnalysisContext* context) {
     snprintf(mangled_name, sizeof(mangled_name), "%s_%zu_%s", func_name, context->block_depth, var_name);
 
     // 2. Store symbol with mangled name info
-    SymbolData var_data = create_variable_symbol(TYPE_NULL);
+    SymbolData var_data = create_variable_symbol(TYPE_UNKNOWN);
     var_data.mangled_name = str_dup(mangled_name); // Store for later lookups
 
     ErrorCode insert_result = symtable_insert(current_scope, var_name, var_data);
