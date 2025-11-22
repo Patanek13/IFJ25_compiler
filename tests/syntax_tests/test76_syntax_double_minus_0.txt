@@ -1,0 +1,12 @@
+// Extension: OPERATORS -- (double minus) is valid syntax
+import "ifj25" for Ifj
+class Program {
+    static main() {
+        var x
+        x = 5
+        var result
+        result = x -- 2  // Valid syntax: double minus operator
+        Ifj.write(result)
+        Ifj.write("\n")
+    }
+}

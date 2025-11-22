@@ -142,6 +142,6 @@ class Program {
             x = x - 1
         } // Melo by se vypsat 17 a 16
 
-        return
+        return x
     }
 }
