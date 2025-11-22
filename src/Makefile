@@ -1,5 +1,5 @@
 CC := gcc
-CFLAGS := -std=c11 -Wall -Wextra -pedantic -lm
+CFLAGS := -std=c11 -Wall -Wextra -pedantic -lm -g
 OUTFILE := IFJcompiler
 BUILDDIR := ../build
 TESTDIR := ../tests

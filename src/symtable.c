@@ -63,6 +63,12 @@ void symtable_free(SymTable *table) {
           table->items[idx].data.info.function.param_types) {
         free(table->items[idx].data.info.function.param_types);
       }
+      // Free mangled name for variables
+      if (table->items[idx].data.kind == SYM_VARIABLE &&
+          table->items[idx].data.mangled_name != NULL) {
+        free(table->items[idx].data.mangled_name); // Free mangled name
+        table->items[idx].data.mangled_name = NULL; // Prevent dangling pointer
+      }
     }
   }
 
@@ -157,6 +163,11 @@ ErrorCode symtable_delete(SymTable *table, const char *key) {
         free(item->data.info.function.param_types);
       }
 
+      if (item->data.kind == SYM_VARIABLE && item->data.mangled_name != NULL) {
+        free(item->data.mangled_name); // Free mangled name
+        item->data.mangled_name = NULL; // Prevent dangling pointer
+      }
+
       item->state = SLOT_DELETED;
       table->count--;
       return ERR_OK; // Successfully deleted
@@ -172,6 +183,7 @@ SymbolData create_variable_symbol(DataType type) {
   data.kind = SYM_VARIABLE;
   data.type = type;
   data.defined = true;
+  data.mangled_name = NULL;
   return data;
 }
 
