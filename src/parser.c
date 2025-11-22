@@ -1795,23 +1795,11 @@ ASTNode* return_func(int *error_code) {
 
     // zkontrolovat return bez vyrazu
     if (token.type == NEW_LINE) {
-        // pro semantiku return null
-        ASTNode* null_node = ast_create_node(NODE_LITERAL, "null", TYPE_NULL);
-        if (null_node == NULL) {
-            ast_free(return_node);
-            *error_code = ERR_INTERNAL;
-            return NULL;
-        }
-        ast_add_child(return_node, null_node);
-        fprintf(out, "___________\n return_func OK return \n_____________\n");
-        token= get_token(); // nacist dalsi token
-        // Check for lexical errors after consuming token
-        if (token.type == ERROR) {
-            ast_free(return_node);
-            *error_code = LEXICAL_ERROR;
-            return NULL;
-        }
-        return return_node;
+        // musi byt vyraz za return
+        fprintf(out, "ERROR: Ocekavany vyraz za RETURN\n");
+        ast_free(return_node);
+        *error_code = SYNTAX_ERROR;
+        return NULL;
     }
 
     // zpracovat vyraz za return
