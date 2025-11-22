@@ -33,6 +33,7 @@ typedef struct SymbolData {
     SymbolKind kind; // variable, function, getter, setter
     DataType type; // return type for functions, data type for variables
     bool defined; // whether the symbol is defined
+    char* mangled_name; // mangled name for generator use
 
     union {
         // For functions
