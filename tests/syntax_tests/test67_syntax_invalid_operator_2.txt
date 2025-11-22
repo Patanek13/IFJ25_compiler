@@ -5,9 +5,9 @@ class Program {
         var x 
         x = 5
         if (x => 3) {  // ERROR: invalid operator =>
-            Ifj.write("Greater or equal\n")
+            __a = Ifj.write("Greater or equal\n")
         } else {
-            Ifj.write("Less\n")
+            __a = Ifj.write("Less\n")
         }
     }
 }

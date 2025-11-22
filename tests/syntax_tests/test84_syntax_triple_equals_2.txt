@@ -5,9 +5,9 @@ class Program {
         var x 
         x = 5
         if (x === 5) {  // ERROR: === not supported
-            Ifj.write("Equal\n")
+            __a = Ifj.write("Equal\n")
         } else {
-            Ifj.write("Not equal\n")
+            __a = Ifj.write("Not equal\n")
         }
     }
 }

@@ -8,7 +8,7 @@ class Program {
     static main() {
         var result 
         result = calculate(5  // ERROR: missing )
-        Ifj.write(result)
-        Ifj.write("\n")
+        __a = Ifj.write(result)
+        __a = Ifj.write("\n")
     }
 }

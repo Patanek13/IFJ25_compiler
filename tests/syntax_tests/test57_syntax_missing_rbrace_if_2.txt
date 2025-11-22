@@ -5,8 +5,8 @@ class Program {
         var x 
         x = 10
         if (x > 5) {
-            Ifj.write("Greater\n")
+            __a = Ifj.write("Greater\n")
         // ERROR: missing closing }
-        Ifj.write("Done\n")
+        __a = Ifj.write("Done\n")
     }
 }

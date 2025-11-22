@@ -2,6 +2,6 @@ import "ifj25" for Ifj
 
 class Program {
   static main() {
-    Ifj.write("Ahoj svete") Ifj.write("Ahoj svete")
+    __a = Ifj.write("Ahoj svete") Ifj.write("Ahoj svete")
   }
 }

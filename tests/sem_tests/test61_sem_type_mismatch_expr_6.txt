@@ -1,0 +1,10 @@
+// Semantic error: Type mismatch in expression
+import "ifj25" for Ifj
+class Program {
+    static main() {
+        var x
+        x = 5 +  // ERROR: type mismatch, cannot add integer and null from func
+        Ifj.write(x)
+        Ifj.write("\n")
+    }
+}

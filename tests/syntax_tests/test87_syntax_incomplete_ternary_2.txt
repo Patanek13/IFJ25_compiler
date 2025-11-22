@@ -6,7 +6,7 @@ class Program {
         x = 5
         var result 
         result = x > 3 ? 10  // ERROR: missing : and else branch
-        Ifj.write(result)
-        Ifj.write("\n")
+        __a = Ifj.write(result)
+        __a = Ifj.write("\n")
     }
 }
