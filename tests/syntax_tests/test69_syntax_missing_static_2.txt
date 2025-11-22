@@ -4,7 +4,7 @@ class Program {
     main() {  // ERROR: missing static keyword
         var x 
         x = 5
-        Ifj.write(x)
-        Ifj.write("\n")
+        __a = Ifj.write(x)
+        __a = Ifj.write("\n")
     }
 }

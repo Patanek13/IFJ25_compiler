@@ -5,8 +5,8 @@ class Program {
         var i 
         i = 0
         while () {  // ERROR: missing condition
-            Ifj.write(i)
-            Ifj.write("\n")
+            __a = Ifj.write(i)
+            __a = Ifj.write("\n")
             i = i + 1
         }
     }

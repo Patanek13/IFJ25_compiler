@@ -4,7 +4,7 @@ class Program {
     static main()  // ERROR: missing {
         var x 
         x = 5
-        Ifj.write(x)
-        Ifj.write("\n")
+        __a = Ifj.write(x)
+        __a = Ifj.write("\n")
     }
 }

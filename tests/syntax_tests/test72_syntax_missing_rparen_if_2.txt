@@ -5,9 +5,9 @@ class Program {
         var x 
         x = 10
         if (x > 5 {  // ERROR: missing )
-            Ifj.write("Greater\n")
+            __a = Ifj.write("Greater\n")
         } else {
-            Ifj.write("Smaller\n")
+            __a = Ifj.write("Smaller\n")
         }
     }
 }

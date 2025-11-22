@@ -4,7 +4,7 @@ class Program {
     static main() {
         var x 
         x 10  // ERROR: missing =
-        Ifj.write(x)
-        Ifj.write("\n")
+        __a = Ifj.write(x)
+        __a = Ifj.write("\n")
     }
 }
