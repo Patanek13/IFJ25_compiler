@@ -14,9 +14,7 @@
 #include <string.h>
 #include "parser.h"
 
-//TODO: odstranit debug vypisy, jelikoz se vypisuji do stderr v main.c
 //TODO: otestovat vsechny mozne vyrazy a operatory
-//TODO: nefunguje unarni minus skrz scanner (scan_minus)
 
 FILE* in;
 FILE* out;
@@ -25,22 +23,23 @@ Token token;
 
 // Precedence table for operators
 // [NA ZÁSOBNÍKU] [NA VSTUPU]
-//             !     * /   + -   < >   is    == !=  &&    ||    (     )     ?     :     id    $
+//             !     * /   + -   < >   is    == !=  &&    ||    (     )     ?     :     id    type  $
 TokenType precedence_table[IDX_COUNT][IDX_COUNT] = {
-    /* 0 !   */ {S, S, S, S, S, S, S, S, S, R, R, R, S, R}, // Unary ma vyssi prioritu nez vse
-    /* 1 * / */ {R, R, R, R, R, R, R, R, S, R, R, R, S, R},
-    /* 2 + - */ {S, S, R, R, R, R, R, R, S, R, R, R, S, R},
-    /* 3 < > */ {S, S, S, R, R, R, R, R, S, R, R, R, S, R},
-    /* 4 is  */ {S, S, S, S, R, R, R, R, S, R, R, R, S, R},
-    /* 5 == !=*/{S, S, S, S, S, R, R, R, S, R, R, R, S, R},
-    /* 6 &&  */ {S, S, S, S, S, S, R, R, S, R, R, R, S, R},
-    /* 7 ||  */ {S, S, S, S, S, S, S, R, S, R, R, R, S, R},
-    /* 8 (   */ {S, S, S, S, S, S, S, S, S, E, S, E, S, X}, // ( vs ) -> E, ( vs : -> E
-    /* 9 )   */ {R, R, R, R, R, R, R, R, X, R, R, R, X, R},
-    /* 10?   */ {S, S, S, S, S, S, S, S, S, S, S, P, S, X}, // ? vs : -> P
-    /* 11:   */ {R, R, R, R, R, R, R, R, X, R, X, R, S, R}, // : redukuje jen po E, shiftuje vsechno ostatni
-    /* 12id  */ {R, R, R, R, R, R, R, R, X, R, R, R, X, R},
-    /* 13$   */ {S, S, S, S, S, S, S, S, S, X, S, X, S, X}  // $ (dno) shiftuje vse
+    /* 0 !   */ {S, S, S, S, S, S, S, S, S, R, R, R, S, X, R}, // Unary ma vyssi prioritu nez vse
+    /* 1 * / */ {R, R, R, R, R, R, R, R, S, R, R, R, S, X, R},
+    /* 2 + - */ {S, S, R, R, R, R, R, R, S, R, R, R, S, X, R},
+    /* 3 < > */ {S, S, S, R, R, R, R, R, S, R, R, R, S, X, R},
+    /* 4 is  */ {S, S, S, S, R, R, R, R, S, R, R, R, X, S, R},
+    /* 5 == !=*/{S, S, S, S, S, R, R, R, S, R, R, R, S, X, R},
+    /* 6 &&  */ {S, S, S, S, S, S, R, R, S, R, R, R, S, X, R},
+    /* 7 ||  */ {S, S, S, S, S, S, S, R, S, R, R, R, S, X, R},
+    /* 8 (   */ {S, S, S, S, S, S, S, S, S, E, S, E, S, X, X}, // ( vs ) -> E, ( vs : -> E
+    /* 9 )   */ {R, R, R, R, R, R, R, R, X, R, R, R, X, X, R},
+    /* 10?   */ {S, S, S, S, S, S, S, S, S, S, S, P, S, X, X}, // ? vs : -> P
+    /* 11:   */ {R, R, R, R, R, R, R, R, X, R, X, R, S, X, R}, // : redukuje jen po E, shiftuje vsechno ostatni
+    /* 12id  */ {R, R, R, R, R, R, R, R, X, R, R, R, X, X, R}, // operandy redukuji vse
+    /* 13type*/ {R, R, R, R, R, R, R, R, X, R, R, R, X, X, R}, // type se redukuje
+    /* 14$   */ {S, S, S, S, S, S, S, S, S, X, S, X, S, X, X}  // $ (dno) shiftuje vse
 };
 
 /* condition state 0 = IF 1 = WHILE */
@@ -339,11 +338,13 @@ int token_to_int(Token in_token) {
         case BOOLEAN:
         case NULL_KEYWORD:
         case IFJ:
+            return IDX_OPERAND; // 12
+
         case NUM_TYPE:
         case STR_TYPE:
         case NULL_TYPE:
         case BOOL_TYPE:
-            return IDX_OPERAND; // 12
+            return IDX_TYPE; // 13
 
         // konec vyrazu
         case NEW_LINE:
@@ -351,7 +352,7 @@ int token_to_int(Token in_token) {
         case COMMA:
         case EOF_TOKEN:
         case END_EXPR:
-            return IDX_END; // 13
+            return IDX_END; // 14
 
         default:
             return -1;
@@ -463,8 +464,8 @@ static int do_reduction(Stack* tokenStack, ASTStack* astStack, int* error_code) 
     ASTNode* new_node = NULL;
     // Handle je nacteny v opacnem poradi (vrchol zasobniku je na handle[0])
 
-    // Pravidlo 1: E -> operand (i, literal, atd.)
-    if (handle_len == 1 && token_to_int(handle[0]) == IDX_OPERAND) {
+    // Pravidlo 1: E -> operand (i, literal, atd.), nebo type (Num, String, Bool, Null)
+    if (handle_len == 1 && (token_to_int(handle[0]) == IDX_OPERAND || token_to_int(handle[0]) == IDX_TYPE)) {
         // new_node = NULL; // Uzel uz je na astStack, nic nedelame
         // Debug vypis
         fprintf(out, "DEBUG do_reduction: Rozpoznano pravidlo E -> operand (len 1)\n");
@@ -522,6 +523,7 @@ static int do_reduction(Stack* tokenStack, ASTStack* astStack, int* error_code) 
             if (ast_stack_pop(astStack, &right) != ERR_OK) { *error_code = SYNTAX_ERROR; return SYNTAX_ERROR; }
             if (ast_stack_pop(astStack, &left) != ERR_OK) { *error_code = SYNTAX_ERROR; return SYNTAX_ERROR; }
 
+            fprintf(out, "DEBUG: Hledam op_str pro token type: %s\n", token_type_to_string(op_token.type));
             char* op_str = NULL;
             if (op_token.type == OPERATOR) op_str = op_token.value.string;
             else if (op_token.type == IS) op_str = "is";
@@ -757,7 +759,7 @@ ASTNode* parse_expression(int *error_code) {
                 }
 
                 // --- Zpracovani AST ---
-                if (current_idx == IDX_OPERAND) {
+                if (current_idx == IDX_OPERAND || current_idx == IDX_TYPE) {
                     ASTNode* node = NULL;
 
                     if (current_token.type == ID) {
@@ -1795,23 +1797,11 @@ ASTNode* return_func(int *error_code) {
 
     // zkontrolovat return bez vyrazu
     if (token.type == NEW_LINE) {
-        // pro semantiku return null
-        ASTNode* null_node = ast_create_node(NODE_LITERAL, "null", TYPE_NULL);
-        if (null_node == NULL) {
-            ast_free(return_node);
-            *error_code = ERR_INTERNAL;
-            return NULL;
-        }
-        ast_add_child(return_node, null_node);
-        fprintf(out, "___________\n return_func OK return \n_____________\n");
-        token= get_token(); // nacist dalsi token
-        // Check for lexical errors after consuming token
-        if (token.type == ERROR) {
-            ast_free(return_node);
-            *error_code = LEXICAL_ERROR;
-            return NULL;
-        }
-        return return_node;
+        // musi byt vyraz za return
+        fprintf(out, "ERROR: Ocekavany vyraz za RETURN\n");
+        ast_free(return_node);
+        *error_code = SYNTAX_ERROR;
+        return NULL;
     }
 
     // zpracovat vyraz za return
