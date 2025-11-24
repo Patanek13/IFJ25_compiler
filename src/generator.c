@@ -547,7 +547,7 @@ ErrorCode generate_code(ASTNode* node, Frame* gf){
             generate_code(args->children[i], gf); // push argumentov na stack
           }
         }
-        fprintf(stdout, "CALL %s$%i\n", node->value, numOfArgs);
+        fprintf(stdout, "CALL $%s$%i\n", funcId, numOfArgs);
       }
       //returnError = generate_code(node->children[1], gf); //ARG_LIST
       return ERR_OK;
