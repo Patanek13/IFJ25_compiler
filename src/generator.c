@@ -567,6 +567,7 @@ ErrorCode generate_code(ASTNode* node, Frame* gf){
       } else if (node->data_type == TYPE_STRING) {
         fprintf(stdout, "PUSHS string@");
         printFormatedString(node->value);
+        fprintf(stdout, "\n");
       } else {
         char* dataType = dataTypeToStr(node->data_type);
         if (dataType != NULL) {
