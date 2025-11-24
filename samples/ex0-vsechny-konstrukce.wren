@@ -1,10 +1,8 @@
-import 
-"ifj25" for 
-Ifj
+import "ifj25" for Ifj
 class Program {
     // funkce bez parametru
     static getAnswer() {
-        return 42 // prikaz navratu z funkce
+        return 42  // prikaz navratu z funkce
     }
 
     // pretizena verze funkce vyse s jednim parametrem
@@ -14,6 +12,8 @@ class Program {
                 // v zakladnim zadani neumime volat funkci mimo prirazeni, proto zde prirazujeme
                 // navratovou hodnotu (kazda funkce nejakou ma) napr. do "dummy" globalni promenne __d
                 __d = Ifj.write("Celkem velke cislo!\n")
+            } else  {
+               // v zakladnim zadani je vyzadovana else vetev, i kdyz je prazdna
             }
             arg = arg * 42  // prikaz prirazeni
             var ansStr 
@@ -78,7 +78,8 @@ class Program {
         myValue = getAnswer(valueFromUser)  // zavola pretizenou funkci getAnswer(arg)
         if (myValue == null) {
             __d = Ifj.write("ODPOVED NENI!\n")
-            return  // konec programu
+            // konec programu; return musi v zakladnim zadani vyraz urcujici navratovou hodnotu
+            return null
         } else {
             if (myValue is Null) {
                 // tato podminka je semanticky ekvivalentni podmince myValue == null,

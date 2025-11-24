@@ -239,8 +239,9 @@ typedef enum {
     IDX_QMARK,   // 10: ?
     IDX_COLON,   // 11: :
     IDX_OPERAND, // 12: id, literal, ...
-    IDX_END,     // 13: $ (konec vyrazu)
-    IDX_COUNT    // 14
+    IDX_TYPE,    // 13: type (Num, String, Bool, Null)
+    IDX_END,     // 14: $ (konec vyrazu)
+    IDX_COUNT    // 15: Pocet indexu
 } PrecTableIndex;
 
 
