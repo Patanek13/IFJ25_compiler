@@ -1,5 +1,5 @@
 CC := gcc
-CFLAGS := -std=c11 -Wall -Wextra -pedantic -lm -g
+CFLAGS := -std=c11 -Wall -Wextra -pedantic -lm
 OUTFILE := IFJcompiler
 BUILDDIR := ../build
 TESTDIR := ../tests
@@ -14,7 +14,7 @@ all:
 
 dev:
 	mkdir -p $(BUILDDIR)
-	$(CC) $(CFLAGS) -o $(BUILDDIR)/$(OUTFILE) *.c
+	$(CC) $(CFLAGS) -g -o $(BUILDDIR)/$(OUTFILE) *.c
 
 test-symtable:
 	mkdir -p $(BUILDDIR)
