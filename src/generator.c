@@ -62,24 +62,19 @@ void populateVarDefinitions(ASTNode* node, Frame* lf) {
   }
 }
 
-char* cleanString(char* in) {
-  if (!in) return NULL;
-  size_t inLen = strlen(in);
-  char* out = malloc(inLen*4+1);
-  if (!out) return NULL;
+void printFormatedString(char* in){
+  if (!in) return;
 
-  char* ptr = out;
-  for (size_t i = 0; i < inLen; i++) {
-    char c = (char)in[i];
+  int inLen = strlen(in);
+  for (int i = 0; i < inLen; i++) {
+    unsigned char c = (unsigned char) in[i];
+
     if (c <= 32 || c == 35 || c == 92) {
-      ptr += sprintf(ptr, "\\%03d", c);
+      fprintf(stdout, "\\%03d", c);
     } else {
-      *ptr = c;
-      ptr++;
+      fputc(c, stdout);
     }
   }
-  *ptr = '\0';
-  return out;
 }
 
 ErrorCode generate_IsOperator(ASTNode* node, Frame* gf){
@@ -568,11 +563,17 @@ ErrorCode generate_code(ASTNode* node, Frame* gf){
       } else if (node->data_type == TYPE_INT) {
         fprintf(stdout, "PUSHS int@%d\n", atoi(node->value));
       } else if (node->data_type == TYPE_NULL) {
-        fprintf(stdout, "PUSHS %s@nil\n", dataTypeToStr(node->data_type));
+        fprintf(stdout, "PUSHS nil@nil\n");
       } else if (node->data_type == TYPE_STRING) {
-        fprintf(stdout, "PUSHS %s@%s\n", dataTypeToStr(node->data_type), cleanString(node->value));
+        fprintf(stdout, "PUSHS string@");
+        printFormatedString(node->value);
       } else {
-        fprintf(stdout, "PUSHS %s@%s\n", dataTypeToStr(node->data_type), node->value);
+        char* dataType = dataTypeToStr(node->data_type);
+        if (dataType != NULL) {
+          fprintf(stdout, "PUSHS %s@%s", dataType, node->value);
+        } else {
+          return ERR_INTERNAL;
+        }
       }
       return ERR_OK;
     }
