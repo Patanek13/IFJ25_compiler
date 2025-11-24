@@ -28,6 +28,6 @@ int getUniqueLabelId(labelManager* lm);
  * @param symTableArray Array of symbolic tables
  * @return ErrorCode
  */
-ErrorCode generate_code(ASTNode* node, Frame* gf, FrameStack* fs);
+ErrorCode generate_code(ASTNode* node, Frame* gf);
 ErrorCode generate_program(ASTNode* root, SymTable** symTableArray, bool debug);
 #endif
