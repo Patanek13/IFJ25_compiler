@@ -183,219 +183,219 @@ ErrorCode generate_builtIn(ASTNode* node, Frame* gf) {
     return ERR_OK;
   } else if (strcmp(funId, "Ifj.floor") == 0) {
     generate_code(node->children[1], gf);
-    fprintf(stdout, "FLOAT2INTS");
-    fprintf(stdout, "INT2FLOATS");
+    fprintf(stdout, "FLOAT2INTS\n");
+    fprintf(stdout, "INT2FLOATS\n");
     return ERR_OK;
   } else if (strcmp(funId, "Ifj.str") == 0) {
     int uniqueId = labelCounter++;
     generate_code(node->children[1], gf);
-    fprintf(stdout, "POPS GF@__$temp1");
-    fprintf(stdout, "TYPE GF@__$tempRes GF@__$temp1");
+    fprintf(stdout, "POPS GF@__$temp1\n");
+    fprintf(stdout, "TYPE GF@__$tempRes GF@__$temp1\n");
 
-    fprintf(stdout, "JUMPIFEQ $ifjstr$nil$%i GF@__$tempRes string@nil", uniqueId);
-    fprintf(stdout, "JUMPIFEQ $ifjstr$bool$%i GF@__$tempRes string@bool", uniqueId);
-    fprintf(stdout, "JUMPIFEQ $ifjstr$int$%i GF@__$tempRes string@int", uniqueId);
-    fprintf(stdout, "JUMPIFEQ $ifjstr$float$%i GF@__$tempRes string@float", uniqueId);
-    fprintf(stdout, "JUMPIFEQ $ifjstr$string$%i GF@__$tempRes string@string", uniqueId);
+    fprintf(stdout, "JUMPIFEQ $ifjstr$nil$%i GF@__$tempRes string@nil\n", uniqueId);
+    fprintf(stdout, "JUMPIFEQ $ifjstr$bool$%i GF@__$tempRes string@bool\n", uniqueId);
+    fprintf(stdout, "JUMPIFEQ $ifjstr$int$%i GF@__$tempRes string@int\n", uniqueId);
+    fprintf(stdout, "JUMPIFEQ $ifjstr$float$%i GF@__$tempRes string@float\n", uniqueId);
+    fprintf(stdout, "JUMPIFEQ $ifjstr$string$%i GF@__$tempRes string@string\n", uniqueId);
 
-    fprintf(stdout, "PUSHS string@");
-    fprintf(stdout, "JUMP $ifjstr$end$%i", uniqueId);
+    fprintf(stdout, "PUSHS string@\n");
+    fprintf(stdout, "JUMP $ifjstr$end$%i\n", uniqueId);
 
     //nil
-    fprintf(stdout, "LABEL $ifjstr$nil$%i", uniqueId);
-    fprintf(stdout, "PUSHS string@null");
-    fprintf(stdout, "JUMP $ifjstr$end$%i", uniqueId);
+    fprintf(stdout, "LABEL $ifjstr$nil$%i\n", uniqueId);
+    fprintf(stdout, "PUSHS string@null\n");
+    fprintf(stdout, "JUMP $ifjstr$end$%i\n", uniqueId);
 
     //bool
-    fprintf(stdout, "LABEL $ifjstr$bool$%i", uniqueId);
-    fprintf(stdout, "JUMPIFEQ $ifjstr$bool$true$%i GF@__temp1 bool@true", uniqueId);
-    fprintf(stdout, "PUSHS string@false");
-    fprintf(stdout, "JUMP $ifjstr$end$%i", uniqueId);
+    fprintf(stdout, "LABEL $ifjstr$bool$%i\n", uniqueId);
+    fprintf(stdout, "JUMPIFEQ $ifjstr$bool$true$%i GF@__temp1 bool@true\n", uniqueId);
+    fprintf(stdout, "PUSHS string@false\n");
+    fprintf(stdout, "JUMP $ifjstr$end$%i\n", uniqueId);
 
-    fprintf(stdout, "LABEL $ifjstr$bool$true$%i", uniqueId);
-    fprintf(stdout, "PUSHS string@true");
-    fprintf(stdout, "JUMP $ifjstr$end$%i", uniqueId);
+    fprintf(stdout, "LABEL $ifjstr$bool$true$%i\n", uniqueId);
+    fprintf(stdout, "PUSHS string@true\n");
+    fprintf(stdout, "JUMP $ifjstr$end$%i\n", uniqueId);
 
     //int
-    fprintf(stdout, "LABEL $ifjstr$int$%i", uniqueId);
-    fprintf(stdout, "INT2STR GF@__$temp2 GF@__$temp1");
-    fprintf(stdout, "PUSHS GF@__$temp2");
-    fprintf(stdout, "JUMP $ifjstr$end$%i", uniqueId);
+    fprintf(stdout, "LABEL $ifjstr$int$%i\n", uniqueId);
+    fprintf(stdout, "INT2STR GF@__$temp2 GF@__$temp1\n");
+    fprintf(stdout, "PUSHS GF@__$temp2\n");
+    fprintf(stdout, "JUMP $ifjstr$end$%i\n", uniqueId);
 
     //float
-    fprintf(stdout, "LABEL $ifjstr$float$%i", uniqueId);
-    fprintf(stdout, "FLOAT2STR GF@__$temp2 GF@__$temp1");
-    fprintf(stdout, "PUSHS GF@__$temp2");
-    fprintf(stdout, "JUMP $ifjstr$end$%i", uniqueId);
+    fprintf(stdout, "LABEL $ifjstr$float$%i\n", uniqueId);
+    fprintf(stdout, "FLOAT2STR GF@__$temp2 GF@__$temp1\n");
+    fprintf(stdout, "PUSHS GF@__$temp2\n");
+    fprintf(stdout, "JUMP $ifjstr$end$%i\n", uniqueId);
 
     //string
-    fprintf(stdout, "LABEL $ifjstr$string$%i", uniqueId);
-    fprintf(stdout, "PUSHS GF@__$temp1");
-    fprintf(stdout, "JUMP $ifjstr$end$%i", uniqueId);
+    fprintf(stdout, "LABEL $ifjstr$string$%i\n", uniqueId);
+    fprintf(stdout, "PUSHS GF@__$temp1\n");
+    fprintf(stdout, "JUMP $ifjstr$end$%i\n", uniqueId);
     //end
-    fprintf(stdout, "LABEL $ifjstr$end$%i", uniqueId);
+    fprintf(stdout, "LABEL $ifjstr$end$%i\n", uniqueId);
     return ERR_OK;
   } else if (strcmp(funId, "Ifj.substring")) {
     int uniqueId = labelCounter++;
     generate_code(node->children[1], gf);
-    fprintf(stdout, "POPS GF@__$temp3"); //j
-    fprintf(stdout, "POPS GF@__$temp2"); //i
-    fprintf(stdout, "POPS GF@__$temp1"); //s
+    fprintf(stdout, "POPS GF@__$temp3\n"); //j
+    fprintf(stdout, "POPS GF@__$temp2\n"); //i
+    fprintf(stdout, "POPS GF@__$temp1\n"); //s
 
     // i a j typechecks
-    fprintf(stdout, "ISINT GF@__$tempRes GF@__$temp2");
-    fprintf(stdout, "JUMPIFEQ $ifjsub$jtype$%i GF@__$tempRes bool@true", uniqueId);
-    fprintf(stdout, "EXIT int@26");
+    fprintf(stdout, "ISINT GF@__$tempRes GF@__$temp2\n");
+    fprintf(stdout, "JUMPIFEQ $ifjsub$jtype$%i GF@__$tempRes bool@true\n", uniqueId);
+    fprintf(stdout, "EXIT int@26\n");
 
 
-    fprintf(stdout, "LABEL $ifjsub$jtype$%i", uniqueId);
-    fprintf(stdout, "ISINT GF@__$tempRes GF@__$temp3");
-    fprintf(stdout, "JUMPIFEQ $ifjsub$toint$%i GF@__$tempRes bool@true", uniqueId);
-    fprintf(stdout, "EXIT int@26");
+    fprintf(stdout, "LABEL $ifjsub$jtype$%i\n", uniqueId);
+    fprintf(stdout, "ISINT GF@__$tempRes GF@__$temp3\n");
+    fprintf(stdout, "JUMPIFEQ $ifjsub$toint$%i GF@__$tempRes bool@true\n", uniqueId);
+    fprintf(stdout, "EXIT int@26\n");
 
     // i,j to int
-    fprintf(stdout, "LABEL $ifjsub$toint$%i", uniqueId);
-    fprintf(stdout, "FLOAT2INT GF@__$tempI GF@__$temp2"); // i
-    fprintf(stdout, "FLOAT2INT GF@__$tempJ GF@__$temp3"); // j
+    fprintf(stdout, "LABEL $ifjsub$toint$%i\n", uniqueId);
+    fprintf(stdout, "FLOAT2INT GF@__$tempI GF@__$temp2\n"); // i
+    fprintf(stdout, "FLOAT2INT GF@__$tempJ GF@__$temp3\n"); // j
 
     //dlzka retazca
-    fprintf(stdout, "STRLEN GF@__$tempK GF@__$temp1");
+    fprintf(stdout, "STRLEN GF@__$tempK GF@__$temp1\n");
 
     // i < 0
-    fprintf(stdout, "LT GF@__$tempRes GF@__$tempI int@0");
-    fprintf(stdout, "JUMPIFEQ $ifjsub$null$%i GF@$__$tempRes bool@true", uniqueId);
+    fprintf(stdout, "LT GF@__$tempRes GF@__$tempI int@0\n");
+    fprintf(stdout, "JUMPIFEQ $ifjsub$null$%i GF@$__$tempRes bool@true\n", uniqueId);
 
     // j < 0
-    fprintf(stdout, "LT GF@__$tempRes GF@__$tempJ int@0");
-    fprintf(stdout, "JUMPIFEQ $ifjsub$null$%i GF@$__$tempRes bool@true", uniqueId);
+    fprintf(stdout, "LT GF@__$tempRes GF@__$tempJ int@0\n");
+    fprintf(stdout, "JUMPIFEQ $ifjsub$null$%i GF@$__$tempRes bool@true\n", uniqueId);
     // i > j
-    fprintf(stdout, "GT GF@__$tempRes GF@__$tempI GF@__$tempJ");
-    fprintf(stdout, "JUMPIFEQ $ifjsub$null$%i GF@$__$tempRes bool@true", uniqueId);
+    fprintf(stdout, "GT GF@__$tempRes GF@__$tempI GF@__$tempJ\n");
+    fprintf(stdout, "JUMPIFEQ $ifjsub$null$%i GF@$__$tempRes bool@true\n", uniqueId);
     // i >= len (negácia i < len)
-    fprintf(stdout, "LT GF@__$tempRes GF@__$tempI GF@__$tempK");
-    fprintf(stdout, "JUMPIFNEQ $ifjsub$null$%i GF@$__$tempRes bool@true", uniqueId);
+    fprintf(stdout, "LT GF@__$tempRes GF@__$tempI GF@__$tempK\n");
+    fprintf(stdout, "JUMPIFNEQ $ifjsub$null$%i GF@$__$tempRes bool@true\n", uniqueId);
     // j > len
-    fprintf(stdout, "GT GF@__$tempRes GF@__$tempJ GF@__$tempK");
-    fprintf(stdout, "JUMPIFEQ $ifjsub$null$%i GF@$__$tempRes bool@true", uniqueId);
+    fprintf(stdout, "GT GF@__$tempRes GF@__$tempJ GF@__$tempK\n");
+    fprintf(stdout, "JUMPIFEQ $ifjsub$null$%i GF@$__$tempRes bool@true\n", uniqueId);
 
     // while i < j
-    fprintf(stdout, "MOVE GF@__$tempRes string@");
-    fprintf(stdout, "LABEL $ifjsub$loopCond$%i", uniqueId);
-    fprintf(stdout, "LT GF@__$temp2 GF@__$tempI GF@__$tempJ");
-    fprintf(stdout, "JUMPIFEQ $ifjsub$loopEnd$%i bool@false", uniqueId);
+    fprintf(stdout, "MOVE GF@__$tempRes string@\n");
+    fprintf(stdout, "LABEL $ifjsub$loopCond$%i\n", uniqueId);
+    fprintf(stdout, "LT GF@__$temp2 GF@__$tempI GF@__$tempJ\n");
+    fprintf(stdout, "JUMPIFEQ $ifjsub$loopEnd$%i bool@false\n", uniqueId);
 
-    fprintf(stdout, "GETCHAR GF@__$tempK GF@__$temp1 GF@__$tempI");
-    fprintf(stdout, "CONCAT GF@__$tempRes GF@__$tempRes GF@__$tempK");
-    fprintf(stdout, "ADD GF@__$tempI GF@__$tempI int@1");
-    fprintf(stdout, "JUMP $ifjsub$loopCond$%i", uniqueId);
+    fprintf(stdout, "GETCHAR GF@__$tempK GF@__$temp1 GF@__$tempI\n");
+    fprintf(stdout, "CONCAT GF@__$tempRes GF@__$tempRes GF@__$tempK\n");
+    fprintf(stdout, "ADD GF@__$tempI GF@__$tempI int@1\n");
+    fprintf(stdout, "JUMP $ifjsub$loopCond$%i\n", uniqueId);
 
-    fprintf(stdout, "$ifjsub$loopEnd$%i", uniqueId);
-    fprintf(stdout, "PUSHS GF@__$tempRes");
-    fprintf(stdout, "JUMP $ifjsub$end$%i", uniqueId);
+    fprintf(stdout, "$ifjsub$loopEnd$%i\n", uniqueId);
+    fprintf(stdout, "PUSHS GF@__$tempRes\n");
+    fprintf(stdout, "JUMP $ifjsub$end$%i\n", uniqueId);
 
-    fprintf(stdout, "LABEL $ifjsub$null$%i", uniqueId);
-    fprintf(stdout, "PUSHS nil@nil");
+    fprintf(stdout, "LABEL $ifjsub$null$%i\n", uniqueId);
+    fprintf(stdout, "PUSHS nil@nil\n");
 
-    fprintf(stdout, "LABEL $ifjsub$end$%i", uniqueId);
+    fprintf(stdout, "LABEL $ifjsub$end$%i\n", uniqueId);
     return ERR_OK;
   } else if (strcmp(funId, "Ifj.strcmp") == 0) {
     int uniqueId = labelCounter++;
 
     generate_code(node->children[1], gf);
-    fprintf(stdout, "POPS GF@__$temp2"); //s2
-    fprintf(stdout, "POPS GF@__$temp1"); //s1
+    fprintf(stdout, "POPS GF@__$temp2\n"); //s2
+    fprintf(stdout, "POPS GF@__$temp1\n"); //s1
 
     //s1,s2 typecheck
-    fprintf(stdout, "TYPE GF@__$temp3 GF@__$temp1");
-    fprintf(stdout, "JUMPIFNEQ $ifjstrcmp$typeerr$%i GF@__$temp3 string@string", uniqueId);
-    fprintf(stdout, "TYPE GF@__$temp3 GF@__$temp2");
-    fprintf(stdout, "JUMPIFNEQ $ifjstrcmp$typeerr$%i GF@__$temp3 string@string", uniqueId);
+    fprintf(stdout, "TYPE GF@__$temp3 GF@__$temp1\n");
+    fprintf(stdout, "JUMPIFNEQ $ifjstrcmp$typeerr$%i GF@__$temp3 string@string\n", uniqueId);
+    fprintf(stdout, "TYPE GF@__$temp3 GF@__$temp2\n");
+    fprintf(stdout, "JUMPIFNEQ $ifjstrcmp$typeerr$%i GF@__$temp3 string@string\n", uniqueId);
 
     //testy rovnosti
-    fprintf(stdout, "LT GF@__$tempRes GF@__$temp1 GF@__$temp2");
-    fprintf(stdout, "JUMPIFEQ $ifjstrcmp$less$%i GF@__$tempRes bool@true", uniqueId);
-    fprintf(stdout, "GT GF@__$tempRes GF@__$temp1 GF@__$temp2");
-    fprintf(stdout, "JUMPIFEQ $ifjstrcmp$greater$%i GF@__$tempRes bool@true", uniqueId);
+    fprintf(stdout, "LT GF@__$tempRes GF@__$temp1 GF@__$temp2\n");
+    fprintf(stdout, "JUMPIFEQ $ifjstrcmp$less$%i GF@__$tempRes bool@true\n", uniqueId);
+    fprintf(stdout, "GT GF@__$tempRes GF@__$temp1 GF@__$temp2\n");
+    fprintf(stdout, "JUMPIFEQ $ifjstrcmp$greater$%i GF@__$tempRes bool@true\n", uniqueId);
 
-    fprintf(stdout, "PUSHS int@0");
-    fprintf(stdout, "JUMP $ifjstrcmp$end$%i", uniqueId);
+    fprintf(stdout, "PUSHS int@0\n");
+    fprintf(stdout, "JUMP $ifjstrcmp$end$%i\n", uniqueId);
 
-    fprintf(stdout, "LABEL $ifjstrcmp$less$%i", uniqueId);
-    fprintf(stdout, "PUSHS int@-1");
-    fprintf(stdout, "JUMP $ifjstrcmp$end$%i", uniqueId);
+    fprintf(stdout, "LABEL $ifjstrcmp$less$%i\n", uniqueId);
+    fprintf(stdout, "PUSHS int@-1\n");
+    fprintf(stdout, "JUMP $ifjstrcmp$end$%i\n", uniqueId);
 
-    fprintf(stdout, "LABEL $ifjstrcmp$greater$%i", uniqueId);
-    fprintf(stdout, "PUSHS int@1");
-    fprintf(stdout, "JUMP $ifjstrcmp$end$%i", uniqueId);
+    fprintf(stdout, "LABEL $ifjstrcmp$greater$%i\n", uniqueId);
+    fprintf(stdout, "PUSHS int@1\n");
+    fprintf(stdout, "JUMP $ifjstrcmp$end$%i\n", uniqueId);
 
-    fprintf(stdout, "LABEL $ifjstrcmp$typeerr$%i", uniqueId);
-    fprintf(stdout, "EXIT int@25");
+    fprintf(stdout, "LABEL $ifjstrcmp$typeerr$%i\n", uniqueId);
+    fprintf(stdout, "EXIT int@25\n");
 
-    fprintf(stdout, "LABEL $ifjstrcmp$end$%i", uniqueId);
+    fprintf(stdout, "LABEL $ifjstrcmp$end$%i\n", uniqueId);
     return ERR_OK;
   } else if (strcmp(funId, "Ifj.ord")) {
     int uniqueId = labelCounter++;
     generate_code(node->children[1], gf);
 
-    fprintf(stdout, "POPS GF@__$temp2"); //i
-    fprintf(stdout, "POPS GF@__$temp1"); //s
+    fprintf(stdout, "POPS GF@__$temp2\n"); //i
+    fprintf(stdout, "POPS GF@__$temp1\n"); //s
 
     //type checks
-    fprintf(stdout, "TYPE GF@__$temp3 GF@__$temp1");
-    fprintf(stdout, "JUMPIFNEQ $ifjord$errtype$&$%i GF@__$temp3 string@string", uniqueId);
+    fprintf(stdout, "TYPE GF@__$temp3 GF@__$temp1\n");
+    fprintf(stdout, "JUMPIFNEQ $ifjord$errtype$&$%i GF@__$temp3 string@string\n", uniqueId);
 
-    fprintf(stdout, "ISINT GF@__$temp3 GF@__$temp2");
-    fprintf(stdout, "JUMPIFNEQ $ifjord$errval$%i GF@__$temp3 bool@true", uniqueId);
+    fprintf(stdout, "ISINT GF@__$temp3 GF@__$temp2\n");
+    fprintf(stdout, "JUMPIFNEQ $ifjord$errval$%i GF@__$temp3 bool@true\n", uniqueId);
 
-    fprintf(stdout, "FLOAT2INT GF@__$tempI GF@__$temp2");
-    fprintf(stdout, "STRLEN GF@__$tempJ GF@__$temp1");
+    fprintf(stdout, "FLOAT2INT GF@__$tempI GF@__$temp2\n");
+    fprintf(stdout, "STRLEN GF@__$tempJ GF@__$temp1\n");
 
     // i < 0 return 0
-    fprintf(stdout, "LT GF@__$tempRes GF@__$tempI int@0");
-    fprintf(stdout, "JUMPIFEQ $ifjord$zero$%i GF@__$tempRes bool@true", uniqueId);
+    fprintf(stdout, "LT GF@__$tempRes GF@__$tempI int@0\n");
+    fprintf(stdout, "JUMPIFEQ $ifjord$zero$%i GF@__$tempRes bool@true\n", uniqueId);
     // i >= 0 return 0
-    fprintf(stdout, "LT GF@__$tempRes GF@__$tempI GF@__$tempJ");
-    fprintf(stdout, "JUMPIFNEQ $ifjord$zero$%i GF@__$tempRes bool@true", uniqueId);
+    fprintf(stdout, "LT GF@__$tempRes GF@__$tempI GF@__$tempJ\n");
+    fprintf(stdout, "JUMPIFNEQ $ifjord$zero$%i GF@__$tempRes bool@true\n", uniqueId);
 
-    fprintf(stdout, "STRI2INT GF@__$tempRes GF@__$temp1 GF@__$tempI");
-    fprintf(stdout, "INT2FLOAT GF@__$tempRes GF@__$tempRes");
-    fprintf(stdout, "PUSHS GF@__$tempRes");
-    fprintf(stdout, "JUMP $ifjord$end$%i", uniqueId);
+    fprintf(stdout, "STRI2INT GF@__$tempRes GF@__$temp1 GF@__$tempI\n");
+    fprintf(stdout, "INT2FLOAT GF@__$tempRes GF@__$tempRes\n");
+    fprintf(stdout, "PUSHS GF@__$tempRes\n");
+    fprintf(stdout, "JUMP $ifjord$end$%i\n", uniqueId);
 
     //return 0
-    fprintf(stdout, "LABEL $ifjord$zero$%i", uniqueId);
-    fprintf(stdout, "PUSHS float@0x0p+0");
-    fprintf(stdout, "JUMP $ifjord$end$%i", uniqueId);
+    fprintf(stdout, "LABEL $ifjord$zero$%i\n", uniqueId);
+    fprintf(stdout, "PUSHS float@0x0p+0\n");
+    fprintf(stdout, "JUMP $ifjord$end$%i\n", uniqueId);
 
     //errors, end
-    fprintf(stdout, "LABEL $ifjord$errtype$&$%i", uniqueId);
-    fprintf(stdout, "EXIT int@25");
+    fprintf(stdout, "LABEL $ifjord$errtype$&$%i\n", uniqueId);
+    fprintf(stdout, "EXIT int@25\n");
 
-    fprintf(stdout, "LABEL $ifjord$errval$%i", uniqueId);
-    fprintf(stdout, "EXIT int@26");
+    fprintf(stdout, "LABEL $ifjord$errval$%i\n", uniqueId);
+    fprintf(stdout, "EXIT int@26\n");
 
-    fprintf(stdout, "LABEL $ifjord$end$%i", uniqueId);
+    fprintf(stdout, "LABEL $ifjord$end$%i\n", uniqueId);
     return ERR_OK;
   } else if (strcmp(funId, "Ifj.chr") == 0) {
     int uniqueId = labelCounter++;
 
     generate_code(node->children[1], gf);
-    fprintf(stdout, "POPS GF@__$temp1");
+    fprintf(stdout, "POPS GF@__$temp1\n");
 
     //type checks
-    fprintf(stdout, "ISINT GF@__$tempRes GF@__$temp1");
-    fprintf(stdout, "JUMPIFNEQ $ifjchr$valerr$%i GF@__$tempRes bool@true", uniqueId);
+    fprintf(stdout, "ISINT GF@__$tempRes GF@__$temp1\n");
+    fprintf(stdout, "JUMPIFNEQ $ifjchr$valerr$%i GF@__$tempRes bool@true\n", uniqueId);
 
     // float to int to char
-    fprintf(stdout, "FLOAT2INT GF@__$tempI GF@__$temp1");
-    fprintf(stdout, "INT2CHAR GF@__$tempRes GF@__$tempI");
+    fprintf(stdout, "FLOAT2INT GF@__$tempI GF@__$temp1\n");
+    fprintf(stdout, "INT2CHAR GF@__$tempRes GF@__$tempI\n");
 
-    fprintf(stdout, "PUSHS GF@__$tempRes");
-    fprintf(stdout, "JUMP $ifjchr$end$%i", uniqueId);
+    fprintf(stdout, "PUSHS GF@__$tempRes\n");
+    fprintf(stdout, "JUMP $ifjchr$end$%i\n", uniqueId);
 
-    fprintf(stdout, "LABEL $ifjchr$valerr$%i", uniqueId);
-    fprintf(stdout, "EXIT int@26");
-    fprintf(stdout, "LABEL ifjchr$end$%i", uniqueId);
+    fprintf(stdout, "LABEL $ifjchr$valerr$%i\n", uniqueId);
+    fprintf(stdout, "EXIT int@26\n");
+    fprintf(stdout, "LABEL ifjchr$end$%i\n", uniqueId);
     return ERR_OK;
   }
   return ERR_OK;
@@ -440,7 +440,7 @@ ErrorCode generate_code(ASTNode* node, Frame* gf){
         //FS_Pop(fs);
         //F_cleanup(lf);
         fprintf(stdout, "POPFRAME\n");
-        fprintf(stdout, "RETURN\n");
+        fprintf(stdout, "RETURN\n\n");
       }
       return returnError;
     }
