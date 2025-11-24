@@ -63,7 +63,7 @@ void populateVarDefinitions(ASTNode* node, Frame* lf) {
 }
 
 char* cleanString(char* in) {
-  if (!in) return "";
+  if (!in) return NULL;
   size_t inLen = strlen(in);
   char* out = malloc(inLen*4+1);
   if (!out) return NULL;
@@ -72,7 +72,7 @@ char* cleanString(char* in) {
   for (size_t i = 0; i < inLen; i++) {
     char c = (char)in[i];
     if (c <= 32 || c == 35 || c == 92) {
-      ptr += sprintf(out, "\\%03d", c);
+      ptr += sprintf(ptr, "\\%03d", c);
     } else {
       *ptr = c;
       ptr++;
@@ -613,8 +613,71 @@ ErrorCode generate_code(ASTNode* node, Frame* gf){
       }
       return ERR_OK;
     }
-    case NODE_UNOP:
-    case NODE_TERNARY:
+    case NODE_UNOP:{
+      int uniqueId = labelCounter++;
+      generate_code(node->children[0], gf);
+
+      if (strcmp(node->value, "-") == 0) {
+        fprintf(stdout, "POPS GF@__$temp1");
+        fprintf(stdout, "TYPE GF@__$temp3 GF@__$temp1");
+
+        fprintf(stdout, "JUMPIFEQ $unop$minus$int$%i GF@__$temp3 string@int", uniqueId);
+        fprintf(stdout, "JUMPIFEQ $unop$minus$float$%i GF@__$temp3 string@float", uniqueId);
+        fprintf(stdout, "EXIT int@26");
+
+        fprintf(stdout, "LABEL $unop$minus$int$%i", uniqueId);
+        fprintf(stdout, "PUSHS int@0");
+        fprintf(stdout, "PUSHS GF@__$temp1");
+        fprintf(stdout, "SUBS");
+        fprintf(stdout, "JUMP $unop$end$%i", uniqueId);
+
+        fprintf(stdout, "LABEL $unop$minus$float$%i", uniqueId);
+        fprintf(stdout, "PUSHS float@0x0p+0");
+        fprintf(stdout, "PUSHS GF@__$temp1");
+        fprintf(stdout, "SUBS");
+        fprintf(stdout, "JUMP $unop$end$%i", uniqueId);
+      } else if (strcmp(node->value, "!") == 0) {
+        fprintf(stdout, "POPS GF@__$temp1");
+        fprintf(stdout, "TYPE GF@__$temp3 GF@__$temp1");
+
+        fprintf(stdout, "JUMPIFEQ $unop$not$nil$%i", uniqueId);
+        fprintf(stdout, "JUMPIFEQ $unop$not$bool$%i", uniqueId);
+
+        fprintf(stdout, "PUSHS bool@false");
+        fprintf(stdout, "JUMP $unop$end$%i", uniqueId);
+
+        fprintf(stdout, "LABEL $unop$not$nil$%i", uniqueId);
+        fprintf(stdout, "PUSHS bool@true");
+        fprintf(stdout, "JUMP $unop$end$%i", uniqueId);
+
+        fprintf(stdout, "LABEL $unop$not$bool$%i", uniqueId);
+        fprintf(stdout, "PUSHS GF@__$temp1");
+        fprintf(stdout, "NOTS");
+        fprintf(stdout, "JUMP $unop$end$%i", uniqueId);
+      }
+      fprintf(stdout, "LABEL $unop$end$%i", uniqueId);
+      return ERR_OK;
+    }
+    case NODE_TERNARY: {
+      int uniqueId = labelCounter++;
+      generate_code(node->children[0], gf);
+      fprintf(stdout, "POPS GF@__$temp1");
+
+      // if
+      fprintf(stdout, "JUMPIFEQ $terelse$%i GF@__$temp1 nil@nil", uniqueId);
+      fprintf(stdout, "JUMPIFEQ $terelse$%i GF@__$temp1 bool@false", uniqueId);
+
+      // then
+      generate_code(node->children[1], gf);
+      fprintf(stdout, "JUMP $terend$%i", uniqueId);
+
+      // else
+      fprintf(stdout, "LABEL $terelse$%i", uniqueId);
+      generate_code(node->children[2], gf);
+
+      fprintf(stdout, "$terend$%i", uniqueId);
+      return ERR_OK;
+    }
     case NODE_PROGRAM: {
       //fprintf(stderr, "gen:Program\n");
       fprintf(stdout, ".IFJcode25\n");
