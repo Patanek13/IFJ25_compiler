@@ -522,8 +522,10 @@ ErrorCode generate_code(ASTNode* node, Frame* gf){
     case NODE_ASSIGN: {
       int idLen = strlen(node->children[0]->value);
       if (node->children[0]->value[idLen-1] == '=') { //identify setter
-        char setterId[idLen-1];
+        char setterId[idLen];
         strncpy(setterId, node->children[0]->value, idLen-1);
+        setterId[idLen-1] = '\0';
+
         returnError = generate_code(node->children[1], gf); // prava cast na zasobik
 
         fprintf(stdout, "CALL $set$%s\n", setterId);
