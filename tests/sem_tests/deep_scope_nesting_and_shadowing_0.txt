@@ -2,7 +2,6 @@
 import "ifj25" for Ifj
 
 class Program {
-    var x
     static main() {
         var x
         x = 10                  // x = main_1_x, Scope Depth 1
