@@ -315,6 +315,19 @@ Token scan_zero() {
         return scan_hex();
     }
 
+    if (match('e') || match('E')) {
+        return scan_exponent();
+    }
+
+    if (match('0')) {
+        return scan_zero();
+    }
+
+    if (isdigit(peek())) {
+        reset_buffer();
+        return scan_number();
+    }
+
     return add_token(INTEGER);
 }
 
