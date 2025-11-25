@@ -990,6 +990,17 @@ ASTNode* param_list(int* error_code) {
               return NULL;
           }
 
+          if (token.type == NEW_LINE){
+            do {
+                token = get_token();
+                if (token.type == ERROR) {
+                    *error_code = LEXICAL_ERROR;
+                    ast_free(param_list_node);
+                    return NULL;
+                }
+            } while (token.type == NEW_LINE);
+          }
+
           // zustala carka bez dalsiho parametru
           if (token.type == BRACKET_END) {
               fprintf(out, "ERROR: Zbyla carka bez dalsiho parametru\n");
@@ -1298,13 +1309,27 @@ ASTNode* built_in_call(int* error_code) {
 
     // nacist dalsi token, musi byt id funkce
     if (!match_token(ID) || !is_built_in_func()) {
+
+        if (token.type == NEW_LINE){
+            fprintf(out, "looking for dot");
+            do {
+                token = get_token();
+                if (token.type == ERROR) {
+                    *error_code = LEXICAL_ERROR;
+                    // ast_free(param_list_node);
+                    return NULL;
+                }
+            } while (token.type == NEW_LINE);
+        }
+        if (token.type == ID || is_built_in_func()){
+            // do nothing syntax correct
+        }
         // Check if match_token failed due to lexical error
         if (token.type == ERROR){
             *error_code = LEXICAL_ERROR;
         } else {
             *error_code = SYNTAX_ERROR;
         }
-        return NULL;
     }
 
     // potrebuju ulozit jmeno funkce
