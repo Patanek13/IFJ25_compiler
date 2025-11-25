@@ -12,7 +12,7 @@ class Program {
                 Ifj.write("Celkem velke cislo!\n")
             }
             arg = arg * 42  // prikaz prirazeni
-            var ansStr 
+            var ansStr
             ansStr = Ifj.str(arg)  // volani vestavene funkce
             return "Odpoved je " + ansStr
         } else {  // else sekce je v zakladnim zadani povinna
@@ -33,7 +33,7 @@ class Program {
     }
 
     // staticky setter -> chova se jako funkce, muze mit vedlejsi efekty, ale pristupuje se k ni jinak (viz nize)
-    static unicorn=(val) {  
+    static unicorn=(val) {
         Ifj.write("Jsem jednorozci setter, ziskal jsem ")
         Ifj.write(val)
         Ifj.write("\n")
@@ -53,12 +53,12 @@ class Program {
                             * Toto volani skonci vypisem "null". */
         Ifj.write("\n")
 
-        unicorn = 5 /* Zavola telo setteru -> 
-                     * ten vypise zpravu "Jsem jednorozci setter, ziskal jsem 5\n" 
+        unicorn = 5 /* Zavola telo setteru ->
+                     * ten vypise zpravu "Jsem jednorozci setter, ziskal jsem 5\n"
                      * a nastavi glob. promennou __a na 5.
                      * Mimochodem /* viceradkove komentare mohou byt /* vnorene */, hura. */ */
 
-        var myValue         // definice promenne - v zakladnim zadani neni s prirazenim (var myValue = ...), 
+        var myValue         // definice promenne - v zakladnim zadani neni s prirazenim (var myValue = ...),
                             // vychozi hodnota je null
         myValue = unicorn   // zavola telo getteru, ten vrati 15 (== __a + 10)
         Ifj.write(myValue)  // vypise 15
@@ -74,7 +74,7 @@ class Program {
         myValue = getAnswer(valueFromUser)  // zavola pretizenou funkci getAnswer(arg)
         if (myValue == null) {
             Ifj.write("ODPOVED NENI!\n")
-            return  // konec programu
+            return null  // konec programu
         } else {
             if (myValue is Null) {
                 // tato podminka je semanticky ekvivalentni podmince myValue == null,
@@ -91,8 +91,8 @@ class Program {
             Ifj.write(" -> ")
             valueFromUser = valueFromUser - 1
 
-            var valStr 
-            valStr = Ifj.str(valueFromUser)  /* pokud byla zadana hodnota desetinna, 
+            var valStr
+            valStr = Ifj.str(valueFromUser)  /* pokud byla zadana hodnota desetinna,
                                               * vypise ji v decimalnim formatu se dvema desetinnymi misty */
             Ifj.write(valStr)
             Ifj.write("\n")
@@ -100,7 +100,7 @@ class Program {
 
         // Rozsahy platnosti:
         {  // na miste prikazu muze stat samostatny blok
-            var x 
+            var x
             x = 1
             {
                 // Na tomto miste muzeme znovu definovat promennou s nazvem "x",
@@ -111,7 +111,7 @@ class Program {
                 x = "cervena panda + "
                 Ifj.write("(")
                 if (1 == 1) {
-                    var y 
+                    var y
                     y = x * 3  // "nasobeni" rezetce celym cislem => iterace retezce (3krat se pripoji sam za sebe)
                     // Telo v podminenem prikazu je taky blok -> taky vytvari rozsah platnosti
                     var x
