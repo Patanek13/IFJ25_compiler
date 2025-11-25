@@ -36,7 +36,7 @@ TokenType precedence_table[IDX_COUNT][IDX_COUNT] = {
     /* 8 (   */ {S, S, S, S, S, S, S, S, S, E, S, E, S, X, X}, // ( vs ) -> E, ( vs : -> E
     /* 9 )   */ {R, R, R, R, R, R, R, R, X, R, R, R, X, X, R},
     /* 10?   */ {S, S, S, S, S, S, S, S, S, S, S, P, S, X, X}, // ? vs : -> P
-    /* 11:   */ {R, R, R, R, R, R, R, R, X, R, X, R, S, X, R}, // : redukuje jen po E, shiftuje vsechno ostatni
+    /* 11:   */ {R, R, R, R, R, R, R, R, S, R, X, R, S, X, R}, // : redukuje jen po E, shiftuje vsechno ostatni
     /* 12id  */ {R, R, R, R, R, R, R, R, X, R, R, R, X, X, R}, // operandy redukuji vse
     /* 13type*/ {R, R, R, R, R, R, R, R, X, R, R, R, X, X, R}, // type se redukuje
     /* 14$   */ {S, S, S, S, S, S, S, S, S, X, S, X, S, X, X}  // $ (dno) shiftuje vse
@@ -675,7 +675,7 @@ ASTNode* parse_expression(int *error_code) {
         // 'b' = aktualni token na vstupu
         Token current_token = token;
         if (is_new_token){
-            if ((current_token.type == NEW_LINE) && (top_terminal.type == OPERATOR)){
+            if ((current_token.type == NEW_LINE) && ((top_terminal.type == OPERATOR) || (top_terminal.type == QUESTION) || (top_terminal.type == COLON))){
                 token = get_token();
                 fprintf(out, "---------\ngetting next token\n-----------\n");
                 current_token = token;
