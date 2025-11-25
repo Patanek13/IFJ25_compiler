@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
   }
 
   ErrorCode generatorError = generate_program(ast_root, NULL, false);
-  fprintf(stderr, "Generator status: %i ", generatorError);
+  fprintf(stderr, "Generator status: %i\n", generatorError);
 
   if (debug) {
     fprintf(stderr, "<AST representation>\n");
