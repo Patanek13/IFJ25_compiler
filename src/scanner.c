@@ -375,9 +375,10 @@ bool handle_escape_sequence() {
 
 Token scan_normal_string() {
     while (c != '"' && c != EOF && c != '\n') {
-        if (iscntrl(c)) {
+        if (iscntrl(c) && c != '\t') {
             return add_token(ERROR);
         }
+
         if (c == '\\') {
             if (!handle_escape_sequence()) {
                 return add_token(ERROR);
