@@ -7,7 +7,7 @@
 set -u
 
 TEST_DIR="lex_tests"
-PROJECT_BIN="../src/IFJcompiler"
+PROJECT_BIN="../build/IFJcompiler"
 
 # timeout per test (format accepted by `timeout`, e.g., 5s). Set TEST_TIMEOUT=0 to disable.
 TEST_TIMEOUT="${TEST_TIMEOUT:-5s}"
