@@ -755,7 +755,7 @@ static void analyze_call(ASTNode* node, AnalysisContext* context) {
                     fprintf(stderr, "Semantic Error: Second argument type mismatch in call to 'Ifj.substring'\n");
                 }
             } else {
-                if (arg2->data_type != TYPE_INT) {
+                if (arg2->data_type != TYPE_INT && arg2->data_type != TYPE_UNKNOWN) {
                     *context->error_code = ERR_SEMANTIC_TYPE;
                     if (context->debug) {
                         fprintf(stderr, "Semantic Error: Second argument is not Int in call to 'Ifj.substring'\n");
@@ -769,7 +769,7 @@ static void analyze_call(ASTNode* node, AnalysisContext* context) {
                     fprintf(stderr, "Semantic Error: Third argument type mismatch in call to 'Ifj.substring'\n");
                 }
             } else {
-                if (arg3->data_type != TYPE_INT) {
+                if (arg3->data_type != TYPE_INT && arg3->data_type != TYPE_UNKNOWN) {
                     *context->error_code = ERR_SEMANTIC_TYPE;
                     if (context->debug) {
                         fprintf(stderr, "Semantic Error: Third argument is not Int in call to 'Ifj.substring'\n");
@@ -794,7 +794,7 @@ static void analyze_call(ASTNode* node, AnalysisContext* context) {
                     fprintf(stderr, "Semantic Error: Second argument type mismatch in call to 'Ifj.ord'\n");
                 }
             } else {
-                if (arg2->data_type != TYPE_INT) {
+                if (arg2->data_type != TYPE_INT && arg2->data_type != TYPE_UNKNOWN) {
                     *context->error_code = ERR_SEMANTIC_TYPE;
                     if (context->debug) {
                         fprintf(stderr, "Semantic Error: Second argument is not Int in call to 'Ifj.ord'\n");
@@ -811,7 +811,7 @@ static void analyze_call(ASTNode* node, AnalysisContext* context) {
                     fprintf(stderr, "Semantic Error: Argument type mismatch in call to 'Ifj.chr'\n");
                 }
             } else {
-                if (arg1->data_type != TYPE_INT) {
+                if (arg1->data_type != TYPE_INT && arg1->data_type != TYPE_UNKNOWN) {
                     *context->error_code = ERR_SEMANTIC_TYPE;
                     if (context->debug) {
                         fprintf(stderr, "Semantic Error: Argument is not Int in call to 'Ifj.chr'\n");
@@ -1020,7 +1020,10 @@ static DataType analyze_expression(ASTNode* node, AnalysisContext* context) {
 
                     // Save original name
                     char* func_name_str = str_dup(var_name);
-                    if(!func_name_str) { *context->error_code=ERR_INTERNAL; return TYPE_UNKNOWN;}
+                    if(!func_name_str) {
+                      *context->error_code=ERR_INTERNAL;
+                      return TYPE_UNKNOWN;
+                    }
 
                     // Clean up current node (it was an ID)
                     // No, ast_create_node makes a copy. So we must free node->value.
@@ -1039,12 +1042,20 @@ static DataType analyze_expression(ASTNode* node, AnalysisContext* context) {
 
                     free(func_name_str); // Clean up temp string
 
-                    if (!func_id || !args) { *context->error_code = ERR_INTERNAL; return TYPE_UNKNOWN; }
+                    if (!func_id || !args) {
+                       *context->error_code = ERR_INTERNAL;
+                       return TYPE_UNKNOWN;
+                    }
 
-                    // Link
                     // Ensure children array is clean
-                    if(node->children) free(node->children);
-                    node->children = NULL; node->child_count = 0;
+                    for (size_t i = 0; i < node->child_count; i++) {
+                        // Should not have any children, but just in case
+                        ast_free(node->children[i]);
+                    }
+                    // Free old children array
+                    free(node->children);
+                    node->children = NULL;
+                    node->child_count = 0;
 
                     ast_add_child(node, func_id);
                     ast_add_child(node, args);
