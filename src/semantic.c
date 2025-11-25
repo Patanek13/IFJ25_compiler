@@ -394,7 +394,7 @@ static void analyze_var_decl(ASTNode* node, AnalysisContext* context) {
         }
         return;
     }
-    
+
     // Get variable name from AST
     ASTNode* id_node = node->children[0];
     const char* var_name = id_node->value;
@@ -637,6 +637,21 @@ static void analyze_assign(ASTNode *node, AnalysisContext* context) {
         }
         else {
             free(setter_key); // Setter not found, free key
+
+            // Check if function exists with the name
+        if (func_exists(context->global_table, var_name)) {
+            *context->error_code = ERR_SEMANTIC_OTHER; // Function name used as variable
+            if (context->debug) fprintf(stderr, "Semantic Error: Assignment to function name '%s'\n", var_name);
+            return;
+        }
+
+        // Check for Getter used as variable
+        SymbolData* getter_data = symtable_lookup(context->global_table, var_name);
+        if (getter_data != NULL && getter_data->kind == SYM_GETTER) {
+            *context->error_code = ERR_SEMANTIC_OTHER; // Getter name used as variable
+            if (context->debug) fprintf(stderr, "Semantic Error: Assignment to getter name '%s'\n", var_name);
+            return;
+        }
 
             // GLOBAL VARIABLE CHECK
             if (strncmp(var_name, "__", 2) == 0) {
