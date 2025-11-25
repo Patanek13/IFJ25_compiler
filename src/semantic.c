@@ -385,6 +385,17 @@ static void analyze_var_decl(ASTNode* node, AnalysisContext* context) {
     if (context->debug) {
         fprintf(stdout, "Semantic Analysis: Analyzing variable declaration node\n");
     }
+
+    // Check for var outside function
+    if (context->current_function == NULL) {
+        *context->error_code = SYNTAX_ERROR;
+        if (context->debug) {
+            fprintf(stderr, "Syntax Error: 'var' declaration outside function\n");
+        }
+        return;
+    }
+    
+    // Get variable name from AST
     ASTNode* id_node = node->children[0];
     const char* var_name = id_node->value;
 
