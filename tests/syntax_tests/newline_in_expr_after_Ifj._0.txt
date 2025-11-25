@@ -1,0 +1,25 @@
+ import "ifj25" for Ifj
+
+class Program{
+
+static main(){
+
+__d = Ifj.
+
+write("str")
+
+
+if (Ifj.
+
+
+read_num() == true &&
+
+"str" == __d){
+
+return "true"
+
+}
+
+}
+
+}

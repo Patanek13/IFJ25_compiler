@@ -1,0 +1,47 @@
+// [TEST 3] Getter/Setter and Variable Interplay
+import "ifj25" for Ifj
+
+class Program {
+    // Globální proměnná (pro uložení stavu)
+    __state = 0
+
+    // Setter (zapisuje do __state)
+    static myVar = (val) {
+        __state = val
+    }
+
+    // Getter (čte z __state a přidává 1)
+    static myVar {
+        return __state + 1
+    }
+
+    // Funkce, která koliduje s názvem setteru/getteru
+    static myVar(arg) {
+        return arg * 100
+    }
+
+    static main() {
+        var x
+        var test
+        x = 10
+
+        // 1. Volání Setteru (Syntaxe přiřazení)
+        myVar = x              // Setter: __state = 10
+
+        // 2. Volání Getteru (Syntaxe proměnné)
+        var y
+        y = myVar              // Getter: y = __state + 1 (11)
+        test = Ifj.write(y)
+
+        // 3. Volání standardní funkce (Syntaxe volání)
+        var z
+        z = myVar(2)           // Standardní funkce: z = 2 * 100 (200)
+        test = Ifj.write(z)
+
+        // 4. Redefinice v lokálním bloku (Chyba 4)
+        {
+            var myVar // [ERROR] Lokální proměnná má stejné jméno jako parametr/funkce
+            myVar = 5
+        }
+    }
+}
