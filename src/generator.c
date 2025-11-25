@@ -390,7 +390,7 @@ ErrorCode generate_builtIn(ASTNode* node, Frame* gf) {
 
     fprintf(stdout, "LABEL $ifjchr$valerr$%i\n", uniqueId);
     fprintf(stdout, "EXIT int@26\n");
-    fprintf(stdout, "LABEL ifjchr$end$%i\n", uniqueId);
+    fprintf(stdout, "LABEL $ifjchr$end$%i\n", uniqueId);
     return ERR_OK;
   }
   return ERR_OK;
@@ -410,7 +410,7 @@ ErrorCode generate_code(ASTNode* node, Frame* gf){
       fprintf(stdout, "LABEL $%s$%i\n",node->value, numOfParams);
       //Frame* lf = malloc(sizeof(Frame));
       //F_init(lf, LF);
-      fprintf(stdout, "CREATEFRAME\n");
+
       //FS_Push(fs, lf);
       fprintf(stdout, "PUSHFRAME\n");
       populateVarDefinitions(node->children[1], gf);
@@ -527,7 +527,7 @@ ErrorCode generate_code(ASTNode* node, Frame* gf){
         setterId[idLen-1] = '\0';
 
         returnError = generate_code(node->children[1], gf); // prava cast na zasobik
-
+        fprintf(stdout, "CREATEFRAME\n");
         fprintf(stdout, "CALL $set$%s\n", setterId);
       } else {
         returnError = generate_code(node->children[1], gf); // prava cast na zasobnik
@@ -550,6 +550,7 @@ ErrorCode generate_code(ASTNode* node, Frame* gf){
             generate_code(args->children[i], gf); // push argumentov na stack
           }
         }
+        fprintf(stdout, "CREATEFRAME\n");
         fprintf(stdout, "CALL $%s$%i\n", funcId, numOfArgs);
       }
       //returnError = generate_code(node->children[1], gf); //ARG_LIST
@@ -698,7 +699,8 @@ ErrorCode generate_code(ASTNode* node, Frame* gf){
       fprintf(stdout, "DEFVAR GF@__$tempJ\n");
       fprintf(stdout, "DEFVAR GF@__$tempK\n");
       fprintf(stdout, "DEFVAR GF@__$tempRes\n");
-      fprintf(stdout, "JUMP $main$0\n");
+      fprintf(stdout, "CREATEFRAME\n");
+      fprintf(stdout, "CALL $main$0\n");
       fprintf(stdout, "JUMP $program$end$\n");
       //generate all functions
       ASTNode* mainBlock = node->children[0];
