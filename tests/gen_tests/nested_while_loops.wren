@@ -5,10 +5,10 @@ class Program {
         var j
         var k
         var counter
-        
+
         i = 1
         counter = 0
-        
+
         // Tři while loopy v sobě
         while (i <= 2) {
             j = 1
@@ -30,15 +30,15 @@ class Program {
             }
             i = i + 1
         }
-        
+
         Ifj.write("---\n")
-        
+
         // Další příklad se čtyřmi úrovněmi
         var a
         var b
         var c
         var d
-        
+
         a = 1
         while (a <= 2) {
             b = 1
@@ -62,4 +62,3 @@ class Program {
         }
     }
 }
-
