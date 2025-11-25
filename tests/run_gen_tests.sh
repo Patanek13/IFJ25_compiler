@@ -90,7 +90,7 @@ for src_file in "${TEST_DIR}"/*.wren; do
 	fi
 
 	# 1. COMPILE
-	compile_err_msg=$("${PROJECT_BIN}" < "${src_file}" > "${TMP_CODE}" 2>&1)
+	compile_err_msg=$("${PROJECT_BIN}" < "${src_file}" > "${TMP_CODE}" 2> /dev/null)
 	compile_exit_code=$?
 
 	if [[ ${compile_exit_code} -ne 0 ]]; then
