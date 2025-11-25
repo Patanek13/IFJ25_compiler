@@ -11,3 +11,4 @@ IFJcompiler
 *.out
 TEST/
 check.log
+output.ifjcode25
