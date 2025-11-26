@@ -1034,87 +1034,98 @@ static DataType analyze_expression(ASTNode* node, AnalysisContext* context) {
             break;
         case NODE_ID: {
             const char* var_name = node->value;
+
+            // 1. Lookup symbol in all available scopes (including global for getters)
             SymbolData* var_symbol = scope_lookup(context->scope_stack, var_name);
 
-            // 1. If not found locally, check for GETTER or Global
+            // If not found, check if it is an implicit global variable (__)
             if (var_symbol == NULL) {
-                // Check for Getter directly (name is just the identifier)
-                SymbolData* getter_data = symtable_lookup(context->global_table, var_name);
-
-                if (getter_data != NULL && getter_data->kind == SYM_GETTER) {
-                    // FOUND GETTER -> Transform to NODE_CALL
-
-                    // Save original name
-                    char* func_name_str = str_dup(var_name);
-                    if(!func_name_str) {
-                      *context->error_code=ERR_INTERNAL;
-                      return TYPE_UNKNOWN;
-                    }
-
-                    // Clean up current node (it was an ID)
-                    // No, ast_create_node makes a copy. So we must free node->value.
-                    free(node->value);
-                    node->value = NULL;
-
-                    // Transform to CALL
-                    node->type = NODE_CALL;
-                    node->frame = FRAME_GLOBAL;
-                    node->data_type = getter_data->type;
-
-                    // Create children for CALL
-                    ASTNode* func_id = ast_create_node(NODE_ID, func_name_str, TYPE_UNKNOWN);
-                    func_id->frame = FRAME_GLOBAL;
-                    ASTNode* args = ast_create_node(NODE_ARG_LIST, NULL, TYPE_UNKNOWN);
-
-                    free(func_name_str); // Clean up temp string
-
-                    if (!func_id || !args) {
-                       *context->error_code = ERR_INTERNAL;
-                       return TYPE_UNKNOWN;
-                    }
-
-                    // Ensure children array is clean
-                    for (size_t i = 0; i < node->child_count; i++) {
-                        // Should not have any children, but just in case
-                        ast_free(node->children[i]);
-                    }
-                    // Free old children array
-                    free(node->children);
-                    node->children = NULL;
-                    node->child_count = 0;
-
-                    ast_add_child(node, func_id);
-                    ast_add_child(node, args);
-
-                    return getter_data->type; // Done
-                }
-
-                // Check global var
                 if (strncmp(var_name, "__", 2) == 0) {
                     var_symbol = symtable_lookup(context->global_table, var_name);
-                    if (!var_symbol) return TYPE_UNKNOWN; // Implicit global
+
+                    if (var_symbol == NULL) {
+                        // If still not found -> Auto-declare global variable
+                        return TYPE_UNKNOWN;
+                    }
                 } else {
+                    // It is not global (__) and was not found -> Error 3
                     *context->error_code = ERR_SEMANTIC_UNDEFINED;
+                    if (context->debug) fprintf(stderr, "Semantic Error: Undefined variable '%s'\n", var_name);
                     return TYPE_UNKNOWN;
                 }
             }
 
-            // 2. Handle Variable (Local/Global)
-            if (var_symbol->kind == SYM_VARIABLE) {
+            // Symbol was found
+
+            // --- A. It is a GETTER -> TRANSFORM TO NODE_CALL ---
+            if (var_symbol->kind == SYM_GETTER) {
+
+                // Save original name
+                char* func_name_str = str_dup(var_name);
+                if (!func_name_str) { *context->error_code = ERR_INTERNAL; return TYPE_UNKNOWN; }
+
+                // Free old value of ID node (because NODE_CALL does not have value)
+                free(node->value);
+                node->value = NULL;
+
+                // Rewrite node: Change it to a function call
+                node->type = NODE_CALL;
+                node->frame = FRAME_GLOBAL;       // Call to getter is a global jump
+                node->data_type = var_symbol->type; // Getter return type
+
+                // create children for CALL node
+                // Name node
+                ASTNode* func_id = ast_create_node(NODE_ID, func_name_str, TYPE_UNKNOWN);
+                // empty argument list
+                ASTNode* args = ast_create_node(NODE_ARG_LIST, NULL, TYPE_UNKNOWN);
+
+                free(func_name_str); // Free the helper string (ast_create_node made a copy)
+
+                if (!func_id || !args) {
+                    *context->error_code = ERR_INTERNAL;
+                    return TYPE_UNKNOWN;
+                }
+
+                // Clear old children of the node)
+                if (node->children) {
+                    free(node->children);
+                }
+                node->children = NULL;
+                node->child_count = 0;
+
+                // Attach new children to the node (which is now a CALL)
+                ast_add_child(node, func_id);
+                ast_add_child(node, args);
+
+                return var_symbol->type;
+            }
+
+            // It is VARIABLE
+            else if (var_symbol->kind == SYM_VARIABLE) {
                 result_type = var_symbol->type;
+
                 if (strncmp(var_name, "__", 2) == 0) {
+                    // Global variable
                     node->frame = FRAME_GLOBAL;
                 } else {
+                    // Local variable
                     node->frame = FRAME_LOCAL;
-                    if (var_symbol->mangled_name) {
+
+                    // If we have a stored unique name (from definition), use it
+                    // This ensures that 'x' inside a block translates to 'main_2_x'.
+                    if (var_symbol->mangled_name != NULL) {
                         free(node->value);
                         node->value = str_dup(var_symbol->mangled_name);
                     }
                 }
-            } else if (var_symbol->kind == SYM_GETTER) {
-                result_type = var_symbol->type;
-            } else {
+            }
+
+            // Other kinds (FUNC, SETTER) cannot be used as variables
+            else {
+                // Func or setter cannot be used as a variable in an expression -> Error 10
                 *context->error_code = ERR_SEMANTIC_OTHER;
+                if (context->debug) fprintf(stderr, "Semantic Error: Invalid use of function/setter '%s' as variable\n", var_name);
+                return TYPE_UNKNOWN;
             }
             break;
         }
