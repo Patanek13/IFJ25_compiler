@@ -1,0 +1,46 @@
+// [TEST 4] Null, Literal and Arithmetic
+import "ifj25" for Ifj
+
+class Program {
+    static func_num() {
+    return 5
+    }
+    static func_null() {
+    return null
+    }
+
+    static main() {
+        var a
+        a = 10
+        var b
+        b = func_num()
+        var c
+        c = func_null() // c ma TYPE_NULL
+
+        // 1. Staticka chyba (Literals):
+        // var err1 = 10 + null  // [ERROR] Tuto syntaxi by parser nemel pustit
+        var x
+        x = 10 + func_null()    // [ERROR 26] Funkce vraci null, musi se cekat na runtime
+
+        if (a == 10) {
+            var y
+            var test
+            y = 5
+            y = y + c           // [ERROR 26] Promenna c je TYPE_NULL
+            test = Ifj.write(y)
+        } else {
+            var z
+            z = 10
+            z = z * 10.5        // [ERROR 26] Num * Float OK
+        }
+
+        // 2. Statická chyba 6 (Explicitní zakázaná operace)
+        // var err2 = "text" - 5 // [ERROR 6] String nelze odecitat
+
+        // 3. Test Ternarniho operatoru s null
+        var res
+        var test
+        res = (c == null) ? "null_ok" : "null_fail"
+        test = Ifj.write(res)
+    }
+}

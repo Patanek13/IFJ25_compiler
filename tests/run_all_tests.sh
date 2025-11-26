@@ -6,8 +6,9 @@ set -u
 LEX_SCRIPT="./run_lex_tests.sh"
 SYNTAX_SCRIPT="./run_stx_tests.sh"
 SEM_SCRIPT="./run_sem_tests.sh"
+GEN_SCRIPT="./run_cc_tests.sh"
 
-if [[ ! -x "${LEX_SCRIPT}" || ! -x "${SYNTAX_SCRIPT}" || ! -x "${SEM_SCRIPT}" ]]; then
+if [[ ! -x "${LEX_SCRIPT}" || ! -x "${SYNTAX_SCRIPT}" || ! -x "${SEM_SCRIPT}" || ! -x "${GEN_SCRIPT}" ]]; then
 	echo "Required test scripts are missing or not executable." >&2
 	exit 1
 fi
@@ -70,7 +71,9 @@ print_percent() {
 lex_data=($(log_and_parse "Lexical" "${LEX_SCRIPT}"))
 syn_data=($(log_and_parse "Syntax" "${SYNTAX_SCRIPT}"))
 sem_data=($(log_and_parse "Semantic" "${SEM_SCRIPT}"))
+gen_data=($(log_and_parse "CodeGen" "${GEN_SCRIPT}"))
 
 print_percent "${lex_data[0]}" "${lex_data[1]:-0}" "${lex_data[2]:-0}"
 print_percent "${syn_data[0]}" "${syn_data[1]:-0}" "${syn_data[2]:-0}"
 print_percent "${sem_data[0]}" "${sem_data[1]:-0}" "${sem_data[2]:-0}"
+print_percent "${gen_data[0]}" "${gen_data[1]:-0}" "${gen_data[2]:-0}"

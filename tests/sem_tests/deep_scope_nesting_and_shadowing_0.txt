@@ -1,0 +1,34 @@
+// [TEST 1] Deep Scope Nesting and Shadowing
+import "ifj25" for Ifj
+
+class Program {
+    static main() {
+        var x
+        x = 10                  // x = main_1_x, Scope Depth 1
+
+        {   // Block Depth 2
+            var x
+            x = 20              // x = main_2_x (Shadows main_1_x)
+            var y
+            y = 50              // y = main_2_y
+
+            {   // Block Depth 3
+                var z
+                z = x + y       // Uses main_2_x (20) and main_2_y (50)
+                Ifj.write(z)        // Output: 70
+
+                {   // Block Depth 4
+                    var y
+                    y = 5       // y = main_4_y (Shadows main_2_y)
+                    Ifj.write(y)    // Output: 5
+                } // Block 4 ends (y = main_4_y is destroyed)
+
+                Ifj.write(y)        // Output: 50 (back to main_2_y)
+            } // Block 3 ends
+
+            Ifj.write(x)            // Output: 20 (main_2_x is still visible)
+        } // Block 2 ends
+
+        Ifj.write(x)                // Output: 10 (back to main_1_x)
+    }
+}
