@@ -35,7 +35,7 @@ TokenType precedence_table[IDX_COUNT][IDX_COUNT] = {
     /* 7 ||  */ {S, S, S, S, S, S, S, R, S, R, R, R, S, X, R},
     /* 8 (   */ {S, S, S, S, S, S, S, S, S, E, S, E, S, X, X}, // ( vs ) -> E, ( vs : -> E
     /* 9 )   */ {R, R, R, R, R, R, R, R, X, R, R, R, X, X, R},
-    /* 10?   */ {S, S, S, S, S, S, S, S, S, S, S, P, S, X, X}, // ? vs : -> P
+    /* 10?   */ {S, S, S, S, S, S, S, S, S, S, S, E, S, X, X}, // ? vs : -> P
     /* 11:   */ {R, R, R, R, R, R, R, R, S, R, X, R, S, X, R}, // : redukuje jen po E, shiftuje vsechno ostatni
     /* 12id  */ {R, R, R, R, R, R, R, R, X, R, R, R, X, X, R}, // operandy redukuji vse
     /* 13type*/ {R, R, R, R, R, R, R, R, X, R, R, R, X, X, R}, // type se redukuje
@@ -158,7 +158,6 @@ static const char* token_type_to_string(TokenType type) {
         case PREC_SHIFT: return "PREC_SHIFT";
         case PREC_REDUCE: return "PREC_REDUCE";
         case PREC_EQUAL: return "PREC_EQUAL";
-        case PREC_PUSH: return "PREC_PUSH";
         default: return "UNKNOWN_TOKEN";
     }
 }
@@ -760,7 +759,6 @@ ASTNode* parse_expression(int *error_code) {
         fprintf(out, "    -> Top index (zásobník): %d (Token: %s)\n", top_idx, token_type_to_string(top_terminal.type));
         fprintf(out, "    -> Curr index (vstup):   %d (Token: %s)\n", current_idx, token_type_to_string(current_token.type));
         fprintf(out, "    -> Pravidlo: %s\n", (rule == S) ? "SHIFT <" :
-                                         (rule == P) ? "PUSH P" :
                                          (rule == E) ? "EQUAL =" :
                                          (rule == R) ? "REDUCE >" : "ERROR X");
         switch (rule) {
@@ -776,11 +774,9 @@ ASTNode* parse_expression(int *error_code) {
                 }
                 // FALLTHROUGH - pokracuj jako PUSH
 
-            case P: // Push (pro ternarni operator)
             case E: // Equal '=' (pro zavorky)
                 is_new_token = true;
                 if(rule == E) fprintf(out, "DEBUG: Pravidlo EQUAL =\n");
-                else if(rule == P) fprintf(out, "DEBUG: Pravidlo PUSH P\n");
 
                 // Push 'b' (current_token) na tokenStack
                 if(stack_push(&tokenStack, current_token) != ERR_OK) {
@@ -808,13 +804,16 @@ ASTNode* parse_expression(int *error_code) {
 
                             // Vytvorime uzel CALL
                             node = ast_create_node(NODE_CALL, NULL, TYPE_UNKNOWN);
-                            if(!node) { *error_code = ERR_INTERNAL;
+                            if(!node) {
+                              *error_code = ERR_INTERNAL;
                               goto cleanup;
                             }
 
                             // 1. Pridame ID (jmeno funkce)
                             ASTNode* id_node = ast_create_node(NODE_ID, current_token.value.string, TYPE_UNKNOWN);
-                            if(!id_node) { *error_code = ERR_INTERNAL; ast_free(node);
+                            if(!id_node) {
+                              *error_code = ERR_INTERNAL;
+                              ast_free(node);
                               goto cleanup;
                             }
                             ast_add_child(node, id_node);
@@ -830,7 +829,8 @@ ASTNode* parse_expression(int *error_code) {
                             }
 
                             ASTNode* args_node = params(error_code); // params zacina tokenem PO '('
-                            if (*error_code != ERR_OK) { ast_free(node);
+                            if (*error_code != ERR_OK) {
+                              ast_free(node);
                               goto cleanup;
                             }
                             ast_add_child(node, args_node);
@@ -846,7 +846,8 @@ ASTNode* parse_expression(int *error_code) {
                         } else {
                             // Byl to jen ID (promenna)
                             node = ast_create_node(NODE_ID, current_token.value.string, TYPE_UNKNOWN);
-                            if (node == NULL) { *error_code = ERR_INTERNAL;
+                            if (node == NULL) {
+                              *error_code = ERR_INTERNAL;
                               goto cleanup;
                             }
                             token = next_token; // Dalsi token uz mame nacteny

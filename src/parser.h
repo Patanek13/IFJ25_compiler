@@ -250,7 +250,6 @@ typedef enum {
 #define S PREC_SHIFT // Shift ">"
 #define R PREC_REDUCE // Reduce "<"
 #define E PREC_EQUAL // Equal "="
-#define P PREC_PUSH // Push "P"
 
 // Precedence table definition
 extern TokenType precedence_table[IDX_COUNT][IDX_COUNT];
