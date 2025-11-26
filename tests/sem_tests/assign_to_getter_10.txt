@@ -1,0 +1,18 @@
+import "ifj25" for Ifj
+
+class Program {
+    // Definice pouze getteru
+    static unicorn {
+        return 42
+    }
+
+    static main() {
+        var x
+        // Čtení je OK
+        x = unicorn
+
+        // Zápis je CHYBA, protože 'unicorn=' (setter) neexistuje,
+        // a 'unicorn' (getter) není zapisovatelný.
+        unicorn = 100
+    }
+}

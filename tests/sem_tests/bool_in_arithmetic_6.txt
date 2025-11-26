@@ -1,0 +1,11 @@
+// [TEST 2.3] Bool v aritmetice - Chyba 6
+import "ifj25" for Ifj
+
+class Program {
+    static main() {
+        var t
+        t = true
+        var x
+        x = t + 1 // Bool nelze sčítat s Num
+    }
+}

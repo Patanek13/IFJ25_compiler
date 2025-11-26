@@ -1,0 +1,23 @@
+// [TEST 1.1] Unarni minus
+import "ifj25" for Ifj
+
+class Program {
+    static main() {
+        var a
+        a = -5
+        var b
+        b = 10
+        var c
+        c = -b // Unarni minus nad promennou
+
+        Ifj.write(a) // Mělo by vypsat -5
+        Ifj.write("\n")
+        Ifj.write(c) // Mělo by vypsat -10
+        Ifj.write("\n")
+
+        // Komplexnejsi vyraz
+        var d
+        d = -(a + b) // -( -5 + 10 ) = -5
+        Ifj.write(d)
+    }
+}

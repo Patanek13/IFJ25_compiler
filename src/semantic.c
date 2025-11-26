@@ -385,6 +385,17 @@ static void analyze_var_decl(ASTNode* node, AnalysisContext* context) {
     if (context->debug) {
         fprintf(stdout, "Semantic Analysis: Analyzing variable declaration node\n");
     }
+
+    // Check for var outside function
+    if (context->current_function == NULL) {
+        *context->error_code = SYNTAX_ERROR;
+        if (context->debug) {
+            fprintf(stderr, "Syntax Error: 'var' declaration outside function\n");
+        }
+        return;
+    }
+
+    // Get variable name from AST
     ASTNode* id_node = node->children[0];
     const char* var_name = id_node->value;
 
@@ -627,6 +638,21 @@ static void analyze_assign(ASTNode *node, AnalysisContext* context) {
         else {
             free(setter_key); // Setter not found, free key
 
+            // Check if function exists with the name
+        if (func_exists(context->global_table, var_name)) {
+            *context->error_code = ERR_SEMANTIC_OTHER; // Function name used as variable
+            if (context->debug) fprintf(stderr, "Semantic Error: Assignment to function name '%s'\n", var_name);
+            return;
+        }
+
+        // Check for Getter used as variable
+        SymbolData* getter_data = symtable_lookup(context->global_table, var_name);
+        if (getter_data != NULL && getter_data->kind == SYM_GETTER) {
+            *context->error_code = ERR_SEMANTIC_OTHER; // Getter name used as variable
+            if (context->debug) fprintf(stderr, "Semantic Error: Assignment to getter name '%s'\n", var_name);
+            return;
+        }
+
             // GLOBAL VARIABLE CHECK
             if (strncmp(var_name, "__", 2) == 0) {
                 var_symbol = symtable_lookup(context->global_table, var_name);
@@ -755,7 +781,7 @@ static void analyze_call(ASTNode* node, AnalysisContext* context) {
                     fprintf(stderr, "Semantic Error: Second argument type mismatch in call to 'Ifj.substring'\n");
                 }
             } else {
-                if (arg2->data_type != TYPE_INT) {
+                if (arg2->data_type != TYPE_INT && arg2->data_type != TYPE_UNKNOWN) {
                     *context->error_code = ERR_SEMANTIC_TYPE;
                     if (context->debug) {
                         fprintf(stderr, "Semantic Error: Second argument is not Int in call to 'Ifj.substring'\n");
@@ -769,7 +795,7 @@ static void analyze_call(ASTNode* node, AnalysisContext* context) {
                     fprintf(stderr, "Semantic Error: Third argument type mismatch in call to 'Ifj.substring'\n");
                 }
             } else {
-                if (arg3->data_type != TYPE_INT) {
+                if (arg3->data_type != TYPE_INT && arg3->data_type != TYPE_UNKNOWN) {
                     *context->error_code = ERR_SEMANTIC_TYPE;
                     if (context->debug) {
                         fprintf(stderr, "Semantic Error: Third argument is not Int in call to 'Ifj.substring'\n");
@@ -794,7 +820,7 @@ static void analyze_call(ASTNode* node, AnalysisContext* context) {
                     fprintf(stderr, "Semantic Error: Second argument type mismatch in call to 'Ifj.ord'\n");
                 }
             } else {
-                if (arg2->data_type != TYPE_INT) {
+                if (arg2->data_type != TYPE_INT && arg2->data_type != TYPE_UNKNOWN) {
                     *context->error_code = ERR_SEMANTIC_TYPE;
                     if (context->debug) {
                         fprintf(stderr, "Semantic Error: Second argument is not Int in call to 'Ifj.ord'\n");
@@ -811,7 +837,7 @@ static void analyze_call(ASTNode* node, AnalysisContext* context) {
                     fprintf(stderr, "Semantic Error: Argument type mismatch in call to 'Ifj.chr'\n");
                 }
             } else {
-                if (arg1->data_type != TYPE_INT) {
+                if (arg1->data_type != TYPE_INT && arg1->data_type != TYPE_UNKNOWN) {
                     *context->error_code = ERR_SEMANTIC_TYPE;
                     if (context->debug) {
                         fprintf(stderr, "Semantic Error: Argument is not Int in call to 'Ifj.chr'\n");
@@ -1020,7 +1046,10 @@ static DataType analyze_expression(ASTNode* node, AnalysisContext* context) {
 
                     // Save original name
                     char* func_name_str = str_dup(var_name);
-                    if(!func_name_str) { *context->error_code=ERR_INTERNAL; return TYPE_UNKNOWN;}
+                    if(!func_name_str) {
+                      *context->error_code=ERR_INTERNAL;
+                      return TYPE_UNKNOWN;
+                    }
 
                     // Clean up current node (it was an ID)
                     // No, ast_create_node makes a copy. So we must free node->value.
@@ -1039,12 +1068,20 @@ static DataType analyze_expression(ASTNode* node, AnalysisContext* context) {
 
                     free(func_name_str); // Clean up temp string
 
-                    if (!func_id || !args) { *context->error_code = ERR_INTERNAL; return TYPE_UNKNOWN; }
+                    if (!func_id || !args) {
+                       *context->error_code = ERR_INTERNAL;
+                       return TYPE_UNKNOWN;
+                    }
 
-                    // Link
                     // Ensure children array is clean
-                    if(node->children) free(node->children);
-                    node->children = NULL; node->child_count = 0;
+                    for (size_t i = 0; i < node->child_count; i++) {
+                        // Should not have any children, but just in case
+                        ast_free(node->children[i]);
+                    }
+                    // Free old children array
+                    free(node->children);
+                    node->children = NULL;
+                    node->child_count = 0;
 
                     ast_add_child(node, func_id);
                     ast_add_child(node, args);

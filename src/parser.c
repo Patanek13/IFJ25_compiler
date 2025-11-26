@@ -36,7 +36,7 @@ TokenType precedence_table[IDX_COUNT][IDX_COUNT] = {
     /* 8 (   */ {S, S, S, S, S, S, S, S, S, E, S, E, S, X, X}, // ( vs ) -> E, ( vs : -> E
     /* 9 )   */ {R, R, R, R, R, R, R, R, X, R, R, R, X, X, R},
     /* 10?   */ {S, S, S, S, S, S, S, S, S, S, S, P, S, X, X}, // ? vs : -> P
-    /* 11:   */ {R, R, R, R, R, R, R, R, X, R, X, R, S, X, R}, // : redukuje jen po E, shiftuje vsechno ostatni
+    /* 11:   */ {R, R, R, R, R, R, R, R, S, R, X, R, S, X, R}, // : redukuje jen po E, shiftuje vsechno ostatni
     /* 12id  */ {R, R, R, R, R, R, R, R, X, R, R, R, X, X, R}, // operandy redukuji vse
     /* 13type*/ {R, R, R, R, R, R, R, R, X, R, R, R, X, X, R}, // type se redukuje
     /* 14$   */ {S, S, S, S, S, S, S, S, S, X, S, X, S, X, X}  // $ (dno) shiftuje vse
@@ -672,10 +672,40 @@ ASTNode* parse_expression(int *error_code) {
             goto cleanup;
         }
 
+        // Musime zjistit co je na top zasobniku
+        Token top_stack_token;
+        stack_top(&tokenStack, &top_stack_token); // Ziskame vrchol zasobniku
+
+        // Pokud jsme v expresionu a narazime na NEW_LINE,
+        // ignorujeme ho (pokud neni na zasobniku operator nebo otaznik/colon)
+        while (token.type == NEW_LINE) {
+            // Pokud je na topu E, vim, ze newline konci vyraz
+            if (top_stack_token.type == PSEUDO_E) {
+                break; // Konec vyrazu
+            }
+
+            int top_idx = token_to_int(top_terminal);
+            if ((top_idx == IDX_MUL) || (top_idx == IDX_LBR) ||
+                (top_idx == IDX_QMARK) || (top_idx == IDX_COLON) ||
+                (top_idx == IDX_ADD) || (top_idx == IDX_CMP) ||
+                (top_idx == IDX_IS) || (top_idx == IDX_EQ) ||
+                (top_idx == IDX_AND) || (top_idx == IDX_OR) || (top_idx == IDX_NOT)) {
+                fprintf(out, "DEBUG: Ignoruji NEW_LINE ve vyrazu\n");
+                token = get_token();
+                // Check for lexical errors after consuming token
+                if (token.type == ERROR) {
+                    *error_code = LEXICAL_ERROR;
+                    goto cleanup;
+                }
+            } else {
+                break; // Jinak koncime ve vyrazu
+            }
+        }
+
         // 'b' = aktualni token na vstupu
         Token current_token = token;
         if (is_new_token){
-            if ((current_token.type == NEW_LINE) && (top_terminal.type == OPERATOR)){
+            if ((current_token.type == NEW_LINE) && ((top_terminal.type == OPERATOR) || (top_terminal.type == QUESTION) || (top_terminal.type == COLON))){
                 token = get_token();
                 fprintf(out, "---------\ngetting next token\n-----------\n");
                 current_token = token;
@@ -990,6 +1020,17 @@ ASTNode* param_list(int* error_code) {
               return NULL;
           }
 
+          if (token.type == NEW_LINE){
+            do {
+                token = get_token();
+                if (token.type == ERROR) {
+                    *error_code = LEXICAL_ERROR;
+                    ast_free(param_list_node);
+                    return NULL;
+                }
+            } while (token.type == NEW_LINE);
+          }
+
           // zustala carka bez dalsiho parametru
           if (token.type == BRACKET_END) {
               fprintf(out, "ERROR: Zbyla carka bez dalsiho parametru\n");
@@ -1296,16 +1337,34 @@ ASTNode* built_in_call(int* error_code) {
         return NULL;
     }
 
-    // nacist dalsi token, musi byt id funkce
-    if (!match_token(ID) || !is_built_in_func()) {
-        // Check if match_token failed due to lexical error
+    // Muze byt new_line mezi . a id funkce
+    token = get_token();
+    // Check for lexical errors after consuming token
+    if (token.type == ERROR) {
+        *error_code = LEXICAL_ERROR;
+        return NULL;
+    }
+    // Pokud je to new_line, preskocime je
+    if (token.type == NEW_LINE){
+        token = get_token();
+        // Check for lexical errors after consuming token
+        if (token.type == ERROR) {
+            *error_code = LEXICAL_ERROR;
+            return NULL;
+        }
+      }
+
+    // uz je nacitan token, musi byt id funkce
+    if (token.type != ID || !is_built_in_func()) {
         if (token.type == ERROR){
             *error_code = LEXICAL_ERROR;
         } else {
             *error_code = SYNTAX_ERROR;
+            fprintf(out, "ERROR: Ocekavane jmeno vestavene funkce, nasli sme: ");
         }
         return NULL;
     }
+
 
     // potrebuju ulozit jmeno funkce
     char* func_name_only = token.value.string;
@@ -2344,55 +2403,3 @@ ASTNode* run_parser(FILE* input, FILE* output, int* parse_error) {
     return ast_root;
 }
 
-// ===============================================================================================================
-// MAIN FUNCTION FOR TESTING PARSER ONLY
-// ===============================================================================================================
-
-// int main (int argc, char** argv){
-//     (void)argc;
-//     (void)argv;
-
-//     in = fopen("../samples/ex0-vsechny-konstrukce.wren", "r");
-//     if (!in){ printf("nejde otvorit\n"); return ERR_INTERNAL; }
-
-//     out = fopen("../samples/outfile.txt", "w");
-//     if (!out){ return ERR_INTERNAL; }
-
-//     scanner_init(in, out);
-
-//     int ok;
-//     // ok = 1;
-
-//     token = get_token();
-
-//     ASTNode* ast_root = NULL;
-//     int parse_error = ERR_OK;
-
-
-//     if (valid() == ERR_OK){
-//         fprintf(out, "VALID OK\n");
-
-//         ast_root = program(&parse_error);
-
-//         if (parse_error == ERR_OK){
-//             ok = 1;
-//             fprintf(out, "\n<AST representation>\n");
-//             ast_fprint_debug(ast_root, out);
-//         } else {
-//             ok = 0;
-//             fprintf(out, "PARSE ERROR\n");
-//         }
-//     } else {
-//         fprintf(out, "VALID NOT OK\n");
-//         parse_error = SYNTAX_ERROR;
-//     }
-
-//     // uvolnit AST
-//     ast_free(ast_root);
-//     fprintf(out, "Program ended %s\n", (ok == 1) ? "successfully" : "with error");
-//     fclose(in);
-//     fclose(out);
-
-
-//     return (ok == 1) ? ERR_OK : parse_error;
-// }

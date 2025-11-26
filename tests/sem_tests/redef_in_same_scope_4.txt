@@ -1,0 +1,10 @@
+// [TEST 3.2] Redefinice promenne
+import "ifj25" for Ifj
+
+class Program {
+    static main() {
+        var x
+        x = 10
+        var x // Chyba: redefinice v tom samem rozsahu
+    }
+}

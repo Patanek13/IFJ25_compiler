@@ -1,0 +1,13 @@
+import "ifj25" for Ifj
+
+class Program {
+    static myFunc() {
+        return 0
+    }
+
+    static main() {
+        // Syntaxe: ID = Výraz (validní)
+        // Sémantika: myFunc je funkce, nelze do ní zapisovat.
+        myFunc = 10
+    }
+}

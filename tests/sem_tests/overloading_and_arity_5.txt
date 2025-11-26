@@ -1,0 +1,34 @@
+// [TEST 2] Overloading and Arity Check
+import "ifj25" for Ifj
+
+class Program {
+    static calc(a, b) { // Arity 2
+    return a + b
+    }
+    static calc(a) { // Arity 1
+    return a * 2
+    }
+    static calc() { // Arity 0
+    return 100
+    }
+
+    static main() {
+        var res
+        var tmp
+
+        // 1. Arity 0
+        res = calc()            // Should call calc() -> 100
+        tmp = Ifj.write(res)
+
+        // 2. Arity 1
+        res = calc(5)           // Should call calc(a) -> 10
+        tmp =Ifj.write(res)
+
+        // 3. Arity 2
+        res = calc(3, 4)        // Should call calc(a, b) -> 7
+        tmp = Ifj.write(res)
+
+        // 4. Arity 3 (Chyba)
+        res = calc(1, 2, 3)     // [ERROR] No function with 3 args
+    }
+}

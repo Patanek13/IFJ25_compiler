@@ -1,0 +1,20 @@
+// [TEST 1.2] Ternarni operator
+import "ifj25" for Ifj
+
+class Program {
+    static main() {
+        var a
+        a = 10
+        var result
+
+        // Klasicke pouziti
+        result = (a > 5) ? "vetsi" : "mensi"
+        Ifj.write(result)
+
+        var b
+        b = 2
+        // Vnoreny ternarni operator
+        result = (a > 5) ? (b < 5 ? "A" : "B") : "C"
+        Ifj.write(result)
+    }
+}

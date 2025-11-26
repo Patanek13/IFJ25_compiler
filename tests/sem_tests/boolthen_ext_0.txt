@@ -1,0 +1,19 @@
+// [TEST 2.1] Bool operatory
+import "ifj25" for Ifj
+
+class Program {
+    static main() {
+        var t
+        t = true
+        var f
+        f = false
+
+        // Ifj.write muze vypisovat Bool (z rozsireni)
+        Ifj.write(t && f) // false
+        Ifj.write(t || f) // true
+        Ifj.write(!f) // true
+
+        // Test priority: ! ma vyssi nez &&
+        Ifj.write(!f && t) // true
+    }
+}

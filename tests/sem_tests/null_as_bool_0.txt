@@ -1,0 +1,20 @@
+// [TEST 2.2] Null jako bool
+import "ifj25" for Ifj
+
+class Program {
+    static main() {
+        var n // Rozdeleno
+        n = null // null je false
+        var s
+        s = "text" // String je true
+
+        if (n) {
+        Ifj.write("Chyba: null je true\n")
+        } else {
+            Ifj.write("OK: null je false\n")
+        }
+        if (s) {
+            Ifj.write("OK: string je true\n")
+        }
+    }
+}
