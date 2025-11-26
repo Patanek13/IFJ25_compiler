@@ -62,6 +62,22 @@ void populateVarDefinitions(ASTNode* node, Frame* lf) {
   }
 }
 
+void populateGlobalVars(ASTNode* node, Frame* gf) {
+  if (!node) return;
+
+  if (node->type == NODE_ID && strncmp(node->value, "__", 2) == 0) {
+    if (F_lookup(gf, node->value) == NULL) {
+      fprintf(stdout, "DEFVAR GF@%s\n", node->value);
+      fprintf(stdout, "MOVE GF@%s nil@nil\n", node->value);
+      F_insert(gf, node->value, node->data_type);
+    }
+  }
+
+  for (size_t i = 0; i < node->child_count; i++) {
+    populateGlobalVars(node->children[i], gf);
+  }
+}
+
 void printFormatedString(char* in){
   if (!in) return;
 
@@ -124,7 +140,7 @@ void verifyOperands() {
 
   fprintf(stdout, "JUMP $skiptofloat$%i\n", uniqueId);
 
-  fprintf(stdout, "LABEL inttofloat$%i\n", uniqueId);
+  fprintf(stdout, "LABEL $inttofloat$%i\n", uniqueId);
   fprintf(stdout, "JUMPIFNEQ $endconvop1$%i GF@__$tempJ string@int\n", uniqueId);
   fprintf(stdout, "INT2FLOAT GF@__$temp2 GF@__$temp2\n");
   fprintf(stdout, "LABEL $endconvop1$%i\n", uniqueId);
@@ -753,6 +769,9 @@ ErrorCode generate_code(ASTNode* node, Frame* gf){
       fprintf(stdout, "DEFVAR GF@__$tempJ\n");
       fprintf(stdout, "DEFVAR GF@__$tempK\n");
       fprintf(stdout, "DEFVAR GF@__$tempRes\n");
+
+      populateGlobalVars(node, gf);
+
       fprintf(stdout, "CREATEFRAME\n");
       fprintf(stdout, "CALL $main$0\n");
       fprintf(stdout, "JUMP $program$end$\n");
@@ -781,7 +800,7 @@ ErrorCode generate_program(ASTNode* root, SymTable** symTableArray, bool debug) 
 
   Frame gf;
   //FrameStack fs;
-  //F_init(&gf, GF);
+  F_init(&gf, GF);
   //FS_init(&fs);
   ErrorCode state;
 
@@ -793,7 +812,7 @@ ErrorCode generate_program(ASTNode* root, SymTable** symTableArray, bool debug) 
   }
   //fprintf(stderr, "startgen\n");
   state = generate_code(root, &gf);
-
+  F_cleanup(&gf);
 
   return state;
 }
