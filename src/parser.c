@@ -278,7 +278,7 @@ void print_token_stack(Stack* stack) {
 
 
 // ===================================================================
-// Implementace nove token_to_int
+// Implementace token_to_int
 // ===================================================================
 
 int token_to_int(Token in_token) {
@@ -364,7 +364,7 @@ int token_to_int(Token in_token) {
 // ===================================================================
 
 // Pretvori jednoduchy token na AST uzel (pro operandy)
-// Logiku pro ID/IFJ se resim v hlavnim loopu parse_expression
+// Logiku pro ID/IFJ resim v hlavnim loopu parse_expression
 static ASTNode* create_ast_node_from_token(Token t, int* error_code) {
     ASTNode* node = NULL;
     *error_code = ERR_OK;
