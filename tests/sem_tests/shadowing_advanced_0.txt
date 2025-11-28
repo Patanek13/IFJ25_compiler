@@ -1,0 +1,12 @@
+import "ifj25" for Ifj
+class Program {
+  static main(){
+    var x
+    x = 1
+    {
+      var x
+      x = "inner"
+    }
+    x = x + 1  // vnější x, 1 + 1 = 2
+  }
+}

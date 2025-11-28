@@ -1,0 +1,7 @@
+import "ifj25" for Ifj
+class Program {
+  static main(){
+    var s
+    s = "a" * 3.5
+  }
+}

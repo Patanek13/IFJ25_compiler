@@ -1,0 +1,14 @@
+import "ifj25" for Ifj
+class Program {
+  static g { 
+return 5 
+}
+  static g=(x) { 
+return null 
+}
+  static main() {
+    var x
+    x = g   // getter
+    g = 10  // setter
+  }
+}

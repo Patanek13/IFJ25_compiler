@@ -1,0 +1,8 @@
+import "ifj25" for Ifj
+class Program {
+  static g { return 10 }
+  static main() {
+    var x
+    x = g + 5
+  }
+}

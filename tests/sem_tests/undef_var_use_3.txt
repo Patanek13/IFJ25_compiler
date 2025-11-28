@@ -1,0 +1,6 @@
+import "ifj25" for Ifj
+class Program {
+  static main() {
+    a = 10   // a není var → NENÍ globální (nemá __ prefix) → chyba 3
+  }
+}

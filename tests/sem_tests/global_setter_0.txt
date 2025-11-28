@@ -1,0 +1,6 @@
+import "ifj25" for Ifj
+class Program {
+  static main() {
+    __g = 5  // OK, vznikne globální proměnná
+  }
+}

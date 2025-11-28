@@ -1,0 +1,9 @@
+import "ifj25" for Ifj
+class Program {
+  static s=(x) {
+}  
+  static main() {
+    var s     // Lokální s existuje, setter se nepřekryje (jiný symbol)
+    s = 10    // přiřazení do lokální proměnné! setter se NEZAVOLÁ
+  }
+}
