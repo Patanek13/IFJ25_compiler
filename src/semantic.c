@@ -115,6 +115,10 @@ static void analyze_getter(ASTNode* node, AnalysisContext* context, AnalysisPhas
 static bool func_exists(SymTable* table, const char* base_key);
 /*===========================================================================*/
 
+/* @brief Checks if the given function name is a numeric-returning built-in function
+  * @param func_name Name of the function
+  * @return true if numeric-returning built-in, false otherwise
+*/
 static bool is_numeric_ret_func(const char* func_name) {
     return (strcmp(func_name, "Ifj.read_num") == 0 ||
             strcmp(func_name, "Ifj.length") == 0 ||
@@ -1242,25 +1246,30 @@ static DataType analyze_expression(ASTNode* node, AnalysisContext* context) {
                     fprintf(stderr, "DEBUG ADD: Left type: %s, Right type: %s\n", data_type_to_string(left_type), data_type_to_string(right_type));
                 }
 
+              // Check NULL literals
+              if ((left_node->type == NODE_LITERAL && left_type == TYPE_NULL) ||
+                  (right_node->type == NODE_LITERAL && right_type == TYPE_NULL)) {
+                  *context->error_code = ERR_SEMANTIC_TYPE;
+                  if (context->debug) {
+                      fprintf(stderr, "Semantic Error: NULL cannot be used in addition operation\n");
+                  }
+                  return TYPE_UNKNOWN;
+              }
+                // Numeric addition
                 if (is_num_type(left_type) && is_num_type(right_type)) {
-                    // addition
                     // Atleast one operand is float -> result is float
                     result_type = (left_type == TYPE_FLOAT || right_type == TYPE_FLOAT) ? TYPE_FLOAT : TYPE_INT;
-                } else if ((left_type == TYPE_STRING || left_type == TYPE_UNKNOWN) &&
-                           (right_type == TYPE_STRING || right_type == TYPE_UNKNOWN || right_type == TYPE_NULL)) {
-                    // String concatenation
-                    if (left_type == TYPE_NULL || (right_node->type == NODE_LITERAL && right_type == TYPE_NULL)) {
-                        // If TYPE_NULL literal, static error
-                        *context->error_code = ERR_SEMANTIC_TYPE;
-                        if (context->debug) {
-                            fprintf(stderr, "Semantic Error: Cannot concatenate NULL to String\n");
-                        }
-                    } else {
-                        // Allow String + Unknown or Var with TYPE_NULL type (could be string at runtime)
-                        result_type = TYPE_STRING;
-                    }
-                } else if (left_type == TYPE_UNKNOWN || right_type == TYPE_UNKNOWN) {
+                }
+
+                // UNKNOWN type handling
+                else if (left_type == TYPE_UNKNOWN || right_type == TYPE_UNKNOWN) {
                     result_type = TYPE_UNKNOWN; // Don't know yet
+                }
+                // String concatenation, both operands must be string-compatible, has to be decided at runtime
+                else if ((left_type == TYPE_STRING || left_type == TYPE_UNKNOWN || left_type == TYPE_NULL) &&
+                          (right_type == TYPE_STRING || right_type == TYPE_UNKNOWN || right_type == TYPE_NULL)) {
+                    result_type = TYPE_STRING;
+                // Type mismatch
                 } else {
                     *context->error_code = ERR_SEMANTIC_TYPE;
                     if (context->debug) {
