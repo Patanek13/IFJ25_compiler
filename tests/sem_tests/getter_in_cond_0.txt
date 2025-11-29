@@ -1,0 +1,12 @@
+import "ifj25" for Ifj
+class Program {
+    static myGet { 
+return null 
+}
+    static main() {
+        // Getter se zavola, vrati null, if(null) je false.
+        if (myGet) { 
+           __dummy = Ifj.write("Bug")
+        }
+    }
+}

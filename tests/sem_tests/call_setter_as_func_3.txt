@@ -1,0 +1,11 @@
+import "ifj25" for Ifj
+class Program {
+    static u=(v) {
+}
+    static main() {
+        // Setter se vola prirazenim 'u = 10'.
+        // Primy syntax 'u=(10)' neni v gramatice IFJ25 povolen pro uzivatele.
+        // Ale co 'u(10)'?
+       __dummy = u(10) 
+    }
+}

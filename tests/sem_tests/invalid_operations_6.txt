@@ -1,0 +1,15 @@
+// test_complex_err6.wren
+import "ifj25" for Ifj
+
+class Program {
+    static main() {
+        var x
+	    x = 10
+        if (x > 5) {
+            var y
+            // Chyba 6: String + Float literál
+            // I když je to v bloku if, statická analýza to musí najít
+            y = "Value: " + 10.5
+        }
+    }
+}

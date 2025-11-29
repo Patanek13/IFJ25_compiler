@@ -1,0 +1,10 @@
+// test_param_redef.wren
+import "ifj25" for Ifj
+class Program {
+    static func(a) {
+        var a
+	a = 10 // Chyba 4: 'a' uz existuje jako parametr
+    }
+    static main() {
+}
+}
