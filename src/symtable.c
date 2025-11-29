@@ -11,7 +11,7 @@
 #include "strutils.h"
 
 
-/* PJW Hash Function
+/* PJW/Elf Hash Function
  * @link https://ssojet.com/compare-hashing-algorithms/bernsteins-hash-djb2-vs-pjw-hash--elf-hash
  *
  */
@@ -26,8 +26,8 @@ size_t symtable_hash(const char *key) {
     hash = (hash << 4) + (unsigned char)(*key++);
     if ((high = hash & high_mask) != 0) {
       hash ^= (high >> (8 * sizeof(size_t) - 8)); // Clear high bits
+      hash &= ~high; // Clear high bits
     }
-    hash &= ~high; // Clear high bits
   }
   return hash % SYMTABLE_DEFAULT_SIZE;
 }
