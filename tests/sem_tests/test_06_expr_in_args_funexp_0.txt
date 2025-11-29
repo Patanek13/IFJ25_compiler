@@ -1,0 +1,13 @@
+import "ifj25" for Ifj
+class Program {
+
+    static f(x) {
+        return x
+    }
+    static main() {
+        var res
+        res = f(5 + (2 * 3))
+        Ifj.write(res)
+    }
+
+}

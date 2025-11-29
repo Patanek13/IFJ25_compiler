@@ -1,0 +1,14 @@
+import "ifj25" for Ifj
+class Program {
+
+    static isValid() {
+        return true
+    }
+    static main() {
+        if (isValid()) {
+            Ifj.write("Yes")
+        } else {
+        }
+    }
+
+}

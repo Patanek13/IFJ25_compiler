@@ -1,0 +1,9 @@
+import "ifj25" for Ifj
+class Program {
+
+    static main() {
+        var x
+        x = Ifj.length(10) // Length chce string, 10 je int literal -> Err 5
+    }
+
+}

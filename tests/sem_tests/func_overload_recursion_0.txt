@@ -1,0 +1,31 @@
+// test_complex_overload.wren
+import "ifj25" for Ifj
+
+class Program {
+    static fact(n) {
+        if (n < 2) {
+            return 1
+            }
+        var prev
+        var temp
+        temp = n - 1
+        prev = fact(temp)
+        return n * prev
+    }
+
+    static fact() {
+        return "Why no args?"
+    }
+
+    static main() {
+        var r1
+        r1 = fact(5) // Volá fact(n)
+        Ifj.write(r1) // 120
+        Ifj.write("\n")
+
+        var r2
+        r2 = fact() // Volá fact()
+        Ifj.write(r2) // "Why no args?"
+        Ifj.write("\n")
+    }
+}

@@ -1,0 +1,10 @@
+// test_write_void.wren
+import "ifj25" for Ifj
+class Program {
+    static voidFunc() {
+} // vraci implicitne null
+    static main() {
+        // Toto musi projit. voidFunc vraci null, write(null) je OK.
+       __dummy = Ifj.write(voidFunc()) 
+    }
+}

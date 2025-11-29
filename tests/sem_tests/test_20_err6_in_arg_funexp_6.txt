@@ -1,0 +1,10 @@
+import "ifj25" for Ifj
+class Program {
+
+    static f(x) {
+    }
+    static main() {
+        __dummy = f("string" - 5)
+    }
+
+}

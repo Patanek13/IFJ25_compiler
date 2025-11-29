@@ -1,0 +1,14 @@
+import "ifj25" for Ifj
+class Program {
+
+    static getVal() {
+        return 10
+    }
+    static main() {
+        var x
+        // 5 + (10 * 2) = 25
+        x = 5 + getVal() * 2
+        Ifj.write(x)
+    }
+
+}

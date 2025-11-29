@@ -1,0 +1,11 @@
+// test_builtin_mismatch.wren
+import "ifj25" for Ifj
+class Program {
+    static main() {
+        // read_num vraci cislo nebo null. Ani jedno neni String.
+        // Toto musi staticky selhat (chyba 5 - spatny typ parametru),
+        // i kdyz je hodnota znama az za behu.
+	var x
+    x = Ifj.length(Ifj.read_num())
+    }
+}
