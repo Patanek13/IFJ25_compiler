@@ -1,0 +1,13 @@
+import "ifj25" for Ifj
+class Program {
+
+    static getCount() {
+        return 0
+    }
+    static main() {
+        while (getCount() > 5) {
+            Ifj.write("Loop")
+        }
+    }
+
+}

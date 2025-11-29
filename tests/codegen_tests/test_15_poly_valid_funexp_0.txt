@@ -1,0 +1,16 @@
+import "ifj25" for Ifj
+class Program {
+
+    static poly() {
+        if (1 < 2) {
+            return 10
+        } else {
+            return "str"
+        }
+    }
+    static main() {
+        var x
+        x = 5 + poly()
+    }
+
+}
