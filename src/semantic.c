@@ -115,6 +115,13 @@ static void analyze_getter(ASTNode* node, AnalysisContext* context, AnalysisPhas
 static bool func_exists(SymTable* table, const char* base_key);
 /*===========================================================================*/
 
+static bool is_numeric_ret_func(const char* func_name) {
+    return (strcmp(func_name, "Ifj.read_num") == 0 ||
+            strcmp(func_name, "Ifj.length") == 0 ||
+            strcmp(func_name, "Ifj.floor") == 0) ||
+            strcmp(func_name, "Ifj.strcmp") == 0 ||
+            strcmp(func_name, "Ifj.ord") == 0;
+}
 /* @brief Checks if the given DataType is numeric (INT or FLOAT)
   * @param type DataType to check
   * @return true if numeric, false otherwise
@@ -721,6 +728,17 @@ static void analyze_call(ASTNode* node, AnalysisContext* context) {
         }
     }
 
+    // Shawdowing check: function name used as variable
+    SymbolData* shadow_var = scope_lookup(context->scope_stack, func_name);
+    if (shadow_var != NULL && shadow_var->kind == SYM_VARIABLE) {
+        // Trying to call a variable as function
+        if (context->debug) {
+            fprintf(stderr, "Semantic Error: Function name '%s' is shadowed by a variable\n", func_name);
+        }
+        *context->error_code = ERR_SEMANTIC_OTHER; // Function name shadowed
+        return;
+    }
+
     // Create function key for lookup
     char* func_key = make_function_key(func_name, arg_count);
     if (func_key == NULL) {
@@ -761,7 +779,19 @@ static void analyze_call(ASTNode* node, AnalysisContext* context) {
                 if (context->debug) {
                     fprintf(stderr, "Semantic Error: Argument type mismatch in call to 'Ifj.length'\n");
                 }
+
             }
+
+            if (arg->type == NODE_CALL && arg->children[0]->type == NODE_ID) {
+                if (is_numeric_ret_func(arg->children[0]->value)) {
+                    *context->error_code = ERR_SEMANTIC_FUNCTION;
+                    if (context->debug) {
+                        fprintf(stderr, "Semantic Error: Argument is not String in call to 'Ifj.length'\n");
+                    }
+                    return;
+                }
+              }
+
         } else if (strcmp(func_name, "Ifj.substring") == 0) {
             // Ifj.substring(str: String, start: Num, length: Num) -> String | Null
             ASTNode* arg1 = arg_list->children[0];
@@ -774,6 +804,16 @@ static void analyze_call(ASTNode* node, AnalysisContext* context) {
                     fprintf(stderr, "Semantic Error: First argument type mismatch in call to 'Ifj.substring'\n");
                 }
             }
+
+            if (arg1->type == NODE_CALL && arg1->children[0]->type == NODE_ID) {
+                if (is_numeric_ret_func(arg1->children[0]->value)) {
+                    *context->error_code = ERR_SEMANTIC_FUNCTION;
+                    if (context->debug) {
+                        fprintf(stderr, "Semantic Error: First argument is not String in call to 'Ifj.substring'\n");
+                    }
+                    return;
+                }
+              }
             // Second and third arguments must be Num (Int)
             if (arg2->type == NODE_LITERAL && !is_num_type(arg2->data_type)) {
                 *context->error_code = ERR_SEMANTIC_FUNCTION;
@@ -813,6 +853,17 @@ static void analyze_call(ASTNode* node, AnalysisContext* context) {
                     fprintf(stderr, "Semantic Error: First argument type mismatch in call to 'Ifj.ord'\n");
                 }
             }
+
+            if (arg1->type == NODE_CALL && arg1->children[0]->type == NODE_ID) {
+                if (is_numeric_ret_func(arg1->children[0]->value)) {
+                    *context->error_code = ERR_SEMANTIC_FUNCTION;
+                    if (context->debug) {
+                        fprintf(stderr, "Semantic Error: First argument is not String in call to 'Ifj.ord'\n");
+                    }
+                    return;
+                }
+              }
+
             // Second argument must be Num (Int)
             if (arg2->type == NODE_LITERAL && !is_num_type(arg2->data_type)) {
                 *context->error_code = ERR_SEMANTIC_FUNCTION;
@@ -858,6 +909,27 @@ static void analyze_call(ASTNode* node, AnalysisContext* context) {
             // Ifj.strcmp(str1: String, str2: String) -> Num
             ASTNode* arg1 = arg_list->children[0];
             ASTNode* arg2 = arg_list->children[1];
+
+            if (arg1->type == NODE_CALL && arg1->children[0]->type == NODE_ID) {
+                if (is_numeric_ret_func(arg1->children[0]->value)) {
+                    *context->error_code = ERR_SEMANTIC_FUNCTION;
+                    if (context->debug) {
+                        fprintf(stderr, "Semantic Error: First argument is not String in call to 'Ifj.strcmp'\n");
+                    }
+                    return;
+                }
+              }
+
+            if (arg2->type == NODE_CALL && arg2->children[0]->type == NODE_ID) {
+                if (is_numeric_ret_func(arg2->children[0]->value)) {
+                    *context->error_code = ERR_SEMANTIC_FUNCTION;
+                    if (context->debug) {
+                        fprintf(stderr, "Semantic Error: Second argument is not String in call to 'Ifj.strcmp'\n");
+                    }
+                    return;
+                }
+              }
+
             // Both arguments must be String
             if (arg1->type == NODE_LITERAL && arg1->data_type != TYPE_STRING) {
                 *context->error_code = ERR_SEMANTIC_FUNCTION;
@@ -904,10 +976,7 @@ static void analyze_return(ASTNode* node, AnalysisContext* context) {
         func_key = str_dup(func_name);
     } else if (context->current_function->type == NODE_SETTER) {
         // Setter key is name with '='
-        func_key = malloc(strlen(func_name) + 2); // +1 for '=' +1 for '\0'
-        if (func_key != NULL) {
-            sprintf(func_key, "%s=", func_name);
-        }
+        func_key = str_dup(func_name);
     } else {
         // Regular function with "name#paramcount" key
         size_t param_count = context->current_function->children[0]->child_count; // First child is param list
@@ -1272,12 +1341,20 @@ static DataType analyze_expression(ASTNode* node, AnalysisContext* context) {
             // Type checking for logical operators (&&, ||)
             } else if (strcmp(operator, "&&") == 0 ||
                        strcmp(operator, "||") == 0) {
-                // Logical operators works with truuthy/falsy values of any type
-                result_type = TYPE_BOOL;
+                // (5 < 10) && 5  ---> return 5 (Int)
+                 // false && 5     ---> return false (Bool)
+                // Just determine return type in AST, runtime decides
+                if (left_type == right_type && left_type != TYPE_UNKNOWN) {
+                    result_type = left_type; // Both same type
+                } else {
+                    // Different types, but still valid
+                    result_type = TYPE_UNKNOWN; // Cannot determine statically
             }
           }
-            break;
         }
+            break;
+      }
+
 
         case NODE_UNOP: {
             // Unary operation node
