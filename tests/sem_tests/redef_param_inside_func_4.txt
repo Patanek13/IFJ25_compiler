@@ -1,0 +1,9 @@
+import "ifj25" for Ifj
+class Program {
+  static foo(a) {
+    var a // parametr už existuje
+  }
+  static main() {
+    
+  }
+}

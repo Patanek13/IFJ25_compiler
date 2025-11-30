@@ -1,0 +1,9 @@
+import "ifj25" for Ifj
+class Program {
+  static g {
+}
+  static g {
+}   // redefinice
+  static main(){
+}
+}

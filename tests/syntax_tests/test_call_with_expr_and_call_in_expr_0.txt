@@ -1,0 +1,11 @@
+import "ifj25" for Ifj
+class Program {
+    static f(a) {
+        return a
+}
+    static main() {
+        // Bez FUNEXP je '1 + 1' v argumentu syntakticka chyba
+        __dummy = f(1 + 1)
+        __test = f(1) + 1
+    }
+}

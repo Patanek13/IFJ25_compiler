@@ -1,0 +1,19 @@
+import "ifj25" for Ifj
+class Program {
+
+    static getBool() {
+        return false
+    }
+    static getNum() {
+        return 5
+    }
+    static main() {
+        var b
+        b = !getBool()
+        Ifj.write(b)
+        var i
+        i = -getNum()
+        Ifj.write(i)
+    }
+
+}

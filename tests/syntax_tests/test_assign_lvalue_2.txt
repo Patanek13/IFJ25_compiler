@@ -1,0 +1,7 @@
+import "ifj25" for Ifj
+class Program {
+    static main() {
+        // (a + 1) neni promenna
+        (1 + 2) = 5 
+    }
+}

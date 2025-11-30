@@ -1,0 +1,11 @@
+// test_dead_code_err.wren
+import "ifj25" for Ifj
+class Program {
+    static main() {
+        if (null) { // Vzdy false
+             // I kdyz se to nevykona, staticka analyza musi najit chybu
+             var x
+	     x = "string" / 5 
+        }
+    }
+}

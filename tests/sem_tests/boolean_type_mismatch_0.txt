@@ -1,0 +1,8 @@
+import "ifj25" for Ifj
+class Program {
+  static main(){
+    var x
+    __test = 1 && 2
+    x = (5 < 10) && 5
+  }
+}

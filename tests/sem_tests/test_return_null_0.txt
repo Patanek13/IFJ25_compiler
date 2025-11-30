@@ -1,0 +1,18 @@
+// test_null_arithmetic.wren
+import "ifj25" for Ifj
+class Program {
+    static getNull() { 
+return null 
+}
+    static main() {
+        var a
+	a = 10
+        
+        // 1. Literal null -> Error 6 (Staticka chyba)
+        // a = a + null 
+
+        // 2. Funkce vracejici null -> Error 26 (Behova chyba)
+        // Protoze analyzator nevi jiste, co getNull vrati (v ramci jednoduchosti)
+        a = a + getNull() 
+    }
+}

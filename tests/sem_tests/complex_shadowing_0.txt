@@ -1,0 +1,47 @@
+// test_complex_shadowing.wren
+import "ifj25" for Ifj
+
+class Program {
+    // Globální stav
+    __val = 0
+
+    // Getter: vrací __val
+    static data { 
+        return __val 
+    }
+
+    // Setter: nastavuje __val
+    static data=(v) { 
+        __val = v 
+    }
+
+    static main() {
+        // 1. Použití setteru (Global)
+        data = 10 
+        
+        // 2. Použití getteru (Global)
+        var temp
+        temp = data
+        Ifj.write(temp) // 10
+        Ifj.write("\n")
+
+        // 3. Stínění lokální proměnnou
+        {
+            var data // Lokální proměnná 'data' stíní getter/setter 'data'
+            data = 999
+            
+            Ifj.write(data) // 999 (Lokální)
+            Ifj.write("\n")
+
+            // Zde 'data = 5' přiřadí do LOKÁLNÍ proměnné, NE do setteru!
+            data = 5 
+            Ifj.write(data) // 5
+        }
+
+        // 4. Zpět v global scope
+        // Lokální 'data' zmizela, 'data' je opět Getter
+        temp = data
+        Ifj.write(temp) // Stále 10 (Setter nebyl uvnitř bloku zavolán)
+        Ifj.write("\n")
+    }
+}

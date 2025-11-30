@@ -111,7 +111,6 @@ typedef enum {
     PREC_SHIFT,    /**< '<' - Shift */
     PREC_REDUCE,   /**< '>' - Reduce */
     PREC_EQUAL,    /**< '=' - Handle (for brackets) */
-    PREC_PUSH      /**< 'P' - Special (for ternary operator) */
 
 } TokenType;
 

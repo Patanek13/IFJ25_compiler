@@ -1,0 +1,10 @@
+import "ifj25" for Ifj
+class Program {
+
+    static main() {
+        var x
+        x = null / 5.5
+        Ifj.write(x)
+    }
+
+}

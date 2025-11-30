@@ -1,0 +1,19 @@
+// test_complex_setter_fail.wren
+import "ifj25" for Ifj
+
+class Program {
+    static prop=(v) {
+}
+
+    static main() {
+        var x
+        // Setter nevrací hodnotu v kontextu výrazu (vrací null, ale nelze ho volat jako funkci v přiřazení takto)
+        // Syntax: prop = 10 je ok.
+        // Ale: x = (prop = 10)
+        // Pokud parser podporuje přiřazení jako výraz, vrátí to hodnotu.
+        // Pokud ne, je to syntax error.
+        
+        // Zkusme přiřadit do neexistujícího setteru
+        nonexistent = 10
+    }
+}

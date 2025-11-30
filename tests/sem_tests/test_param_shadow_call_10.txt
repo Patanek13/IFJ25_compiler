@@ -1,0 +1,21 @@
+// test_param_shadow_call.wren
+import "ifj25" for Ifj
+class Program {
+    static foo() {
+return 10
+}
+
+    static main() {
+       __dummy = test(5)
+    }
+
+    static test(foo) {
+        // Zde 'foo' je lokalni promenna (parametr).
+        // foo() by melo byt syntakticky volani funkce.
+        // Ale semanticky: 'foo' je promenna typu Int (hodnota 5).
+        // Volani promenne jako funkce -> Error 10? Nebo Syntax?
+        // Pokud parser povoli ID(...), semantika musi rict: "foo neni funkce".
+        var x
+	    x = foo()
+    }
+}

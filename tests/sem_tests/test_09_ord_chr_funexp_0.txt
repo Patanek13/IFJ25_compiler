@@ -1,0 +1,10 @@
+import "ifj25" for Ifj
+class Program {
+
+    static main() {
+        var s
+        s = Ifj.chr(Ifj.ord("A", 0))
+        Ifj.write(s)
+    }
+
+}

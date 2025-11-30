@@ -1,0 +1,38 @@
+// test_complex_bool.wren
+import "ifj25" for Ifj
+
+class Program {
+    static main() {
+	    var a
+	    var b
+	    var c
+        a = 10
+        b = null
+        c = "hello"
+
+        // Složená podmínka:
+        // (a > 5) -> true
+        // (b != null) -> false
+        // (c == "hello") -> true
+        // true && false || true -> true (AND má přednost, ale tady false || true)
+
+        if ((a > 5) && (b != null) || (c == "hello")) {
+            Ifj.write("Pass 1\n")
+        } else {
+            Ifj.write("Fail 1\n")
+        }
+
+        // Test ! (NOT) a null
+        // b je null -> if(b) je false. if(!b) je true.
+        if (!b) {
+            Ifj.write("Pass 2 (null is falsey)\n")
+        }
+
+        // Ternární operátor (pokud je v rozšíření OPERATORS)
+        // a (10) je truthy
+        var res
+        res = a ? "A is true" : "A is false"
+        Ifj.write(res)
+        Ifj.write("\n")
+    }
+}
