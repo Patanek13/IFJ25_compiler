@@ -3,6 +3,6 @@ class Program {
     static main(){
         var x
         __y = "5"
-        __x = x * __y // Cannot multiply string with string!
+        __x = x * __y // Cannot multiply null with string!
     }
 }
