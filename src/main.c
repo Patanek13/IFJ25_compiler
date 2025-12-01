@@ -69,7 +69,7 @@ int main(int argc, char** argv) {
     }
   }
 
-  ErrorCode generatorError = generate_program(ast_root, NULL, false);
+  ErrorCode generatorError = generate_program(ast_root, false);
   fprintf(stderr, "Generator status: %i\n", generatorError);
 
   if (debug) {

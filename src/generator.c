@@ -129,6 +129,20 @@ ErrorCode generate_IsOperator(ASTNode* node, Frame* gf){
   }
 }
 
+void convertToFloat() {
+  int uniqueId = labelCounter++;
+
+  fprintf(stdout, "POPS GF@__$temp1\n");
+  fprintf(stdout, "TYPE GF@__$tempRes GF@__$temp1\n");
+
+  fprintf(stdout, "JUMPIFNEQ $skiptofloat$%i GF@__$tempRes string@int\n", uniqueId);
+
+  fprintf(stdout, "INT2FLOAT GF@__$temp1 GF@__$temp1\n");
+
+  fprintf(stdout, "LABEL $skiptofloat$%i\n", uniqueId);
+  fprintf(stdout, "PUSHS GF@__$temp1\n");
+}
+
 void verifyOperands() {
   int uniqueId = labelCounter++;
   fprintf(stdout, "POPS GF@__$temp2\n");
@@ -170,31 +184,64 @@ ErrorCode generate_binOp(ASTNode* node, Frame* gf){
   if (strcmp(op, "+") == 0) {
     int uniqueId = labelCounter++;
 
-      fprintf(stdout, "POPS GF@__$temp2\n");
-      fprintf(stdout, "POPS GF@__$temp1\n");
-      fprintf(stdout, "TYPE GF@__$tempI GF@__$temp1\n");
-      fprintf(stdout, "TYPE GF@__$tempJ GF@__$temp2\n");
-      fprintf(stdout, "JUMPIFEQ $binop$p$checkS$%i GF@__$tempI string@string\n", uniqueId);
-      //fprintf(stdout, "ADD");
-      fprintf(stdout, "JUMP $binop$p$add$%i\n", uniqueId);
+    fprintf(stdout, "POPS GF@__$temp2\n");
+    fprintf(stdout, "POPS GF@__$temp1\n");
+    fprintf(stdout, "TYPE GF@__$tempI GF@__$temp1\n");
+    fprintf(stdout, "TYPE GF@__$tempJ GF@__$temp2\n");
+    fprintf(stdout, "JUMPIFEQ $binop$p$error$%i GF@__$tempI string@nil\n", uniqueId);
+    fprintf(stdout, "JUMPIFEQ $binop$p$error$%i GF@__$tempJ string@nil\n", uniqueId);
 
-      fprintf(stdout, "LABEL $binop$p$checkS$%i\n", uniqueId);
-      fprintf(stdout, "JUMPIFNEQ $binop$p$error$%i GF@__$tempJ string@string\n", uniqueId);
-      fprintf(stdout, "CONCAT GF@__$tempRes GF@__$temp1 GF@__$temp2\n");
-      fprintf(stdout, "JUMP $binop$p$end$%i\n", uniqueId);
+    fprintf(stdout, "JUMPIFEQ $binop$p$checkS$%i GF@__$tempI string@string\n", uniqueId);
+    fprintf(stdout, "JUMPIFEQ $binop$p$error$%i GF@__$tempJ string@string\n", uniqueId);
 
-      fprintf(stdout, "LABEL $binop$p$add$%i\n", uniqueId);
-      fprintf(stdout, "ADD GF@__$tempRes GF@__$temp1 GF@__$temp2\n");
-      fprintf(stdout, "JUMP $binop$p$end$%i\n",uniqueId);
+    fprintf(stdout, "JUMPIFEQ $binop$p$float$%i GF@__$tempI string@float\n", uniqueId);
+    fprintf(stdout, "JUMPIFEQ $binop$p$float$%i GF@__$tempJ string@float\n", uniqueId);
 
-      fprintf(stdout, "LABEL $binop$p$error$%i\n", uniqueId);
-      fprintf(stdout, "EXIT int@26\n");
+    fprintf(stdout, "ADD GF@__$tempRes GF@__$temp1 GF@__$temp2\n");
+    fprintf(stdout, "JUMP $binop$p$end$%i\n", uniqueId);
 
-      fprintf(stdout, "LABEL $binop$p$end$%i\n", uniqueId);
-      fprintf(stdout, "PUSHS GF@__$tempRes\n");
+    fprintf(stdout, "LABEL $binop$p$float$%i\n", uniqueId);
 
+    fprintf(stdout, "JUMPIFNEQ $binop$p$c1$%i GF@__$tempI string@int\n", uniqueId);
+    fprintf(stdout, "INT2FLOAT GF@__$temp1 GF@__$temp1\n");
+    fprintf(stdout, "LABEL $binop$p$c1$%i\n", uniqueId);
+
+    fprintf(stdout, "JUMPIFNEQ $binop$p$c2$%i GF@__$tempJ string@int\n", uniqueId);
+    fprintf(stdout, "INT2FLOAT GF@__$temp2 GF@__$temp2\n");
+    fprintf(stdout, "LABEL $binop$p$c2$%i\n", uniqueId);
+
+    fprintf(stdout, "ADD GF@__$tempRes GF@__$temp1 GF@__$temp2\n");
+    fprintf(stdout, "JUMP $binop$p$end$%i\n", uniqueId);
+
+    fprintf(stdout, "LABEL $binop$p$checkS$%i\n", uniqueId);
+    fprintf(stdout, "JUMPIFNEQ $binop$p$error$%i GF@__$tempJ string@string\n", uniqueId);
+    fprintf(stdout, "CONCAT GF@__$tempRes GF@__$temp1 GF@__$temp2\n");
+    fprintf(stdout, "JUMP $binop$p$end$%i\n", uniqueId);
+
+    fprintf(stdout, "LABEL $binop$p$error$%i\n", uniqueId);
+    fprintf(stdout, "EXIT int@26\n");
+
+    fprintf(stdout, "LABEL $binop$p$end$%i\n", uniqueId);
+    fprintf(stdout, "PUSHS GF@__$tempRes\n");
   }
-  else if (strcmp(op, "-") == 0) fprintf(stdout, "SUBS\n");
+  else if (strcmp(op, "-") == 0) {
+    int uniqueId = labelCounter++;
+    fprintf(stdout, "POPS GF@__$temp2\n");
+    fprintf(stdout, "POPS GF@__$temp1\n");
+    fprintf(stdout, "TYPE GF@__$tempI GF@__$temp1\n");
+    fprintf(stdout, "TYPE GF@__$tempJ GF@__$temp2\n");
+    fprintf(stdout, "JUMPIFEQ $binop$s$error$%i GF@__$tempI string@nil\n", uniqueId);
+    fprintf(stdout, "JUMPIFEQ $binop$s$error$%i GF@__$tempJ string@nil\n", uniqueId);
+    fprintf(stdout, "PUSHS GF@__$temp1\n");
+    fprintf(stdout, "PUSHS GF@__$temp2\n");
+    fprintf(stdout, "SUBS\n");
+    fprintf(stdout, "JUMP $binop$s$end$%i\n", uniqueId);
+
+    fprintf(stdout, "LABEL $binop$s$error$%i\n", uniqueId);
+    fprintf(stdout, "EXIT int@26\n");
+
+    fprintf(stdout, "LABEL $binop$s$end$%i\n", uniqueId);
+  }
   else if (strcmp(op, "*") == 0) {
     int uniqueId = labelCounter++;
 
@@ -202,13 +249,19 @@ ErrorCode generate_binOp(ASTNode* node, Frame* gf){
     fprintf(stdout, "POPS GF@__$temp1\n");
     fprintf(stdout, "TYPE GF@__$tempI GF@__$temp1\n");
     fprintf(stdout, "TYPE GF@__$tempJ GF@__$temp2\n");
+    fprintf(stdout, "JUMPIFEQ $binop$m$error$%i GF@__$tempI string@nil\n", uniqueId);
+    fprintf(stdout, "JUMPIFEQ $binop$m$error$%i GF@__$tempJ string@nil\n", uniqueId);
 
     fprintf(stdout, "JUMPIFEQ $binop$m$string$%i GF@__$tempI string@string\n", uniqueId);
     fprintf(stdout, "JUMPIFEQ $binop$m$error$%i GF@__$tempJ string@string\n", uniqueId);
 
-
     fprintf(stdout, "PUSHS GF@__$temp1\n");
     fprintf(stdout, "PUSHS GF@__$temp2\n");
+
+    convertToFloat();
+    fprintf(stdout, "POPS GF@__$temp3\n");
+    convertToFloat();
+    fprintf(stdout, "PUSHS GF@__$temp3\n");
     fprintf(stdout, "MULS\n");
     fprintf(stdout, "JUMP $binop$m$end$%i\n", uniqueId);
 
@@ -243,23 +296,30 @@ ErrorCode generate_binOp(ASTNode* node, Frame* gf){
   }
   else if (strcmp(op, "/") == 0) {
     //dynamicke rozhodnutie medzi DIV a IDIV
+    //int uniqueId = labelCounter++;
     int uniqueId = labelCounter++;
+
     fprintf(stdout, "POPS GF@__$temp2\n");
     fprintf(stdout, "POPS GF@__$temp1\n");
-
-    fprintf(stdout, "TYPE GF@__$tempRes GF@__$temp2\n");
-    fprintf(stdout, "JUMPIFEQ $floatdiv$%i GF@__$tempRes string@float\n", uniqueId);
-
-    //int idiv
+    fprintf(stdout, "TYPE GF@__$tempI GF@__$temp1\n");
+    fprintf(stdout, "TYPE GF@__$tempJ GF@__$temp2\n");
+    fprintf(stdout, "JUMPIFEQ $binop$d$error$%i GF@__$tempI string@nil\n", uniqueId);
+    fprintf(stdout, "JUMPIFEQ $binop$d$error$%i GF@__$tempJ string@nil\n", uniqueId);
     fprintf(stdout, "PUSHS GF@__$temp1\n");
     fprintf(stdout, "PUSHS GF@__$temp2\n");
-    fprintf(stdout, "IDIVS\n");
-    fprintf(stdout, "JUMP $divcheckend$%i\n", uniqueId);
 
-    fprintf(stdout, "LABEL $floatdiv$%i\n", uniqueId);
+    convertToFloat();
+    fprintf(stdout, "POPS GF@__$temp3\n");
+    convertToFloat();
+    fprintf(stdout, "PUSHS GF@__$temp3\n");
+
     fprintf(stdout, "DIVS\n");
+    fprintf(stdout, "JUMP $binop$d$end%i\n", uniqueId);
 
-    fprintf(stdout, "LABEL $divcheckend$%i\n", uniqueId);
+    fprintf(stdout, "LABEL $binop$d$error$%i\n", uniqueId);
+    fprintf(stdout, "EXIT int@26\n");
+
+    fprintf(stdout, "LABEL $binop$d$end%i\n", uniqueId);
   }
   else if (strcmp(op, "==") == 0) fprintf(stdout, "EQS\n");
   else if (strcmp(op, "<") == 0) fprintf(stdout, "LTS\n");
@@ -273,6 +333,34 @@ ErrorCode generate_binOp(ASTNode* node, Frame* gf){
   } else if (strcmp(op, ">=") == 0) {
     fprintf(stdout, "LTS\n");
     fprintf(stdout, "NOTS\n");
+  } else if (strcmp(op, "&&") == 0) {
+    int uniqueId = labelCounter++;
+    generate_code(node->children[0], gf); // left side
+    fprintf(stdout, "POPS GF@__$temp1\n");
+    fprintf(stdout, "JUMPIFEQ $and$false$end$%i GF@__$temp1 bool@false\n", uniqueId);
+    fprintf(stdout, "JUMPIFEQ $and$false$end$%i GF@__$temp1 nil@nil\n", uniqueId);
+
+    generate_code(node->children[1], gf); // right side
+    fprintf(stdout, "JUMP $and$end$%i\n", uniqueId);
+
+    fprintf(stdout, "LABEL $and$false$end$%i\n", uniqueId);
+    fprintf(stdout, "PUSHS GF@__$temp1\n");
+
+    fprintf(stdout, "LABEL $and$end$%i\n", uniqueId);
+  } else if (strcmp(op, "||") == 0) {
+    int uniqueId = labelCounter++;
+    generate_code(node->children[0], gf); // left side
+    fprintf(stdout, "POPS GF@__$temp1\n");
+    fprintf(stdout, "JUMPIFEQ $or$right$%i GF@__$temp1 bool@false\n", uniqueId);
+    fprintf(stdout, "JUMPIFEQ $or$right$%i GF@__$temp1 nil@nil\n", uniqueId);
+
+    fprintf(stdout, "PUSHS GF@__$temp1\n");
+    fprintf(stdout, "JUMP $or$end$%i\n", uniqueId);
+
+    fprintf(stdout, "LABEL $or$right$%i\n", uniqueId);
+    generate_code(node->children[1], gf); //right side
+
+    fprintf(stdout, "LABEL $or$end$%i\n", uniqueId);
   }
   return ERR_OK;
 }
@@ -281,8 +369,16 @@ ErrorCode generate_builtIn(ASTNode* node, Frame* gf) {
   char* funId = node->children[0]->value;
   if (strcmp(funId, "Ifj.write") == 0) {
     for (size_t i = 0; i< node->children[1]->child_count; i++) {
+      int uniqueId = labelCounter++;
       generate_code(node->children[1]->children[i], gf);
       fprintf(stdout, "POPS GF@__$tempRes\n");
+      fprintf(stdout, "TYPE GF@__$temp3 GF@__$tempRes\n");
+      fprintf(stdout, "JUMPIFNEQ $intcheckskip$%i GF@__$temp3 string@float\n", uniqueId);
+      fprintf(stdout, "ISINT GF@__$temp3 GF@__$tempRes\n");
+      fprintf(stdout, "JUMPIFEQ $intcheckskip$%i GF@__$temp3 bool@false\n", uniqueId);
+      fprintf(stdout, "FLOAT2INT GF@__$tempRes GF@__$tempRes\n");
+
+      fprintf(stdout, "LABEL $intcheckskip$%i\n", uniqueId);
       fprintf(stdout, "WRITE GF@__$tempRes\n");
       fprintf(stdout, "PUSHS nil@nil\n");
     }
@@ -618,7 +714,7 @@ ErrorCode generate_code(ASTNode* node, Frame* gf){
       strncpy(setterId, node->value, idLen-1);
       setterId[idLen-1] = '\0';
       fprintf(stdout, "LABEL $set$%s\n", setterId);
-      fprintf(stdout, "CREATEFRAME\n");
+      //fprintf(stdout, "CREATEFRAME\n");
       fprintf(stdout, "PUSHFRAME\n");
 
       ASTNode* setParam = node->children[0]->children[0]; // NODE_PARAM_LIST->NODE_ID
@@ -637,7 +733,7 @@ ErrorCode generate_code(ASTNode* node, Frame* gf){
 
     case NODE_GETTER:{
       fprintf(stdout, "LABEL $get$%s\n", node->value);
-      fprintf(stdout, "CREATEFRAME\n");
+      //fprintf(stdout, "CREATEFRAME\n");
       fprintf(stdout, "PUSHFRAME\n");
       populateVarDefinitions(node->children[1], gf);
       returnError = generate_code(node->children[1], gf);
@@ -713,6 +809,9 @@ ErrorCode generate_code(ASTNode* node, Frame* gf){
 
       if (strncmp(funcId,"Ifj.", 4) == 0) {
         returnError = generate_builtIn(node, gf);
+      } else if (node->frame == FRAME_GLOBAL) {
+        fprintf(stdout, "CREATEFRAME\n");
+        fprintf(stdout, "CALL $get$%s\n", funcId);
       } else {
         int numOfArgs = node->children[1]->child_count;
         if (numOfArgs > 0) {
@@ -759,20 +858,27 @@ ErrorCode generate_code(ASTNode* node, Frame* gf){
     case NODE_IF:{
       int uniqueId = labelCounter++;
       generate_code(node->children[0], gf);
-      fprintf(stdout, "PUSHS bool@false\n");
-      fprintf(stdout, "JUMPIFEQS $else$%i\n", uniqueId);
 
-      fprintf(stderr, "afterEQS:%i\n", node->children[1]->type);
-      generate_code(node->children[1], gf);
-      fprintf(stdout, "JUMP $end$%i\n", uniqueId);
-      fprintf(stdout, "LABEL $else$%i\n", uniqueId);
+      //fprintf(stdout, "PUSHS bool@false\n");
+      fprintf(stdout, "POPS GF@__$temp1\n");
+      fprintf(stdout, "JUMPIFEQ $if$else$%i GF@__$temp1 nil@nil\n", uniqueId);
 
+      fprintf(stdout, "TYPE GF@__$temp3 GF@__$temp1\n");
+      fprintf(stdout, "JUMPIFNEQ $if$skipcheck$%i GF@__$temp3 string@bool\n", uniqueId);
+
+      fprintf(stdout, "JUMPIFEQ $if$else$%i GF@__$temp1 bool@false\n", uniqueId);
+
+      fprintf(stdout, "LABEL $if$skipcheck$%i\n", uniqueId);
+
+      generate_code(node->children[1], gf); // then
+      fprintf(stdout, "JUMP $if$end$%i\n", uniqueId);
+
+      fprintf(stdout, "LABEL $if$else$%i\n", uniqueId);
       if (node->child_count > 2) {
-        fprintf(stderr, "genElse\n");
-        generate_code(node->children[2], gf);
+        generate_code(node->children[2], gf); // else body
       }
 
-      fprintf(stdout, "LABEL $end$%i\n", uniqueId);
+      fprintf(stdout, "LABEL $if$end$%i\n", uniqueId);
       return ERR_OK;
     }
     case NODE_WHILE:{
@@ -896,7 +1002,7 @@ ErrorCode generate_code(ASTNode* node, Frame* gf){
   return ERR_OK;
 }
 
-ErrorCode generate_program(ASTNode* root, SymTable** symTableArray, bool debug) {
+ErrorCode generate_program(ASTNode* root, bool debug) {
   if (root == NULL) return ERR_INTERNAL;
 
   Frame gf;
@@ -907,9 +1013,6 @@ ErrorCode generate_program(ASTNode* root, SymTable** symTableArray, bool debug) 
 
   if (debug) {
     fprintf(stderr, "Debug mode ON\n");
-  }
-  if (symTableArray != NULL) {
-    return ERR_INTERNAL;
   }
   //fprintf(stderr, "startgen\n");
   state = generate_code(root, &gf);

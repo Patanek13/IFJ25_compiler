@@ -29,5 +29,5 @@ int getUniqueLabelId(labelManager* lm);
  * @return ErrorCode
  */
 ErrorCode generate_code(ASTNode* node, Frame* gf);
-ErrorCode generate_program(ASTNode* root, SymTable** symTableArray, bool debug);
+ErrorCode generate_program(ASTNode* root, bool debug);
 #endif
