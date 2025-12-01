@@ -1,0 +1,8 @@
+Start main: 10
+Inside function: 11
+Back in main: 11
+Global Message: Globalni retezec z funkce
+Local copy: 11
+Global reset: 0
+Recursion start depth: 0
+Recursion end depth: 5

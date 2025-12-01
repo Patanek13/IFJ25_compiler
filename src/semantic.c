@@ -394,7 +394,7 @@ static void analyze_node(ASTNode* node, AnalysisContext* context, AnalysisPhase 
 */
 static void analyze_var_decl(ASTNode* node, AnalysisContext* context) {
     if (context->debug) {
-        fprintf(stdout, "Semantic Analysis: Analyzing variable declaration node\n");
+        fprintf(stderr, "Semantic Analysis: Analyzing variable declaration node\n");
     }
 
     // Check for var outside function
