@@ -1567,6 +1567,8 @@ static void analyze_setter(ASTNode* node, AnalysisContext* context, AnalysisPhas
             const char* param_name = param_node->children[0]->value;
             SymbolData param_data = create_variable_symbol(TYPE_UNKNOWN);
             symtable_insert(local_table, param_name, param_data);
+            // Set frame of param node to local
+            param_node->children[0]->frame = FRAME_LOCAL;
         }
 
         ASTNode* old_func = context->current_function;
