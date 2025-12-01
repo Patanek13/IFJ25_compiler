@@ -1002,7 +1002,7 @@ ErrorCode generate_code(ASTNode* node, Frame* gf){
   return ERR_OK;
 }
 
-ErrorCode generate_program(ASTNode* root, SymTable** symTableArray, bool debug) {
+ErrorCode generate_program(ASTNode* root, bool debug) {
   if (root == NULL) return ERR_INTERNAL;
 
   Frame gf;
@@ -1013,9 +1013,6 @@ ErrorCode generate_program(ASTNode* root, SymTable** symTableArray, bool debug) 
 
   if (debug) {
     fprintf(stderr, "Debug mode ON\n");
-  }
-  if (symTableArray != NULL) {
-    return ERR_INTERNAL;
   }
   //fprintf(stderr, "startgen\n");
   state = generate_code(root, &gf);
