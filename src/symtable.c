@@ -10,7 +10,6 @@
 #include "symtable.h"
 #include "strutils.h"
 
-
 /* PJW/Elf Hash Function
  * @link https://ssojet.com/compare-hashing-algorithms/bernsteins-hash-djb2-vs-pjw-hash--elf-hash
  *
@@ -26,12 +25,11 @@ size_t symtable_hash(const char *key) {
     hash = (hash << 4) + (unsigned char)(*key++);
     if ((high = hash & high_mask) != 0) {
       hash ^= (high >> (8 * sizeof(size_t) - 8)); // Clear high bits
-      hash &= ~high; // Clear high bits
+      hash &= ~high;                              // Clear high bits
     }
   }
   return hash % SYMTABLE_DEFAULT_SIZE;
 }
-
 
 ErrorCode symtable_init(SymTable *table) {
   if (table == NULL) {
@@ -49,7 +47,6 @@ ErrorCode symtable_init(SymTable *table) {
   return ERR_OK;
 }
 
-
 void symtable_free(SymTable *table) {
   if (table == NULL || table->items == NULL) {
     return;
@@ -59,14 +56,12 @@ void symtable_free(SymTable *table) {
     if (table->items[idx].state == SLOT_OCCUPIED) {
       free(table->items[idx].key);
       // Free SymbolData if it contains dynamically allocated memory
-      if (table->items[idx].data.kind == SYM_FUNCTION &&
-          table->items[idx].data.info.function.param_types) {
+      if (table->items[idx].data.kind == SYM_FUNCTION && table->items[idx].data.info.function.param_types) {
         free(table->items[idx].data.info.function.param_types);
       }
       // Free mangled name for variables
-      if (table->items[idx].data.kind == SYM_VARIABLE &&
-          table->items[idx].data.mangled_name != NULL) {
-        free(table->items[idx].data.mangled_name); // Free mangled name
+      if (table->items[idx].data.kind == SYM_VARIABLE && table->items[idx].data.mangled_name != NULL) {
+        free(table->items[idx].data.mangled_name);  // Free mangled name
         table->items[idx].data.mangled_name = NULL; // Prevent dangling pointer
       }
     }
@@ -77,7 +72,6 @@ void symtable_free(SymTable *table) {
   table->size = 0;
   table->count = 0;
 }
-
 
 SymItem *symtable_lookup_item(SymTable *table, const char *key) {
   if (table == NULL || key == NULL) {
@@ -107,7 +101,6 @@ SymbolData *symtable_lookup(SymTable *table, const char *key) {
   }
   return NULL;
 }
-
 
 ErrorCode symtable_insert(SymTable *table, const char *key, SymbolData data) {
   if (table == NULL || key == NULL) {
@@ -140,7 +133,6 @@ ErrorCode symtable_insert(SymTable *table, const char *key, SymbolData data) {
   return ERR_INTERNAL; // Table full
 }
 
-
 ErrorCode symtable_delete(SymTable *table, const char *key) {
   if (table == NULL || key == NULL) {
     return ERR_INTERNAL;
@@ -164,7 +156,7 @@ ErrorCode symtable_delete(SymTable *table, const char *key) {
       }
 
       if (item->data.kind == SYM_VARIABLE && item->data.mangled_name != NULL) {
-        free(item->data.mangled_name); // Free mangled name
+        free(item->data.mangled_name);  // Free mangled name
         item->data.mangled_name = NULL; // Prevent dangling pointer
       }
 
@@ -176,7 +168,6 @@ ErrorCode symtable_delete(SymTable *table, const char *key) {
 
   return ERR_SEMANTIC_UNDEFINED; // Not found
 }
-
 
 SymbolData create_variable_symbol(DataType type) {
   SymbolData data;
@@ -211,7 +202,6 @@ SymbolData create_function_symbol(DataType return_type, size_t param_count) {
   return data;
 }
 
-
 SymbolData create_getter_symbol(DataType type) {
   SymbolData data = create_function_symbol(type, 0);
   data.kind = SYM_GETTER;
@@ -231,9 +221,9 @@ SymbolData create_setter_symbol(DataType param_type) {
   return data;
 }
 
-
 char *make_function_key(const char *name, size_t param_count) {
-  if (name == NULL) return NULL;
+  if (name == NULL)
+    return NULL;
 
   size_t name_len = strlen(name);
 
@@ -252,10 +242,10 @@ char *make_function_key(const char *name, size_t param_count) {
 
   size_t key_len = name_len + 1 + digits + 1; /* name + '#' + digits + '\0' */
   char *key = malloc(key_len);
-  if (key == NULL) return NULL;
+  if (key == NULL)
+    return NULL;
 
   snprintf(key, key_len, "%s#%zu", name, param_count);
   // Have to free the key after use
   return key;
 }
-

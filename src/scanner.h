@@ -21,9 +21,9 @@
 #ifndef SCANNER_H
 #define SCANNER_H
 
-#include <stdio.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdio.h>
 
 //================================================================================================
 //                                      DEFINITIONS
@@ -48,69 +48,69 @@
 
 typedef enum {
 
-    BLOCK_START,        /**< { */
-    BLOCK_END,          /**< } */
-    BRACKET_START,      /**< ( */
-    BRACKET_END,        /**< ) */
-    PLUS,               /**< + */
-    MINUS,              /**< - */
-    MULTIPLY,           /**< * */
-    DIVIDE,             /**< / */
-    DOT,                /**< . */
-    COMMA,              /**< , */
-    COLON,              /**< : */
-    QUESTION,           /**< ? */
-    NEW_LINE,           /**< \n */
+  BLOCK_START,   /**< { */
+  BLOCK_END,     /**< } */
+  BRACKET_START, /**< ( */
+  BRACKET_END,   /**< ) */
+  PLUS,          /**< + */
+  MINUS,         /**< - */
+  MULTIPLY,      /**< * */
+  DIVIDE,        /**< / */
+  DOT,           /**< . */
+  COMMA,         /**< , */
+  COLON,         /**< : */
+  QUESTION,      /**< ? */
+  NEW_LINE,      /**< \n */
 
-    EQUAL,              /**< = */
-    EQUAL_EQUAL,        /**< == */
-    LESS,               /**< < */
-    LESS_EQUAL,         /**< <= */
-    MORE,               /**< > */
-    MORE_EQUAL,         /**< >= */
-    NOT,                /**< ! */
-    NOT_EQUAL,          /**< != */
-    AND,                /**< && */
-    OR,                 /**< || */
+  EQUAL,       /**< = */
+  EQUAL_EQUAL, /**< == */
+  LESS,        /**< < */
+  LESS_EQUAL,  /**< <= */
+  MORE,        /**< > */
+  MORE_EQUAL,  /**< >= */
+  NOT,         /**< ! */
+  NOT_EQUAL,   /**< != */
+  AND,         /**< && */
+  OR,          /**< || */
 
-    ID,                 /**< Identifier - variable and function names */
-    GLOBAL_ID,          /**< Global identifier - starts with '__' */
-    INTEGER,            /**< Integer - normal, hexadecimal */
-    FLOATING,           /**< Floating - decimal, exponential */
-    STRING,             /**< String literal - normal and multi-line */
-    BOOLEAN,            /**< Boolean literal - true or false */
+  ID,        /**< Identifier - variable and function names */
+  GLOBAL_ID, /**< Global identifier - starts with '__' */
+  INTEGER,   /**< Integer - normal, hexadecimal */
+  FLOATING,  /**< Floating - decimal, exponential */
+  STRING,    /**< String literal - normal and multi-line */
+  BOOLEAN,   /**< Boolean literal - true or false */
 
-    OPERATOR,           /**< Operators +, -, *, / for precedence parsing */
-    PSEUDO_E,          /**< Pseudo-token E for expression parsing */
-    MARKER_LESS,       /**< Marker '<' for precedence parsing */
+  OPERATOR,    /**< Operators +, -, *, / for precedence parsing */
+  PSEUDO_E,    /**< Pseudo-token E for expression parsing */
+  MARKER_LESS, /**< Marker '<' for precedence parsing */
 
-    CLASS,              /**< class */
-    IF,                 /**< if */
-    ELSE,               /**< else */
-    IS,                 /**< is */
-    NULL_KEYWORD,       /**< null */
-    RETURN,             /**< return */
-    VAR,                /**< var */
-    WHILE,              /**< while */
-    IFJ,                /**< Ifj */
-    STATIC,             /**< static */
-    IMPORT,             /**< import */
-    FOR,                /**< for */
-    NUM_TYPE,           /**< Num */
-    STR_TYPE,           /**< String */
-    NULL_TYPE,          /**< Null */
-    BOOL_TYPE,          /**< Bool */
+  CLASS,        /**< class */
+  IF,           /**< if */
+  ELSE,         /**< else */
+  IS,           /**< is */
+  NULL_KEYWORD, /**< null */
+  RETURN,       /**< return */
+  VAR,          /**< var */
+  WHILE,        /**< while */
+  IFJ,          /**< Ifj */
+  STATIC,       /**< static */
+  IMPORT,       /**< import */
+  FOR,          /**< for */
+  NUM_TYPE,     /**< Num */
+  STR_TYPE,     /**< String */
+  NULL_TYPE,    /**< Null */
+  BOOL_TYPE,    /**< Bool */
 
-    END_EXPR,          /**< $ - end of expression */
+  END_EXPR, /**< $ - end of expression */
 
-    EOF_TOKEN,          /**< End of file */
-    ERROR,               /**< Lexical error */
+  EOF_TOKEN, /**< End of file */
+  ERROR,     /**< Lexical error */
 
-    // Special tokens for precedence parsing
-    PREC_ERR,      /**< 'X' - Error */
-    PREC_SHIFT,    /**< '<' - Shift */
-    PREC_REDUCE,   /**< '>' - Reduce */
-    PREC_EQUAL,    /**< '=' - Handle (for brackets) */
+  // Special tokens for precedence parsing
+  PREC_ERR,    /**< 'X' - Error */
+  PREC_SHIFT,  /**< '<' - Shift */
+  PREC_REDUCE, /**< '>' - Reduce */
+  PREC_EQUAL,  /**< '=' - Handle (for brackets) */
 
 } TokenType;
 
@@ -120,10 +120,10 @@ typedef enum {
  *
  */
 typedef union {
-    int integer;                    /**< INTEGER token value */
-    double floating;                /**< FLOATING token value */
-    char string[BUFFER_SIZE];       /**< STRING, ID, GLOBAL_ID token value */
-    bool boolean;                   /**< BOOLEAN token value */
+  int integer;              /**< INTEGER token value */
+  double floating;          /**< FLOATING token value */
+  char string[BUFFER_SIZE]; /**< STRING, ID, GLOBAL_ID token value */
+  bool boolean;             /**< BOOLEAN token value */
 } TokenValue;
 
 /**
@@ -134,8 +134,8 @@ typedef union {
  * @var Token value (optional)
  */
 typedef struct {
-    TokenType type;     /**< Token type */
-    TokenValue value;   /**< Token value (optional) */
+  TokenType type;   /**< Token type */
+  TokenValue value; /**< Token value (optional) */
 } Token;
 
 //================================================================================================
@@ -150,14 +150,13 @@ typedef struct {
  * @var TokenType type
  */
 typedef struct {
-    char* keyword;
-    TokenType type;
+  char *keyword;
+  TokenType type;
 } KeywordEntry;
 
 //================================================================================================
 //                                      FUNCTION PROTOTYPES
 //================================================================================================
-
 
 //------------------------------------- Initialization -------------------------------------------
 /**
@@ -166,7 +165,7 @@ typedef struct {
  * @param input_file File pointer to the input source code
  * @param output_file File pointer to the output (error) stream
  */
-void scanner_init(FILE* input_file, FILE* output_file);
+void scanner_init(FILE *input_file, FILE *output_file);
 
 //------------------------------------- Buffer ---------------------------------------------------
 
@@ -234,7 +233,7 @@ Token add_token(TokenType type);
  * @param word String to check
  * @return TokenType of correct keyword or ID
  */
-TokenType lookup_keyword(const char* word);
+TokenType lookup_keyword(const char *word);
 
 //================================================================================================
 //                                      SCANNER STATES
@@ -320,7 +319,6 @@ Token scan_hex(void);
  * @return INTEGER token
  */
 Token scan_zero(void);
-
 
 //------------------------------------- Strings --------------------------------------------------
 

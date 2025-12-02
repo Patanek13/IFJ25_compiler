@@ -24,8 +24,8 @@ void F_init(Frame *frame, FrameType type) {
   }
 }
 
-//DJBHash
-unsigned int F_hash(char* id) {
+// DJBHash
+unsigned int F_hash(char *id) {
   unsigned long hash = 5381;
   int c;
   while ((c = *id++)) {
@@ -34,10 +34,10 @@ unsigned int F_hash(char* id) {
   return hash % MAX_FRAME_SIZE;
 }
 
-FrameEntry* F_lookup(Frame* frame, char* id) {
+FrameEntry *F_lookup(Frame *frame, char *id) {
   unsigned int key = F_hash(id);
   if (frame != NULL && frame->entryTable[key] != NULL) {
-    FrameEntry* item = frame->entryTable[key];
+    FrameEntry *item = frame->entryTable[key];
     while (item != NULL) { // prechadzanie synonymami
       if (strcmp(item->id, id) == 0) {
         return item;
@@ -51,31 +51,33 @@ FrameEntry* F_lookup(Frame* frame, char* id) {
   }
 }
 
-ErrorCode F_insert(Frame* frame, char* id, DataType type) {
-  FrameEntry* item = F_lookup(frame, id);
+ErrorCode F_insert(Frame *frame, char *id, DataType type) {
+  FrameEntry *item = F_lookup(frame, id);
   if (item != NULL) {
     item->type = type;
     return ERR_OK;
-  } else if (frame != NULL){
+  } else if (frame != NULL) {
     unsigned int key = F_hash(id);
     item = malloc(sizeof(FrameEntry));
-    if (item == NULL) return false;
+    if (item == NULL)
+      return false;
     item->id = id;
     item->type = type;
     item->initialized = 0;
     item->next = NULL;
-    if (frame->entryTable[key] != NULL) item->next = frame->entryTable[key];
+    if (frame->entryTable[key] != NULL)
+      item->next = frame->entryTable[key];
     frame->entryTable[key] = item;
     return ERR_OK;
   }
   return ERR_INTERNAL;
 }
 
-void F_cleanup(Frame* frame) {
+void F_cleanup(Frame *frame) {
   if (frame != NULL) {
     for (int i = 0; i < MAX_FRAME_SIZE; i++) {
-      FrameEntry* item = frame->entryTable[i];
-      FrameEntry* nextItem = NULL;
+      FrameEntry *item = frame->entryTable[i];
+      FrameEntry *nextItem = NULL;
       while (item != NULL) {
         nextItem = item->next;
         free(item);
@@ -86,11 +88,10 @@ void F_cleanup(Frame* frame) {
   }
 }
 
-
 ErrorCode FS_init(FrameStack *fs) {
   if (fs != NULL) {
     fs->topIndex = -1;
-    fs->stack = malloc(MAX_STACK_SIZE*sizeof(Frame));
+    fs->stack = malloc(MAX_STACK_SIZE * sizeof(Frame));
     if (fs->stack == NULL) {
       return ERR_INTERNAL;
     } else {
@@ -101,15 +102,11 @@ ErrorCode FS_init(FrameStack *fs) {
   }
 }
 
-bool FS_IsEmpty(FrameStack *fs) {
-  return (fs->topIndex == -1);
-}
+bool FS_IsEmpty(FrameStack *fs) { return (fs->topIndex == -1); }
 
-bool FS_IsFull(FrameStack *fs) {
-  return (fs->topIndex == (MAX_STACK_SIZE-1));
-}
+bool FS_IsFull(FrameStack *fs) { return (fs->topIndex == (MAX_STACK_SIZE - 1)); }
 
-Frame* FS_Top(FrameStack* fs) {
+Frame *FS_Top(FrameStack *fs) {
   if (!FS_IsEmpty(fs)) {
     return fs->stack[(fs->topIndex)];
   } else {
@@ -117,7 +114,7 @@ Frame* FS_Top(FrameStack* fs) {
   }
 }
 
-Frame* FS_Pop(FrameStack* fs) {
+Frame *FS_Pop(FrameStack *fs) {
   if (!FS_IsEmpty(fs)) {
     fs->topIndex--;
     return fs->stack[(fs->topIndex++)];
@@ -126,7 +123,7 @@ Frame* FS_Pop(FrameStack* fs) {
   }
 }
 
-ErrorCode FS_Push(FrameStack *fs, Frame* frame) {
+ErrorCode FS_Push(FrameStack *fs, Frame *frame) {
   if (!FS_IsFull(fs)) {
     fs->topIndex++;
     fs->stack[fs->topIndex] = frame;
