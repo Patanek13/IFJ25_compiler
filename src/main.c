@@ -1,23 +1,22 @@
 /**
  * @file main.c
- * @author Sebastián Kuchta
+ * @author Sebastián Kuchta (xkuchts00)
  * @author Patrik Lošťák (xlostap00)
  * @brief Main function with basic logic
  * @date 2025-10-01
  *
  */
+#include "ast.h"
 #include "error.h"
 #include "generator.h"
+#include "parser.h"
 #include "scanner.h"
+#include "semantic.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
-#include "parser.h"
-#include "semantic.h"
-#include "ast.h"
 
-
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   bool debug = false;
   bool scan_test = false;
   for (int i = 1; i < argc; i++) {
@@ -36,7 +35,7 @@ int main(int argc, char** argv) {
   }
 
   // Parser initialization
-  ASTNode* ast_root = NULL;
+  ASTNode *ast_root = NULL;
   int parse_error = ERR_OK;
 
   // Run the parser
@@ -76,7 +75,6 @@ int main(int argc, char** argv) {
     fprintf(stderr, "<AST representation>\n");
     ast_fprint_debug(ast_root, stderr);
   }
-
 
   // Free AST
   ast_free(ast_root);

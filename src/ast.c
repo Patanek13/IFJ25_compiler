@@ -1,16 +1,14 @@
-/*
+/**
  * @file ast.c
  * @brief Abstract Syntax Tree (AST) implementation
  * @author Patrik Lošťák (xlostap00)
- * @details This file contains the implementation of the Abstract Syntax Tree
- * (AST)
+ * @details This file contains the implementation of the Abstract Syntax Tree (AST)
  */
 
 #include "ast.h"
 #include "strutils.h"
 
-ASTNode *ast_create_node(ASTNodeType type, const char *value,
-                         DataType data_type) {
+ASTNode *ast_create_node(ASTNodeType type, const char *value, DataType data_type) {
   ASTNode *node = (ASTNode *)malloc(sizeof(ASTNode));
   if (!node) {
     return NULL; // Memory allocation failed
@@ -39,8 +37,7 @@ void ast_add_child(ASTNode *parent, ASTNode *child) {
     return; // Invalid input
   }
 
-  parent->children =
-      realloc(parent->children, (parent->child_count + 1) * sizeof(ASTNode *));
+  parent->children = realloc(parent->children, (parent->child_count + 1) * sizeof(ASTNode *));
   if (!parent->children) {
     return; // Memory allocation failed
   }
@@ -69,7 +66,6 @@ void ast_free(ASTNode *root) {
   // Free the root node
   free(root);
 }
-
 
 // Helper function to convert ASTNodeType to string
 const char *ast_node_type_to_string(ASTNodeType type) {
@@ -161,9 +157,7 @@ void ast_fprint_debug(const ASTNode *root, FILE *out) {
 }
 
 // Function to print the AST for debugging to stdout
-void ast_print_debug_stdout(const ASTNode *root) {
-  ast_fprint_debug(root, stdout);
-}
+void ast_print_debug_stdout(const ASTNode *root) { ast_fprint_debug(root, stdout); }
 
 // Function to print the AST for debugging to a file (returns 0 on success, -1 on error)
 int ast_print_debug_to_file(const ASTNode *root, const char *filename) {
@@ -196,8 +190,7 @@ int ast_print_debug_to_file(const ASTNode *root, const char *filename) {
   When is_last is true, use "└── " for the branch, otherwise "├── ".
   Prefix decides what to print before the branch (e.g., "│   " or "    ").
 */
-void ast_fprint_debug_inner(const ASTNode *node, FILE *out,
-                                   const char *prefix, bool is_last) {
+void ast_fprint_debug_inner(const ASTNode *node, FILE *out, const char *prefix, bool is_last) {
   if (!node)
     return;
 

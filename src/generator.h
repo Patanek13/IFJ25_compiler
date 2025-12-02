@@ -19,7 +19,7 @@ typedef struct {
   int labelCounter;
 } labelManager;
 
-int getUniqueLabelId(labelManager* lm);
+int getUniqueLabelId(labelManager *lm);
 
 /**
  * @brief Entry point for code generation
@@ -28,6 +28,6 @@ int getUniqueLabelId(labelManager* lm);
  * @param symTableArray Array of symbolic tables
  * @return ErrorCode
  */
-ErrorCode generate_code(ASTNode* node, Frame* gf);
-ErrorCode generate_program(ASTNode* root, bool debug);
+ErrorCode generate_code(ASTNode *node, Frame *gf);
+ErrorCode generate_program(ASTNode *root, bool debug);
 #endif
