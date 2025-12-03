@@ -1,11 +1,7 @@
 /**
  * @file stackframe.c
  * @author Sebastián Kuchta (xkuchts00)
- * @brief
- * @version 0.1
- * @date 2025-11-10
- *
- * @copyright Copyright (c) 2025
+ * @brief Implementation of frame datatype as hashtable
  *
  */
 
@@ -86,55 +82,4 @@ void F_cleanup(Frame *frame) {
       frame->entryTable[i] = NULL;
     }
   }
-}
-
-ErrorCode FS_init(FrameStack *fs) {
-  if (fs != NULL) {
-    fs->topIndex = -1;
-    fs->stack = malloc(MAX_STACK_SIZE * sizeof(Frame));
-    if (fs->stack == NULL) {
-      return ERR_INTERNAL;
-    } else {
-      return ERR_OK;
-    }
-  } else {
-    return ERR_INTERNAL;
-  }
-}
-
-bool FS_IsEmpty(FrameStack *fs) { return (fs->topIndex == -1); }
-
-bool FS_IsFull(FrameStack *fs) { return (fs->topIndex == (MAX_STACK_SIZE - 1)); }
-
-Frame *FS_Top(FrameStack *fs) {
-  if (!FS_IsEmpty(fs)) {
-    return fs->stack[(fs->topIndex)];
-  } else {
-    return NULL;
-  }
-}
-
-Frame *FS_Pop(FrameStack *fs) {
-  if (!FS_IsEmpty(fs)) {
-    fs->topIndex--;
-    return fs->stack[(fs->topIndex++)];
-  } else {
-    return NULL;
-  }
-}
-
-ErrorCode FS_Push(FrameStack *fs, Frame *frame) {
-  if (!FS_IsFull(fs)) {
-    fs->topIndex++;
-    fs->stack[fs->topIndex] = frame;
-    return ERR_OK;
-  } else {
-    return ERR_INTERNAL;
-  }
-}
-
-void FS_Dispose(FrameStack *fs) {
-  free(fs->stack);
-  fs->stack = NULL;
-  fs->topIndex = -1;
 }

@@ -1,9 +1,7 @@
 /**
  * @file generator.h
  * @author Sebastián Kuchta (xkuchts00)
- * @brief
- * @date 2025-11-09
- *
+ * @brief Header file for code generator
  *
  */
 
@@ -12,22 +10,18 @@
 
 #include "ast.h"
 #include "error.h"
-#include "stackframe.h"
-#include "symtable.h"
 
 typedef struct {
   int labelCounter;
 } labelManager;
 
-int getUniqueLabelId(labelManager *lm);
-
 /**
- * @brief Entry point for code generation
+ * @brief Entry point for code generation, should receive AST from parser after semantic
+    verification
  *
- * @param root AST root node
- * @param symTableArray Array of symbolic tables
+ * @param root Semantically verified AST root node
+ * @param debug Toggle for debug mode
  * @return ErrorCode
  */
-ErrorCode generate_code(ASTNode *node, Frame *gf);
 ErrorCode generate_program(ASTNode *root, bool debug);
 #endif
