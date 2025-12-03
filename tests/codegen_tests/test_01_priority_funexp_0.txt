@@ -9,6 +9,7 @@ class Program {
         // 5 + (10 * 2) = 25
         x = 5 + getVal() * 2
         Ifj.write(x)
+        Ifj.write("\n")
     }
 
 }

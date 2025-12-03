@@ -11,6 +11,7 @@ class Program {
         var res
         res = double(getVal())
         Ifj.write(res)
+        Ifj.write("\n")
     }
 
 }

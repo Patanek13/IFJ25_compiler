@@ -42,6 +42,7 @@ while IFS= read -r -d '' file; do
   # Only process files that end with .txt and have a suffix _<num> before .txt
   case "$base" in
     *.txt) noext="${base%.txt}" ;;
+    *.out) continue ;;
     *)
       skipped_count=$((skipped_count + 1))
       continue
