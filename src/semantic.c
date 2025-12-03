@@ -840,12 +840,11 @@ static void analyze_call(ASTNode *node, AnalysisContext *context) {
         if (context->debug) {
           fprintf(stderr, "Semantic Error: Second argument type mismatch in call to 'Ifj.substring'\n");
         }
-      } else {
-        if (arg2->data_type != TYPE_INT && arg2->data_type != TYPE_UNKNOWN) {
-          *context->error_code = ERR_SEMANTIC_TYPE;
-          if (context->debug) {
-            fprintf(stderr, "Semantic Error: Second argument is not Int in call to 'Ifj.substring'\n");
-          }
+      } else if (arg2->type == NODE_LITERAL && arg2->data_type == TYPE_FLOAT) {
+        // Float literal used as start index --> 6/26
+        *context->error_code = ERR_SEMANTIC_TYPE;
+        if (context->debug) {
+          fprintf(stderr, "Semantic Error: Second argument is not Int in call to 'Ifj.substring'\n");
         }
       }
 
@@ -854,12 +853,11 @@ static void analyze_call(ASTNode *node, AnalysisContext *context) {
         if (context->debug) {
           fprintf(stderr, "Semantic Error: Third argument type mismatch in call to 'Ifj.substring'\n");
         }
-      } else {
-        if (arg3->data_type != TYPE_INT && arg3->data_type != TYPE_UNKNOWN) {
-          *context->error_code = ERR_SEMANTIC_TYPE;
-          if (context->debug) {
-            fprintf(stderr, "Semantic Error: Third argument is not Int in call to 'Ifj.substring'\n");
-          }
+      } else if (arg3->type == NODE_LITERAL && arg3->data_type == TYPE_FLOAT) {
+        // Float literal used as length --> 6/26
+        *context->error_code = ERR_SEMANTIC_TYPE;
+        if (context->debug) {
+          fprintf(stderr, "Semantic Error: Third argument is not Int in call to 'Ifj.substring'\n");
         }
       }
     } else if (strcmp(func_name, "Ifj.ord") == 0) {
@@ -890,12 +888,11 @@ static void analyze_call(ASTNode *node, AnalysisContext *context) {
         if (context->debug) {
           fprintf(stderr, "Semantic Error: Second argument type mismatch in call to 'Ifj.ord'\n");
         }
-      } else {
-        if (arg2->data_type != TYPE_INT && arg2->data_type != TYPE_UNKNOWN) {
-          *context->error_code = ERR_SEMANTIC_TYPE;
-          if (context->debug) {
-            fprintf(stderr, "Semantic Error: Second argument is not Int in call to 'Ifj.ord'\n");
-          }
+      } else if (arg2->type == NODE_LITERAL && arg2->data_type == TYPE_FLOAT) {
+        // Float literal used as index --> 6/26
+        *context->error_code = ERR_SEMANTIC_TYPE;
+        if (context->debug) {
+          fprintf(stderr, "Semantic Error: Second argument is not Int in call to 'Ifj.ord'\n");
         }
       }
     } else if (strcmp(func_name, "Ifj.chr") == 0) {
@@ -907,12 +904,11 @@ static void analyze_call(ASTNode *node, AnalysisContext *context) {
         if (context->debug) {
           fprintf(stderr, "Semantic Error: Argument type mismatch in call to 'Ifj.chr'\n");
         }
-      } else {
-        if (arg1->data_type != TYPE_INT && arg1->data_type != TYPE_UNKNOWN) {
-          *context->error_code = ERR_SEMANTIC_TYPE;
-          if (context->debug) {
-            fprintf(stderr, "Semantic Error: Argument is not Int in call to 'Ifj.chr'\n");
-          }
+      } else if (arg1->type == NODE_LITERAL && arg1->data_type == TYPE_FLOAT) {
+        // Float literal used as ASCI code --> 6/26
+        *context->error_code = ERR_SEMANTIC_TYPE;
+        if (context->debug) {
+          fprintf(stderr, "Semantic Error: Argument is not Int in call to 'Ifj.chr'\n");
         }
       }
     } else if (strcmp(func_name, "Ifj.floor") == 0) {
