@@ -1,8 +1,7 @@
 /**
  * @file generator.c
  * @author Sebastián Kuchta (xkuchts00)
- * @date 2025-11-09
- *
+ * @brief Implementation of IFJcode25 code generator
  *
  */
 
@@ -10,7 +9,6 @@
 #include "ast.h"
 #include "error.h"
 #include "stackframe.h"
-#include "symtable.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,7 +16,9 @@
 
 int labelCounter = 0;
 
-char *dataTypeToStr(DataType type) {
+ErrorCode generate_code(ASTNode *node, Frame *gf);
+
+char *data_type_to_str(DataType type) {
   char *dataType;
   switch (type) {
   case TYPE_UNKNOWN:
@@ -42,7 +42,7 @@ char *dataTypeToStr(DataType type) {
   return dataType;
 }
 
-char *getFrameFromId(char *id) {
+char *get_frame_from_id(char *id) {
   if (strncmp(id, "__", 2) == 0) {
     return "GF";
   } else {
@@ -50,20 +50,19 @@ char *getFrameFromId(char *id) {
   }
 }
 
-void populateVarDefinitions(ASTNode *node, Frame *lf) {
+void populate_var_definitions(ASTNode *node, Frame *lf) {
   if (!node)
     return;
-  // fprintf(stderr, "gen:InPopulateBody:%i:%zu\n",node->type, node->child_count);
   if (node->type == NODE_VAR_DECL) {
-    fprintf(stdout, "DEFVAR %s@%s\n", getFrameFromId(node->children[0]->value), node->children[0]->value);
+    fprintf(stdout, "DEFVAR %s@%s\n", get_frame_from_id(node->children[0]->value), node->children[0]->value);
   }
 
   for (size_t i = 0; i < node->child_count; i++) {
-    populateVarDefinitions(node->children[i], lf);
+    populate_var_definitions(node->children[i], lf);
   }
 }
 
-void populateGlobalVars(ASTNode *node, Frame *gf) {
+void populate_global_vars(ASTNode *node, Frame *gf) {
   if (!node)
     return;
 
@@ -76,11 +75,11 @@ void populateGlobalVars(ASTNode *node, Frame *gf) {
   }
 
   for (size_t i = 0; i < node->child_count; i++) {
-    populateGlobalVars(node->children[i], gf);
+    populate_global_vars(node->children[i], gf);
   }
 }
 
-void printFormatedString(char *in) {
+void print_formated_string(char *in) {
   if (!in)
     return;
 
@@ -96,12 +95,11 @@ void printFormatedString(char *in) {
   }
 }
 
-ErrorCode generate_IsOperator(ASTNode *node, Frame *gf) {
+ErrorCode generate_is_operator(ASTNode *node, Frame *gf) {
   generate_code(node->children[0], gf); // lava strana
 
   fprintf(stdout, "POPS GF@__$temp1\n");
   fprintf(stdout, "TYPE GF@__$tempRes GF@__$temp1\n");
-  // fprintf(stdout, "PUSHS GF@__$tempRes\n");
 
   char *rhT = node->children[1]->value;
   if (strcmp(rhT, "Num") == 0) {
@@ -131,7 +129,7 @@ ErrorCode generate_IsOperator(ASTNode *node, Frame *gf) {
   }
 }
 
-void convertToFloat() {
+void convert_to_float() {
   int uniqueId = labelCounter++;
 
   fprintf(stdout, "POPS GF@__$temp1\n");
@@ -145,7 +143,7 @@ void convertToFloat() {
   fprintf(stdout, "PUSHS GF@__$temp1\n");
 }
 
-void verifyOperands() {
+void verify_operands() {
   int uniqueId = labelCounter++;
   fprintf(stdout, "POPS GF@__$temp2\n");
   fprintf(stdout, "POPS GF@__$temp1\n");
@@ -171,15 +169,15 @@ void verifyOperands() {
   fprintf(stdout, "PUSHS GF@__$temp2\n");
 }
 
-ErrorCode generate_binOp(ASTNode *node, Frame *gf) {
+ErrorCode generate_binop(ASTNode *node, Frame *gf) {
   if (strcmp(node->value, "is") == 0) {
-    ErrorCode state = generate_IsOperator(node, gf);
+    ErrorCode state = generate_is_operator(node, gf);
     return state;
   }
 
   generate_code(node->children[0], gf); // Operand 1
   generate_code(node->children[1], gf); // Operand 2
-  verifyOperands();
+  verify_operands();
 
   char *op = node->value;
 
@@ -258,9 +256,9 @@ ErrorCode generate_binOp(ASTNode *node, Frame *gf) {
     fprintf(stdout, "PUSHS GF@__$temp1\n");
     fprintf(stdout, "PUSHS GF@__$temp2\n");
 
-    convertToFloat();
+    convert_to_float();
     fprintf(stdout, "POPS GF@__$temp3\n");
-    convertToFloat();
+    convert_to_float();
     fprintf(stdout, "PUSHS GF@__$temp3\n");
     fprintf(stdout, "MULS\n");
     fprintf(stdout, "JUMP $binop$m$end$%i\n", uniqueId);
@@ -306,9 +304,9 @@ ErrorCode generate_binOp(ASTNode *node, Frame *gf) {
     fprintf(stdout, "PUSHS GF@__$temp1\n");
     fprintf(stdout, "PUSHS GF@__$temp2\n");
 
-    convertToFloat();
+    convert_to_float();
     fprintf(stdout, "POPS GF@__$temp3\n");
-    convertToFloat();
+    convert_to_float();
     fprintf(stdout, "PUSHS GF@__$temp3\n");
 
     fprintf(stdout, "DIVS\n");
@@ -365,7 +363,7 @@ ErrorCode generate_binOp(ASTNode *node, Frame *gf) {
   return ERR_OK;
 }
 
-ErrorCode generate_builtIn(ASTNode *node, Frame *gf) {
+ErrorCode generate_builtin(ASTNode *node, Frame *gf) {
   char *funId = node->children[0]->value;
   if (strcmp(funId, "Ifj.write") == 0) {
     for (size_t i = 0; i < node->children[1]->child_count; i++) {
@@ -661,48 +659,32 @@ ErrorCode generate_builtIn(ASTNode *node, Frame *gf) {
 ErrorCode generate_code(ASTNode *node, Frame *gf) {
   if (!node)
     return 0;
-  fprintf(stderr, "genNodeSwitch:%i:%zu\n", node->type, node->child_count);
+
   ErrorCode returnError = ERR_OK;
 
   switch (node->type) {
   case NODE_FUNCTION: {
-    // fprintf(stderr, "gen:Function\n");
-    // labelManager counter;
-    // counter.labelCounter = 0;
     int numOfParams = node->children[0]->child_count;
     fprintf(stdout, "LABEL $%s$%i\n", node->value, numOfParams);
-    // Frame* lf = malloc(sizeof(Frame));
-    // F_init(lf, LF);
 
-    // FS_Push(fs, lf);
     fprintf(stdout, "PUSHFRAME\n");
-    populateVarDefinitions(node->children[1], gf);
-    // fprintf(stderr, "gen:AfterPopulateBody\n");
-    if (numOfParams > 0) {
+    populate_var_definitions(node->children[1], gf);
+
+    if (numOfParams > 0) { // ziskaj argumenty zo zasobnika
       for (int i = numOfParams - 1; i >= 0; i--) {
-        // fprintf(stderr, "gen:ParamsFunctionBody:%i\n",i);
-        // ASTNode* param = node->children[0]->children[i];
-        // F_insert(lf, param->value, param->data_type);
         fprintf(stdout, "DEFVAR LF@%s\n", node->children[0]->children[i]->value);
         fprintf(stdout, "POPS LF@%s\n", node->children[0]->children[i]->value);
       }
     }
-    // fprintf(stderr, "gen:FunctionGenerate\n");
-    // fprintf(stdout, "DEFVAR LF@retVal$"); // sem sa ulozi vysledok tela
+
     // generuj telo funkcie
-    // fprintf(stderr, "gen:BeforeFunctionBody:%i:%zu\n", node->children[1]->type, node->child_count);
     returnError = generate_code(node->children[1], gf);
-    // fprintf(stderr, "gen:AfterFunctionBody\n");
     if (strcmp(node->value, "main") == 0) {
       fprintf(stdout, "PUSHS nil@nil\n");
-      // FS_Pop(fs);
-      // F_cleanup(lf);
       fprintf(stdout, "POPFRAME\n");
       fprintf(stdout, "RETURN\n\n");
     } else {
       fprintf(stdout, "PUSHS nil@nil\n");
-      // FS_Pop(fs);
-      // F_cleanup(lf);
       fprintf(stdout, "POPFRAME\n");
       fprintf(stdout, "RETURN\n\n");
     }
@@ -711,10 +693,9 @@ ErrorCode generate_code(ASTNode *node, Frame *gf) {
   case NODE_SETTER: {
     int idLen = strlen(node->value);
     char setterId[idLen];
-    strncpy(setterId, node->value, idLen - 1);
+    strncpy(setterId, node->value, idLen - 1); // setterId bez "="
     setterId[idLen - 1] = '\0';
     fprintf(stdout, "LABEL $set$%s\n", setterId);
-    // fprintf(stdout, "CREATEFRAME\n");
     fprintf(stdout, "PUSHFRAME\n");
 
     ASTNode *setParam = node->children[0]->children[0]; // NODE_PARAM_LIST->NODE_ID
@@ -722,7 +703,7 @@ ErrorCode generate_code(ASTNode *node, Frame *gf) {
     fprintf(stdout, "POPS LF@%s\n", setParam->value);
 
     ASTNode *codeBlock = node->children[1];
-    populateVarDefinitions(codeBlock, gf);
+    populate_var_definitions(codeBlock, gf);
     returnError = generate_code(codeBlock, gf);
 
     fprintf(stdout, "PUSHS nil@nil\n");
@@ -731,11 +712,10 @@ ErrorCode generate_code(ASTNode *node, Frame *gf) {
     return returnError;
   }
 
-  case NODE_GETTER: {
+  case NODE_GETTER: { // generuje getter, chova sa ako funkcia bez parametrov
     fprintf(stdout, "LABEL $get$%s\n", node->value);
-    // fprintf(stdout, "CREATEFRAME\n");
     fprintf(stdout, "PUSHFRAME\n");
-    populateVarDefinitions(node->children[1], gf);
+    populate_var_definitions(node->children[1], gf);
     returnError = generate_code(node->children[1], gf);
 
     fprintf(stdout, "PUSHS nil@nil\n");
@@ -746,22 +726,12 @@ ErrorCode generate_code(ASTNode *node, Frame *gf) {
   case NODE_TYPE_ID:
     return ERR_OK;
   case NODE_ID: {
-    /*Frame* lf = FS_Top(fs);
-    FrameEntry* fe = F_lookup(lf, node->value);
-    if (fe == NULL) {
-      F_insert(lf, node->value, node->data_type);
-      fprintf(stdout, "DEFVAR LF@%s\n", node->value);
-    }
-    */
-    fprintf(stdout, "PUSHS %s@%s\n", getFrameFromId(node->value), node->value);
+    fprintf(stdout, "PUSHS %s@%s\n", get_frame_from_id(node->value), node->value);
     return ERR_OK;
   }
-  case NODE_BLOCK: { // postupny chod prikazmi v code block
+  case NODE_BLOCK: { // postupny chod prikazmi v code blocku
     for (size_t i = 0; i < node->child_count; i++) {
-      // fprintf(stderr, "gen:NodeBlock:CC:%zu\n", node->child_count);
-      // fprintf(stderr, "gen:NodeBlockStart%zu:%s\n",i, node->children[i]->value);
       returnError = generate_code(node->children[i], gf);
-      // fprintf(stderr, "gen:FinishBlockIte%zu\n", i);;
       if (returnError != ERR_OK) {
         return returnError;
       }
@@ -771,17 +741,11 @@ ErrorCode generate_code(ASTNode *node, Frame *gf) {
   }
 
   case NODE_RETURN: {
-    // Frame* lf = FS_Top(fs);
-    // fprintf(stderr, "gen:NodeReturn\n");
     if (node->child_count > 0) {
       generate_code(node->children[0], gf); // generuje vyraz v return na vrchol zasobniku
     } else {
       fprintf(stdout, "PUSHS nil@nil\n");
     }
-    // fprintf(stdout, "PUSHS LF@%s\n", node->children[0]->value);
-    // Frame* lf = FS_Pop(fs);
-    // F_cleanup(lf);
-    // free(lf);
     fprintf(stdout, "POPFRAME\n");
     fprintf(stdout, "RETURN\n\n");
     return ERR_OK;
@@ -793,23 +757,23 @@ ErrorCode generate_code(ASTNode *node, Frame *gf) {
       strncpy(setterId, node->children[0]->value, idLen - 1);
       setterId[idLen - 1] = '\0';
 
-      returnError = generate_code(node->children[1], gf); // prava cast na zasobik
+      returnError = generate_code(node->children[1], gf); //generate rhs and put on stack as argument for setter
       fprintf(stdout, "CREATEFRAME\n");
       fprintf(stdout, "CALL $set$%s\n", setterId);
     } else {
-      returnError = generate_code(node->children[1], gf); // prava cast na zasobnik
-      fprintf(stdout, "POPS %s@%s\n", getFrameFromId(node->children[0]->value), node->children[0]->value);
+      returnError = generate_code(node->children[1], gf); // left side generate and put on stack
+      fprintf(stdout, "POPS %s@%s\n", get_frame_from_id(node->children[0]->value), node->children[0]->value);
     }
     return returnError;
   }
 
   case NODE_CALL: {
     char *funcId = node->children[0]->value;
-    fprintf(stderr, "genNodeCall:%s\n", funcId);
+    //fprintf(stderr, "genNodeCall:%s\n", funcId);
 
     if (strncmp(funcId, "Ifj.", 4) == 0) {
-      returnError = generate_builtIn(node, gf);
-    } else if (node->frame == FRAME_GLOBAL) {
+      returnError = generate_builtin(node, gf); // inline generate built-in function
+    } else if (node->frame == FRAME_GLOBAL) { // identify getter (distinguished from function by frame type)
       fprintf(stdout, "CREATEFRAME\n");
       fprintf(stdout, "CALL $get$%s\n", funcId);
     } else {
@@ -817,17 +781,16 @@ ErrorCode generate_code(ASTNode *node, Frame *gf) {
       if (numOfArgs > 0) {
         ASTNode *args = node->children[1];
         for (size_t i = 0; i < args->child_count; i++) {
-          generate_code(args->children[i], gf); // push argumentov na stack
+          generate_code(args->children[i], gf); // push arguments on stack
         }
       }
       fprintf(stdout, "CREATEFRAME\n");
       fprintf(stdout, "CALL $%s$%i\n", funcId, numOfArgs);
     }
-    // returnError = generate_code(node->children[1], gf); //ARG_LIST
     return ERR_OK;
   }
   case NODE_BINOP: {
-    returnError = generate_binOp(node, gf);
+    returnError = generate_binop(node, gf);
     return returnError;
   }
   case NODE_LITERAL: {
@@ -839,10 +802,10 @@ ErrorCode generate_code(ASTNode *node, Frame *gf) {
       fprintf(stdout, "PUSHS nil@nil\n");
     } else if (node->data_type == TYPE_STRING) {
       fprintf(stdout, "PUSHS string@");
-      printFormatedString(node->value);
+      print_formated_string(node->value);
       fprintf(stdout, "\n");
     } else {
-      char *dataType = dataTypeToStr(node->data_type);
+      char *dataType = data_type_to_str(node->data_type);
       if (dataType != NULL) {
         fprintf(stdout, "PUSHS %s@%s\n", dataType, node->value);
       } else {
@@ -851,15 +814,14 @@ ErrorCode generate_code(ASTNode *node, Frame *gf) {
     }
     return ERR_OK;
   }
-  case NODE_VAR_DECL: {
-    fprintf(stdout, "MOVE %s@%s nil@nil\n", getFrameFromId(node->children[0]->value), node->children[0]->value);
+  case NODE_VAR_DECL: { //local variable already defined at start of function, just insert nil
+    fprintf(stdout, "MOVE %s@%s nil@nil\n", get_frame_from_id(node->children[0]->value), node->children[0]->value);
     return ERR_OK;
   }
   case NODE_IF: {
     int uniqueId = labelCounter++;
-    generate_code(node->children[0], gf);
+    generate_code(node->children[0], gf); // evaluate condition body (should return bool value)
 
-    // fprintf(stdout, "PUSHS bool@false\n");
     fprintf(stdout, "POPS GF@__$temp1\n");
     fprintf(stdout, "JUMPIFEQ $if$else$%i GF@__$temp1 nil@nil\n", uniqueId);
 
@@ -967,8 +929,9 @@ ErrorCode generate_code(ASTNode *node, Frame *gf) {
     return ERR_OK;
   }
   case NODE_PROGRAM: {
-    // fprintf(stderr, "gen:Program\n");
     fprintf(stdout, ".IFJcode25\n");
+
+    //prepare global helper variables
     fprintf(stdout, "DEFVAR GF@__$temp1\n");
     fprintf(stdout, "DEFVAR GF@__$temp2\n");
     fprintf(stdout, "DEFVAR GF@__$temp3\n");
@@ -977,12 +940,12 @@ ErrorCode generate_code(ASTNode *node, Frame *gf) {
     fprintf(stdout, "DEFVAR GF@__$tempK\n");
     fprintf(stdout, "DEFVAR GF@__$tempRes\n");
 
-    populateGlobalVars(node, gf);
+    populate_global_vars(node, gf);
 
     fprintf(stdout, "CREATEFRAME\n");
     fprintf(stdout, "CALL $main$0\n");
     fprintf(stdout, "JUMP $program$end$\n");
-    // generate all functions
+    // generate all program functions
     ASTNode *mainBlock = node->children[0];
     for (size_t i = 0; i < mainBlock->child_count; i++) {
       returnError = generate_code(mainBlock->children[i], gf);
@@ -1007,15 +970,13 @@ ErrorCode generate_program(ASTNode *root, bool debug) {
     return ERR_INTERNAL;
 
   Frame gf;
-  // FrameStack fs;
   F_init(&gf, GF);
-  // FS_init(&fs);
   ErrorCode state;
 
   if (debug) {
     fprintf(stderr, "Debug mode ON\n");
   }
-  // fprintf(stderr, "startgen\n");
+
   state = generate_code(root, &gf);
   F_cleanup(&gf);
 
