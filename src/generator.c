@@ -18,6 +18,16 @@ int label_counter = 0;
 
 ErrorCode generate_code(ASTNode *node, Frame *gf);
 
+void generate_error_exits(){
+  fprintf(stdout, "LABEL $exit$err$type\n");
+  fprintf(stdout, "CLEARS\n");
+  fprintf(stdout, "EXIT int@26\n");
+
+  fprintf(stdout, "LABEL $exit$err$param\n");
+  fprintf(stdout, "CLEARS\n");
+  fprintf(stdout, "EXIT int@25\n");
+}
+
 char *data_type_to_str(DataType type) {
   char *dataType;
   switch (type) {
@@ -124,7 +134,7 @@ ErrorCode generate_is_operator(ASTNode *node, Frame *gf) {
     fprintf(stdout, "EQS\n");
     return ERR_OK;
   } else {
-    fprintf(stdout, "EXIT int@26\n");
+    fprintf(stdout, "JUMP $exit$err$type\n");
     return ERR_OK;
   }
 }
@@ -198,12 +208,12 @@ ErrorCode generate_binop(ASTNode *node, Frame *gf) {
     fprintf(stdout, "POPS GF@__$temp1\n");
     fprintf(stdout, "TYPE GF@__$tempI GF@__$temp1\n");
     fprintf(stdout, "TYPE GF@__$tempJ GF@__$temp2\n");
-    fprintf(stdout, "JUMPIFEQ $binop$p$error$%i GF@__$tempI string@nil\n", uniqueId);
-    fprintf(stdout, "JUMPIFEQ $binop$p$error$%i GF@__$tempJ string@nil\n", uniqueId);
+    fprintf(stdout, "JUMPIFEQ $exit$err$type GF@__$tempI string@nil\n");
+    fprintf(stdout, "JUMPIFEQ $exit$err$type GF@__$tempJ string@nil\n");
 
     //first operand is string -> check second operand
     fprintf(stdout, "JUMPIFEQ $binop$p$checkS$%i GF@__$tempI string@string\n", uniqueId);
-    fprintf(stdout, "JUMPIFEQ $binop$p$error$%i GF@__$tempJ string@string\n", uniqueId);
+    fprintf(stdout, "JUMPIFEQ $exit$err$type GF@__$tempJ string@string\n");
 
     fprintf(stdout, "JUMPIFEQ $binop$p$float$%i GF@__$tempI string@float\n", uniqueId);
     fprintf(stdout, "JUMPIFEQ $binop$p$float$%i GF@__$tempJ string@float\n", uniqueId);
@@ -225,32 +235,22 @@ ErrorCode generate_binop(ASTNode *node, Frame *gf) {
     fprintf(stdout, "JUMP $binop$p$end$%i\n", uniqueId);
 
     fprintf(stdout, "LABEL $binop$p$checkS$%i\n", uniqueId);
-    fprintf(stdout, "JUMPIFNEQ $binop$p$error$%i GF@__$tempJ string@string\n", uniqueId);
+    fprintf(stdout, "JUMPIFNEQ $exit$err$type GF@__$tempJ string@string\n");
     fprintf(stdout, "CONCAT GF@__$tempRes GF@__$temp1 GF@__$temp2\n");
     fprintf(stdout, "JUMP $binop$p$end$%i\n", uniqueId);
-
-    fprintf(stdout, "LABEL $binop$p$error$%i\n", uniqueId);
-    fprintf(stdout, "EXIT int@26\n");
 
     fprintf(stdout, "LABEL $binop$p$end$%i\n", uniqueId);
     fprintf(stdout, "PUSHS GF@__$tempRes\n");
   } else if (strcmp(op, "-") == 0) {
-    int uniqueId = label_counter++;
     fprintf(stdout, "POPS GF@__$temp2\n");
     fprintf(stdout, "POPS GF@__$temp1\n");
     fprintf(stdout, "TYPE GF@__$tempI GF@__$temp1\n");
     fprintf(stdout, "TYPE GF@__$tempJ GF@__$temp2\n");
-    fprintf(stdout, "JUMPIFEQ $binop$s$error$%i GF@__$tempI string@nil\n", uniqueId);
-    fprintf(stdout, "JUMPIFEQ $binop$s$error$%i GF@__$tempJ string@nil\n", uniqueId);
+    fprintf(stdout, "JUMPIFEQ $exit$err$type GF@__$tempI string@nil\n");
+    fprintf(stdout, "JUMPIFEQ $exit$err$type GF@__$tempJ string@nil\n");
     fprintf(stdout, "PUSHS GF@__$temp1\n");
     fprintf(stdout, "PUSHS GF@__$temp2\n");
     fprintf(stdout, "SUBS\n");
-    fprintf(stdout, "JUMP $binop$s$end$%i\n", uniqueId);
-
-    fprintf(stdout, "LABEL $binop$s$error$%i\n", uniqueId);
-    fprintf(stdout, "EXIT int@26\n");
-
-    fprintf(stdout, "LABEL $binop$s$end$%i\n", uniqueId);
   } else if (strcmp(op, "*") == 0) {
     int uniqueId = label_counter++;
 
@@ -258,11 +258,11 @@ ErrorCode generate_binop(ASTNode *node, Frame *gf) {
     fprintf(stdout, "POPS GF@__$temp1\n");
     fprintf(stdout, "TYPE GF@__$tempI GF@__$temp1\n");
     fprintf(stdout, "TYPE GF@__$tempJ GF@__$temp2\n");
-    fprintf(stdout, "JUMPIFEQ $binop$m$error$%i GF@__$tempI string@nil\n", uniqueId);
-    fprintf(stdout, "JUMPIFEQ $binop$m$error$%i GF@__$tempJ string@nil\n", uniqueId);
+    fprintf(stdout, "JUMPIFEQ $exit$err$type GF@__$tempI string@nil\n");
+    fprintf(stdout, "JUMPIFEQ $exit$err$type GF@__$tempJ string@nil\n");
 
     fprintf(stdout, "JUMPIFEQ $binop$m$string$%i GF@__$tempI string@string\n", uniqueId);
-    fprintf(stdout, "JUMPIFEQ $binop$m$error$%i GF@__$tempJ string@string\n", uniqueId);
+    fprintf(stdout, "JUMPIFEQ $exit$err$type GF@__$tempJ string@string\n");
 
     fprintf(stdout, "PUSHS GF@__$temp1\n");
     fprintf(stdout, "PUSHS GF@__$temp2\n");
@@ -277,7 +277,7 @@ ErrorCode generate_binop(ASTNode *node, Frame *gf) {
     fprintf(stdout, "LABEL $binop$m$string$%i\n", uniqueId);
 
     fprintf(stdout, "ISINT GF@__$tempK GF@__$temp2\n");
-    fprintf(stdout, "JUMPIFNEQ $binop$m$error$%i GF@__$tempK bool@true\n", uniqueId);
+    fprintf(stdout, "JUMPIFNEQ $exit$err$type GF@__$tempK bool@true\n");
 
     fprintf(stdout, "JUMPIFNEQ $binop$m$skipf2i$%i GF@__$tempJ string@float\n", uniqueId);
     fprintf(stdout, "FLOAT2INT GF@__$temp2 GF@__$temp2\n");
@@ -297,9 +297,6 @@ ErrorCode generate_binop(ASTNode *node, Frame *gf) {
     fprintf(stdout, "PUSHS GF@__$tempRes\n");
     fprintf(stdout, "JUMP $binop$m$end$%i\n", uniqueId);
 
-    fprintf(stdout, "LABEL $binop$m$error$%i\n", uniqueId);
-    fprintf(stdout, "EXIT int@26\n");
-
     fprintf(stdout, "LABEL $binop$m$end$%i\n", uniqueId);
   } else if (strcmp(op, "/") == 0) {
     // dynamicke rozhodnutie medzi DIV a IDIV
@@ -310,8 +307,8 @@ ErrorCode generate_binop(ASTNode *node, Frame *gf) {
     fprintf(stdout, "POPS GF@__$temp1\n");
     fprintf(stdout, "TYPE GF@__$tempI GF@__$temp1\n");
     fprintf(stdout, "TYPE GF@__$tempJ GF@__$temp2\n");
-    fprintf(stdout, "JUMPIFEQ $binop$d$error$%i GF@__$tempI string@nil\n", uniqueId);
-    fprintf(stdout, "JUMPIFEQ $binop$d$error$%i GF@__$tempJ string@nil\n", uniqueId);
+    fprintf(stdout, "JUMPIFEQ $exit$err$type GF@__$tempI string@nil\n");
+    fprintf(stdout, "JUMPIFEQ $exit$err$type GF@__$tempJ string@nil\n");
     fprintf(stdout, "PUSHS GF@__$temp1\n");
     fprintf(stdout, "PUSHS GF@__$temp2\n");
 
@@ -322,9 +319,6 @@ ErrorCode generate_binop(ASTNode *node, Frame *gf) {
 
     fprintf(stdout, "DIVS\n");
     fprintf(stdout, "JUMP $binop$d$end%i\n", uniqueId);
-
-    fprintf(stdout, "LABEL $binop$d$error$%i\n", uniqueId);
-    fprintf(stdout, "EXIT int@26\n");
 
     fprintf(stdout, "LABEL $binop$d$end%i\n", uniqueId);
   } else if (strcmp(op, "==") == 0)
@@ -406,16 +400,13 @@ ErrorCode generate_builtin(ASTNode *node, Frame *gf) {
     fprintf(stdout, "PUSHS GF@__$tempRes\n");
     return ERR_OK;
   } else if (strcmp(funId, "Ifj.length") == 0) {
-    int uniqueId = label_counter++;
+    //int uniqueId = label_counter++;
     generate_code(node->children[1], gf);
     fprintf(stdout, "POPS GF@__$temp1\n");
     //verify it is string
     fprintf(stdout, "TYPE GF@__$temp2 GF@__$temp1\n");
-    fprintf(stdout, "JUMPIFEQ $ifj$length$%i GF@__$temp2 string@string\n", uniqueId);
-    fprintf(stdout, "CLEARS\n");
-    fprintf(stdout, "EXIT int@25\n");
+    fprintf(stdout, "JUMPIFNEQ $exit$err$param GF@__$temp2 string@string\n");
 
-    fprintf(stdout, "LABEL $ifj$length$%i\n", uniqueId);
     fprintf(stdout, "STRLEN GF@__$tempRes GF@__$temp1\n");
     fprintf(stdout, "PUSHS GF@__$tempRes\n");
     return ERR_OK;
@@ -424,9 +415,7 @@ ErrorCode generate_builtin(ASTNode *node, Frame *gf) {
     int uniqueId = label_counter++;
 
     verify_num();
-    fprintf(stdout, "JUMPIFEQ $ifj$floor$%i GF@__$tempRes bool@true\n", uniqueId);
-    fprintf(stdout, "CLEARS\n");
-    fprintf(stdout, "EXIT int@25\n");
+    fprintf(stdout, "JUMPIFNEQ $exit$err$param GF@__$tempRes bool@true\n");
 
     fprintf(stdout, "LABEL $ifj$floor$%i\n", uniqueId);
     fprintf(stdout, "POPS GF@__$temp1\n");
@@ -490,16 +479,12 @@ ErrorCode generate_builtin(ASTNode *node, Frame *gf) {
     int uniqueId = label_counter++;
     generate_code(node->children[1], gf);
     verify_num();
-    fprintf(stdout, "JUMPIFEQ $ifj$sub$j$%i GF@__$tempRes bool@true\n", uniqueId);
-    fprintf(stdout, "CLEARS\n");
-    fprintf(stdout, "EXIT int@25\n");
+    fprintf(stdout, "JUMPIFNEQ $exit$err$param GF@__$tempRes bool@true\n");
 
     fprintf(stdout, "LABEL $ifj$sub$j$%i\n", uniqueId);
     fprintf(stdout, "POPS GF@__$temp3\n"); // j
     verify_num();
-    fprintf(stdout, "JUMPIFEQ $ifj$sub$i$%i GF@__$tempRes bool@true\n", uniqueId);
-    fprintf(stdout, "CLEARS\n");
-    fprintf(stdout, "EXIT int@25\n");
+    fprintf(stdout, "JUMPIFNEQ $exit$err$param GF@__$tempRes bool@true\n");
 
     fprintf(stdout, "LABEL $ifj$sub$i$%i\n", uniqueId);
     fprintf(stdout, "POPS GF@__$temp2\n"); // i
@@ -509,12 +494,12 @@ ErrorCode generate_builtin(ASTNode *node, Frame *gf) {
     // i a j typechecks
     fprintf(stdout, "ISINT GF@__$tempRes GF@__$temp2\n");
     fprintf(stdout, "JUMPIFEQ $ifj$sub$jtype$%i GF@__$tempRes bool@true\n", uniqueId);
-    fprintf(stdout, "EXIT int@26\n");
+    fprintf(stdout, "JUMP $exit$err$type\n");
 
     fprintf(stdout, "LABEL $ifj$sub$jtype$%i\n", uniqueId);
     fprintf(stdout, "ISINT GF@__$tempRes GF@__$temp3\n");
     fprintf(stdout, "JUMPIFEQ $ifj$sub$toint$%i GF@__$tempRes bool@true\n", uniqueId);
-    fprintf(stdout, "EXIT int@26\n");
+    fprintf(stdout, "JUMP $exit$err$type\n");
 
     // i,j to int
     fprintf(stdout, "LABEL $ifj$sub$toint$%i\n", uniqueId);
@@ -535,10 +520,8 @@ ErrorCode generate_builtin(ASTNode *node, Frame *gf) {
 
     fprintf(stdout, "LABEL $ifj$sub$scheck$%i\n", uniqueId);
     fprintf(stdout, "TYPE GF@__$tempRes GF@__$temp1\n");
-    fprintf(stdout, "JUMPIFEQ $ifj$sub$strlen$%i GF@__$tempRes string@string\n", uniqueId);
-    fprintf(stdout, "EXIT int@25\n");
+    fprintf(stdout, "JUMPIFNEQ $exit$err$param GF@__$tempRes string@string\n");
     // dlzka retazca
-    fprintf(stdout, "LABEL $ifj$sub$strlen$%i\n", uniqueId);
     fprintf(stdout, "STRLEN GF@__$tempK GF@__$temp1\n");
 
     // i < 0
@@ -587,9 +570,9 @@ ErrorCode generate_builtin(ASTNode *node, Frame *gf) {
 
     // s1,s2 typecheck
     fprintf(stdout, "TYPE GF@__$temp3 GF@__$temp1\n");
-    fprintf(stdout, "JUMPIFNEQ $ifjstrcmp$typeerr$%i GF@__$temp3 string@string\n", uniqueId);
+    fprintf(stdout, "JUMPIFNEQ $exit$err$param GF@__$temp3 string@string\n");
     fprintf(stdout, "TYPE GF@__$temp3 GF@__$temp2\n");
-    fprintf(stdout, "JUMPIFNEQ $ifjstrcmp$typeerr$%i GF@__$temp3 string@string\n", uniqueId);
+    fprintf(stdout, "JUMPIFNEQ $exit$err$param GF@__$temp3 string@string\n");
 
     // testy rovnosti
     fprintf(stdout, "LT GF@__$tempRes GF@__$temp1 GF@__$temp2\n");
@@ -608,9 +591,6 @@ ErrorCode generate_builtin(ASTNode *node, Frame *gf) {
     fprintf(stdout, "PUSHS int@1\n");
     fprintf(stdout, "JUMP $ifjstrcmp$end$%i\n", uniqueId);
 
-    fprintf(stdout, "LABEL $ifjstrcmp$typeerr$%i\n", uniqueId);
-    fprintf(stdout, "EXIT int@25\n");
-
     fprintf(stdout, "LABEL $ifjstrcmp$end$%i\n", uniqueId);
     return ERR_OK;
   } else if (strcmp(funId, "Ifj.ord") == 0) {
@@ -618,9 +598,7 @@ ErrorCode generate_builtin(ASTNode *node, Frame *gf) {
     generate_code(node->children[1], gf);
 
     verify_num();
-    fprintf(stdout, "JUMPIFEQ $ifj$ord$%i GF@__$tempRes bool@true\n", uniqueId);
-    fprintf(stdout, "CLEARS\n");
-    fprintf(stdout, "EXIT int@25\n");
+    fprintf(stdout, "JUMPIFNEQ $exit$err$param GF@__$tempRes bool@true\n");
 
     fprintf(stdout, "LABEL $ifj$ord$%i\n", uniqueId);
     fprintf(stdout, "POPS GF@__$temp2\n"); // i
@@ -628,10 +606,10 @@ ErrorCode generate_builtin(ASTNode *node, Frame *gf) {
 
     // type checks
     fprintf(stdout, "TYPE GF@__$temp3 GF@__$temp1\n");
-    fprintf(stdout, "JUMPIFNEQ $ifjord$errtype$&$%i GF@__$temp3 string@string\n", uniqueId);
+    fprintf(stdout, "JUMPIFNEQ $exit$err$param GF@__$temp3 string@string\n");
 
     fprintf(stdout, "ISINT GF@__$temp3 GF@__$temp2\n");
-    fprintf(stdout, "JUMPIFNEQ $ifjord$errval$%i GF@__$temp3 bool@true\n", uniqueId);
+    fprintf(stdout, "JUMPIFNEQ $exit$err$type GF@__$temp3 bool@true\n");
 
     fprintf(stdout, "TYPE GF@__$temp3 GF@__$temp2\n");
     fprintf(stdout, "JUMPIFEQ $ifjord$float2intskip$%i GF@__$temp3 string@int\n", uniqueId);
@@ -660,13 +638,6 @@ ErrorCode generate_builtin(ASTNode *node, Frame *gf) {
     fprintf(stdout, "PUSHS int@0\n");
     fprintf(stdout, "JUMP $ifjord$end$%i\n", uniqueId);
 
-    // errors, end
-    fprintf(stdout, "LABEL $ifjord$errtype$&$%i\n", uniqueId);
-    fprintf(stdout, "EXIT int@25\n");
-
-    fprintf(stdout, "LABEL $ifjord$errval$%i\n", uniqueId);
-    fprintf(stdout, "EXIT int@26\n");
-
     fprintf(stdout, "LABEL $ifjord$end$%i\n", uniqueId);
     return ERR_OK;
   } else if (strcmp(funId, "Ifj.chr") == 0) {
@@ -674,14 +645,11 @@ ErrorCode generate_builtin(ASTNode *node, Frame *gf) {
 
     generate_code(node->children[1], gf);
     verify_num();
-    fprintf(stdout, "JUMPIFEQ $ifj$chr$%i GF@__$tempRes bool@true\n", uniqueId);
-    fprintf(stdout, "CLEARS\n");
-    fprintf(stdout, "EXIT int@25\n");
+    fprintf(stdout, "JUMPIFNEQ $exit$err$param GF@__$tempRes bool@true\n");
 
-    fprintf(stdout, "LABEL $ifj$chr$%i\n", uniqueId);
     // type checks
     fprintf(stdout, "ISINT GF@__$tempRes GF@__$temp1\n");
-    fprintf(stdout, "JUMPIFNEQ $ifjchr$valerr$%i GF@__$tempRes bool@true\n", uniqueId);
+    fprintf(stdout, "JUMPIFNEQ $exit$err$type GF@__$tempRes bool@true\n");
 
     // float to int to char
     fprintf(stdout, "TYPE GF@__$temp3 GF@__$temp1\n");
@@ -697,8 +665,6 @@ ErrorCode generate_builtin(ASTNode *node, Frame *gf) {
     fprintf(stdout, "PUSHS GF@__$tempRes\n");
     fprintf(stdout, "JUMP $ifjchr$end$%i\n", uniqueId);
 
-    fprintf(stdout, "LABEL $ifjchr$valerr$%i\n", uniqueId);
-    fprintf(stdout, "EXIT int@26\n");
     fprintf(stdout, "LABEL $ifjchr$end$%i\n", uniqueId);
     return ERR_OK;
   }
@@ -922,7 +888,7 @@ ErrorCode generate_code(ASTNode *node, Frame *gf) {
 
       fprintf(stdout, "JUMPIFEQ $unop$minus$int$%i GF@__$temp3 string@int\n", uniqueId);
       fprintf(stdout, "JUMPIFEQ $unop$minus$float$%i GF@__$temp3 string@float\n", uniqueId);
-      fprintf(stdout, "EXIT int@26\n");
+      fprintf(stdout, "JUMP $exit$err$type\n");
 
       fprintf(stdout, "LABEL $unop$minus$int$%i\n", uniqueId);
       fprintf(stdout, "PUSHS int@0\n");
@@ -994,6 +960,8 @@ ErrorCode generate_code(ASTNode *node, Frame *gf) {
     fprintf(stdout, "CREATEFRAME\n");
     fprintf(stdout, "CALL $main$0\n");
     fprintf(stdout, "JUMP $program$end$\n");
+    generate_error_exits();
+
     // generate all program functions
     ASTNode *mainBlock = node->children[0];
     for (size_t i = 0; i < mainBlock->child_count; i++) {
