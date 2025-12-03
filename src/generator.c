@@ -1036,6 +1036,7 @@ ErrorCode generate_program(ASTNode *root, bool debug) {
   if (root == NULL)
     return ERR_INTERNAL;
 
+  // Prepare global frame
   Frame gf;
   F_init(&gf, GF);
   ErrorCode state;

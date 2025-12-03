@@ -1,11 +1,7 @@
 /**
  * @file stackframe.c
  * @author Sebastián Kuchta (xkuchts00)
- * @brief
- * @version 0.1
- * @date 2025-11-10
- *
- * @copyright Copyright (c) 2025
+ * @brief Implementation of frame datatype as hashtable
  *
  */
 

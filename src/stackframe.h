@@ -1,8 +1,7 @@
 /**
  * @file stackframe.h
  * @author Sebastián Kuchta (xkuchts00)
- * @brief
- * @date 2025-11-09
+ * @brief Header file for stackframe.c
  *
  */
 
