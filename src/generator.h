@@ -10,8 +10,6 @@
 
 #include "ast.h"
 #include "error.h"
-#include "stackframe.h"
-#include "symtable.h"
 
 typedef struct {
   int labelCounter;
