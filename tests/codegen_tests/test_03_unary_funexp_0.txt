@@ -11,9 +11,11 @@ class Program {
         var b
         b = !getBool()
         Ifj.write(b)
+        Ifj.write("\n")
         var i
         i = -getNum()
         Ifj.write(i)
+        Ifj.write("\n")
     }
 
 }

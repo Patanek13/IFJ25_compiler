@@ -8,6 +8,7 @@ class Program {
         var res
         res = f(f(f(1)))
         Ifj.write(res)
+        Ifj.write("\n")
     }
 
 }

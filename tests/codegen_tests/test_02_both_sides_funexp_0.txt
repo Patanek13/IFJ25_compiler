@@ -11,6 +11,7 @@ class Program {
         var x
         x = a() + b()
         Ifj.write(x)
+        Ifj.write("\n")
     }
 
 }
