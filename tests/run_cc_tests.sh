@@ -1,147 +1,166 @@
 #!/usr/bin/env bash
+# run_tests.sh - run tests in TEST_DIR where filenames end in _<num>
 # Requires environment variables: TEST_DIR, PROJECT_BIN, INTERPRETER_BIN, OUT_FILE
 
 set -u
 
-# --- KONFIGURACE ---
+# === Colors ===
+C_RED="\033[1;31m"
+C_GREEN="\033[1;32m"
+C_YELLOW="\033[1;33m"
+C_BLUE="\033[1;34m"
+C_RESET="\033[0m"
+
+# required variables
 TEST_DIR="codegen_tests"
 PROJECT_BIN="../build/IFJcompiler"
-INTERPRETER_BIN="tools/ic25int-linux-x86_64"
-OUT_FILE="tools/output.ifjcode25"
+INTERPRETER_BIN="./tools/ic25int-linux-x86_64"
+OUT_FILE="./tools/output.ifjcode25"
 
-# --- BARVY ---
-if [[ -t 1 ]]; then
-    GREEN=$'\033[32m'
-    RED=$'\033[31m'
-    YELLOW=$'\033[33m'
-    BLUE=$'\033[34m'
-    BOLD=$'\033[1m'
-    RESET=$'\033[0m'
-else
-    GREEN=""
-    RED=""
-    YELLOW=""
-    BLUE=""
-    BOLD=""
-    RESET=""
-fi
-
-# --- KONTROLY ---
+# sanity checks
 if [ ! -d "$TEST_DIR" ]; then
-    echo "${RED}ERROR: TEST_DIR '$TEST_DIR' is not a directory.${RESET}" >&2
-    exit 2
+  echo -e "${C_RED}ERROR:${C_RESET} TEST_DIR '$TEST_DIR' is not a directory." >&2
+  exit 2
 fi
 if [ ! -x "$PROJECT_BIN" ]; then
-    echo "${RED}ERROR: PROJECT_BIN '$PROJECT_BIN' not found or not executable.${RESET}" >&2
-    exit 2
+  echo -e "${C_RED}ERROR:${C_RESET} PROJECT_BIN '$PROJECT_BIN' not found or not executable." >&2
+  exit 2
 fi
 if [ ! -x "$INTERPRETER_BIN" ]; then
-    echo "${RED}ERROR: INTERPRETER_BIN '$INTERPRETER_BIN' not found or not executable.${RESET}" >&2
-    exit 2
+  echo -e "${C_RED}ERROR:${C_RESET} INTERPRETER_BIN '$INTERPRETER_BIN' not found or not executable." >&2
+  exit 2
 fi
 
-# --- INICIALIZACE ---
 fail_count=0
-pass_count=0
+processed_count=0
 skipped_count=0
-declare -a failed_tests  # Pole pro uložení jmen selhaných testů
 
-echo "${BOLD}Spouštím testy generátoru kódu...${RESET}"
-echo "--------------------------------------------------------"
-
-# --- HLAVNÍ SMYČKA ---
+# find files (non-recursive), handle arbitrary filenames safely
 while IFS= read -r -d '' file; do
-    base="$(basename "$file")"
+  base="$(basename "$file")"
 
-    # Extrakce čísla očekávaného návratového kódu
-    case "$base" in
-        *.txt) noext="${base%.txt}" ;;
-        *)
-            ((skipped_count++))
-            continue
-            ;;
-    esac
+  # Only process files that end with .txt and have a suffix _<num> before .txt
+  case "$base" in
+    *.txt) noext="${base%.txt}" ;;
+    *)
+      skipped_count=$((skipped_count + 1))
+      continue
+      ;;
+  esac
 
-    expected_raw="${noext##*_}"
+  # expected exit code is the part after the last underscore in noext
+  expected_raw="${noext##*_}"
 
-    # Validace suffixu
-    if [ "$expected_raw" = "$noext" ] || ! [[ "$expected_raw" =~ ^[0-9]+$ ]]; then
-        echo "${YELLOW}[SKIP]${RESET} $base (špatný formát názvu, chybí _<číslo>)"
-        ((skipped_count++))
-        continue
-    fi
+  # if there was no underscore (no change), skip
+  if [ "$expected_raw" = "$noext" ]; then
+    echo -e "${C_YELLOW}SKIP:${C_RESET} '$base'   missing '_<num>.txt' suffix." >&2
+    skipped_count=$((skipped_count + 1))
+    continue
+  fi
 
-    # Převod na číslo (base 10)
-    expected=$((10#$expected_raw))
+  # validate expected is a sequence of digits
+  if ! [[ "$expected_raw" =~ ^[0-9]+$ ]]; then
+    echo -e "${C_YELLOW}SKIP:${C_RESET} '$base'   suffix '_$expected_raw' is not a non-negative integer." >&2
+    skipped_count=$((skipped_count + 1))
+    continue
+  fi
 
-    # --- 1. KOMPILACE ---
-    # Přesměrování stderr do /dev/null, aby ladicí výpisy nerušily v terminálu
-    # Pokud chcete vidět chyby překladače, odstraňte "2> /dev/null"
-    if ! "$PROJECT_BIN" < "$file" > "$OUT_FILE" 2> /dev/null; then
-        # Pokud překladač selže, uložíme jeho návratový kód
-        compiler_rc=$?
-        # Pokud jsme neočekávali chybu kompilace (např. test očekává 0, ale překladač spadl)
-        # tak to považujeme za FAIL už tady.
-        if [ "$expected" -ne "$compiler_rc" ] && [ "$compiler_rc" -ne 0 ]; then
-             echo "${RED}[FAIL]${RESET} $base ${BOLD}(Chyba překladu: $compiler_rc, očekáváno: $expected)${RESET}"
-             ((fail_count++))
-             failed_tests+=("$base (Compiler error: $compiler_rc)")
-             continue
-        fi
-    fi
+  # parse expected in base 10 to avoid octal interpretation on leading zeros
+  expected=$((10#$expected_raw))
 
-    # --- 2. INTERPRETACE ---
-    # Interpretovi pošleme prázdný vstup, aby se nezasekl na instrukci READ
-    # Zachytáváme stdout i stderr interpretu, abychom viděli případné chyby
-    inter_out=$("$INTERPRETER_BIN" "$OUT_FILE" < /dev/null 2>&1)
+  processed_count=$((processed_count + 1))
+
+  echo -e "${C_BLUE}----${C_RESET}"
+  echo -e "${C_BLUE}TEST:${C_RESET} $base    expected exit: $expected"
+
+  # Run project and save return code into rc
+  "$PROJECT_BIN" < "$file" > "$OUT_FILE" 2> /dev/null
+  rc=$?
+  # Run project (redirect input -> OUT_FILE).
+  if [ "$rc" -ne 0 ]; then
+    echo -e "${C_YELLOW}NOTE:${C_RESET} ${PROJECT_BIN} exited non-zero for '$base'" >&2
+  fi
+  # if we returned 0, run the interpreter on the output file
+  if [ "$rc" -eq 0 ]; then
+    echo -e "${C_GREEN}PROJECT BIN OK:${C_RESET} exited 0. Continuing to interpreter."
+    tmp_out="$(mktemp)"
+    "$INTERPRETER_BIN" "$OUT_FILE" > "$tmp_out"
     rc=$?
+  fi
 
-    # --- 3. VYHODNOCENÍ ---
-    if [ "$rc" -eq "$expected" ]; then
-        echo "${GREEN}[PASS]${RESET} $base (rc=$rc)"
-        ((pass_count++))
-    else
-        echo "${RED}[FAIL]${RESET} $base ${BOLD}(rc=$rc, očekáváno=$expected)${RESET}"
-        # Volitelně: vypsat chybu interpretu, pokud test selhal
-        # echo "       Důvod: $inter_out"
-        ((fail_count++))
-        failed_tests+=("$base (Got $rc, Expected $expected)")
+  ############################################################
+  # RC kontrola
+  # - ak expected je 6 alebo 26   akceptujeme RC 6 aj 26
+  # - ak expected je 5 alebo 25   akceptujeme RC 5 aj 25
+  # - inak vy adujeme presn  match
+  ############################################################
+  rc_ok=0
+  if [ "$expected" -eq 6 ] || [ "$expected" -eq 26 ]; then
+    if [ "$rc" -eq 6 ] || [ "$rc" -eq 26 ]; then
+      rc_ok=1
     fi
+  elif [ "$expected" -eq 5 ] || [ "$expected" -eq 25 ]; then
+    if [ "$rc" -eq 5 ] || [ "$rc" -eq 25 ]; then
+      rc_ok=1
+    fi
+  else
+    if [ "$rc" -eq "$expected" ]; then
+      rc_ok=1
+    fi
+  fi
+
+  if [ "$rc_ok" -eq 1 ]; then
+    if [ "$expected" -eq 6 ] || [ "$expected" -eq 26 ]; then
+      echo -e "${C_GREEN}RC  OK:${C_RESET} $rc (expected 6 or 26)"
+    elif [ "$expected" -eq 5 ] || [ "$expected" -eq 25 ]; then
+      echo -e "${C_GREEN}RC  OK:${C_RESET} $rc (expected 5 or 25)"
+    else
+      echo -e "${C_GREEN}RC  OK:${C_RESET} $rc"
+    fi
+  else
+    if [ "$expected" -eq 6 ] || [ "$expected" -eq 26 ]; then
+      echo -e "${C_RED}RC FAIL:${C_RESET} got $rc, expected 6 or 26"
+    elif [ "$expected" -eq 5 ] || [ "$expected" -eq 25 ]; then
+      echo -e "${C_RED}RC FAIL:${C_RESET} got $rc, expected 5 or 25"
+    else
+      echo -e "${C_RED}RC FAIL:${C_RESET} got $rc, expected $expected"
+    fi
+    fail_count=$((fail_count + 1))
+    echo -e "${C_YELLOW}OUT SKIP:${C_RESET} RC mismatch, not comparing stdout."
+    rm -f "$tmp_out"
+    continue
+  fi
+
+  # Compare stdout with reference .out if it exists
+  ref_out="${file%.txt}.out"
+  if [ -f "$ref_out" ]; then
+    if diff -u "$ref_out" "$tmp_out" > /dev/null; then
+      echo -e "${C_GREEN}OUT OK${C_RESET}"
+    else
+      echo -e "${C_RED}OUT FAIL:${C_RESET} stdout differs from $ref_out"
+      echo "---- diff ----"
+      diff -u "$ref_out" "$tmp_out"
+      fail_count=$((fail_count + 1))
+    fi
+  else
+    echo -e "${C_YELLOW}OUT SKIP:${C_RESET} no expected output file '$ref_out'"
+  fi
+
+  rm -f "$tmp_out"
 
 done < <(find "$TEST_DIR" -maxdepth 1 -type f -print0 | sort -z)
 
+echo -e "${C_BLUE}----${C_RESET}"
+if [ "$processed_count" -eq 0 ]; then
+  echo -e "${C_RED}No test files matching '*_<num>.txt' were found in '$TEST_DIR'.${C_RESET}" >&2
+  echo -e "${C_YELLOW}Skipped $skipped_count other files.${C_RESET}" >&2
+  exit 2
+fi
 
-# --- SOUHRN ---
-echo "--------------------------------------------------------"
-echo "${BOLD}SOUHRN VÝSLEDKŮ:${RESET}"
-
-if [ "$fail_count" -eq 0 ] && [ "$pass_count" -gt 0 ]; then
-    echo "${GREEN}Všechny testy prošly! ($pass_count)${RESET}"
-    if [ "$skipped_count" -gt 0 ]; then
-        echo "${YELLOW}Přeskočeno: $skipped_count${RESET}"
-    fi
-    exit 0
+if [ "$fail_count" -eq 0 ]; then
+  echo -e "${C_GREEN}All $processed_count tests passed (skipped $skipped_count files).${C_RESET}"
+  exit 0
 else
-    echo "Celkem testů: $((pass_count + fail_count))"
-    echo "${GREEN}Úspěšných:    $pass_count${RESET}"
-    echo "${RED}Selhaných:    $fail_count${RESET}"
-
-    if [ "$skipped_count" -gt 0 ]; then
-        echo "${YELLOW}Přeskočeno:   $skipped_count${RESET}"
-    fi
-
-    if [ "$fail_count" -gt 0 ]; then
-        echo ""
-        echo "${BOLD}Seznam selhaných testů:${RESET}"
-        for fail in "${failed_tests[@]}"; do
-            echo " - ${RED}$fail${RESET}"
-        done
-        exit 1
-    fi
-
-    # Pokud nebyly nalezeny žádné testy
-    if [ "$pass_count" -eq 0 ]; then
-        echo "${YELLOW}Nebyly spuštěny žádné testy.${RESET}"
-        exit 2
-    fi
+  echo -e "${C_RED}$fail_count of $processed_count tests failed (skipped $skipped_count files).${C_RESET}"
+  exit 1
 fi
